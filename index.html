@@ -147,6 +147,22 @@
             color: white;
             border-color: #15803d;
         }
+        .confirm-modal.confirm-danger .confirm-icon {
+            background: linear-gradient(135deg, #fee2e2, #fecaca);
+        }
+        .confirm-modal.confirm-danger .confirm-name {
+            color: #dc2626;
+        }
+        .btn-danger-solid {
+            background: #dc2626;
+            color: white;
+            border: none;
+        }
+        .btn-danger-solid:hover {
+            background: #b91c1c;
+            color: white;
+            border-color: #b91c1c;
+        }
 
         /* Bottone torna in alto */
         .btn-back-to-top {
@@ -504,6 +520,19 @@
         <div class="confirm-actions">
             <button type="button" class="btn" onclick="closeConfirmInstall()">Annulla</button>
             <button type="button" class="btn btn-success" onclick="confirmInstallato()">Sì, conferma</button>
+        </div>
+    </div>
+</div>
+
+<div id="confirmDeleteModal" class="modal-overlay confirm-modal confirm-danger">
+    <div class="modal">
+        <div class="confirm-icon">🗑️</div>
+        <h3>Eliminare questo cliente?</h3>
+        <div class="confirm-name" id="confirmDeleteName"></div>
+        <p class="confirm-desc">L'operazione non si può annullare.<br>I dati del cliente verranno rimossi definitivamente.</p>
+        <div class="confirm-actions">
+            <button type="button" class="btn" onclick="closeConfirmDelete()">Annulla</button>
+            <button type="button" class="btn btn-danger-solid" onclick="confirmDeleteClient()">Sì, elimina</button>
         </div>
     </div>
 </div>
@@ -1257,12 +1286,28 @@
         }
     }
 
+    let pendingDeleteId = null;
+
     window.deleteClient = function(id) {
-        if(confirm("Eliminare questo cliente?")) {
-            clients = clients.filter(c => c.id !== id);
-            saveToLocalStorage();
-            render();
-        }
+        const client = clients.find(c => String(c.id) === String(id));
+        if (!client) return;
+        pendingDeleteId = id;
+        document.getElementById('confirmDeleteName').textContent = client.nome;
+        document.getElementById('confirmDeleteModal').style.display = 'flex';
+    }
+
+    window.closeConfirmDelete = function() {
+        pendingDeleteId = null;
+        document.getElementById('confirmDeleteModal').style.display = 'none';
+    }
+
+    window.confirmDeleteClient = function() {
+        if (!pendingDeleteId) return;
+        clients = clients.filter(c => String(c.id) !== String(pendingDeleteId));
+        saveToLocalStorage();
+        pendingDeleteId = null;
+        document.getElementById('confirmDeleteModal').style.display = 'none';
+        render();
     }
 
     window.deleteStage = function(stageName) {
