@@ -29,57 +29,80 @@
         .settings-menu {
             position: relative;
         }
+        .settings-menu > .btn {
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            border-color: #cbd5e1;
+            padding-right: 14px;
+        }
+        .settings-menu > .btn:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
         .settings-menu-panel {
             display: none;
             position: absolute;
-            top: calc(100% + 8px);
+            top: calc(100% + 10px);
             right: 0;
-            min-width: 220px;
+            min-width: 240px;
             background: white;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
-            padding: 8px;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14), 0 2px 6px rgba(15, 23, 42, 0.06);
+            padding: 10px;
             z-index: 50;
+            overflow: hidden;
         }
         .settings-menu.open .settings-menu-panel {
             display: block;
-            animation: menuFade 0.15s ease;
+            animation: menuFade 0.18s cubic-bezier(0.16, 1, 0.3, 1);
         }
         @keyframes menuFade {
-            from { opacity: 0; transform: translateY(-6px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
         }
         .settings-menu-item {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             width: 100%;
-            padding: 11px 12px;
+            padding: 12px 14px;
             border: none;
             background: transparent;
-            border-radius: 8px;
+            border-radius: 10px;
             cursor: pointer;
             font-size: 0.9rem;
             font-weight: 600;
             color: var(--primary);
             text-align: left;
+            transition: background 0.15s, transform 0.1s;
         }
         .settings-menu-item:hover {
-            background: #f1f5f9;
+            background: linear-gradient(90deg, #eff6ff, #f8fafc);
+            color: var(--accent);
+        }
+        .settings-menu-item:active {
+            transform: scale(0.98);
         }
         .settings-menu-item span.icon {
-            font-size: 1.1rem;
-            width: 24px;
-            text-align: center;
+            font-size: 1.15rem;
+            width: 28px;
+            height: 28px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #f1f5f9;
+            border-radius: 8px;
+        }
+        .settings-menu-item:hover span.icon {
+            background: #dbeafe;
         }
         .settings-menu-label {
-            font-size: 0.7rem;
+            font-size: 0.68rem;
             font-weight: 700;
-            color: var(--text-muted);
+            color: #94a3b8;
             text-transform: uppercase;
-            padding: 6px 12px 4px;
-            letter-spacing: 0.04em;
+            padding: 10px 14px 6px;
+            letter-spacing: 0.06em;
         }
         .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 8px; font-size: 0.875rem; font-weight: 600; border: 1px solid var(--border); background-color: var(--card-bg); color: var(--primary); cursor: pointer; transition: all 0.2s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
         .btn:hover { border-color: var(--accent); color: var(--accent); }
@@ -90,8 +113,53 @@
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px; margin-bottom: 20px; }
         .form-group { display: flex; flex-direction: column; gap: 6px; }
         .form-group label { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
-        .input-control, .select-control { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; background: #fff; outline: none; }
-        .input-control:focus, .select-control:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+        .input-control, .select-control {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 0.9rem;
+            background: #fff;
+            outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
+            color: var(--text);
+        }
+        .input-control:focus, .select-control:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+        .select-control, select.edit-select, select {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-color: #fff;
+            background-image:
+                linear-gradient(45deg, transparent 50%, #64748b 50%),
+                linear-gradient(135deg, #64748b 50%, transparent 50%),
+                linear-gradient(to right, #e2e8f0, #e2e8f0);
+            background-position:
+                calc(100% - 18px) calc(50% - 3px),
+                calc(100% - 12px) calc(50% - 3px),
+                calc(100% - 36px) 50%;
+            background-size: 6px 6px, 6px 6px, 1px 60%;
+            background-repeat: no-repeat;
+            padding-right: 42px;
+            cursor: pointer;
+        }
+        .select-control:hover, select.edit-select:hover, select:hover {
+            border-color: #94a3b8;
+        }
+        .select-control:focus, select.edit-select:focus, select:focus {
+            background-image:
+                linear-gradient(45deg, transparent 50%, var(--accent) 50%),
+                linear-gradient(135deg, var(--accent) 50%, transparent 50%),
+                linear-gradient(to right, #bfdbfe, #bfdbfe);
+        }
+        .select-control:disabled, select:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            background-color: #f8fafc;
+        }
         .models-container { display: flex; flex-direction: column; gap: 10px; }
         .model-select-row { display: flex; gap: 8px; align-items: center; }
         .model-actions-btns { display: flex; gap: 4px; }
@@ -103,8 +171,26 @@
         
         /* Barca Rapida Tappe */
         .stages-nav-bar { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 20px; white-space: nowrap; }
-        .stage-pill { background: var(--card-bg); border: 1px solid var(--border); color: var(--primary); padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.04); transition: all 0.2s; }
-        .stage-pill:hover { background: var(--accent); color: white; border-color: var(--accent); }
+        .stage-pill {
+            background: linear-gradient(180deg, #ffffff, #f8fafc);
+            border: 1px solid #e2e8f0;
+            color: var(--primary);
+            padding: 7px 16px;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+            transition: all 0.18s ease;
+        }
+        .stage-pill:hover {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+            transform: translateY(-1px);
+        }
+        .stage-pill:active { transform: translateY(0); }
 
         .stage-group { margin-bottom: 24px; background: var(--card-bg); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--border); scroll-margin-top: 20px; }
         .stage-header { background: var(--primary); color: white; padding: 14px 20px; font-size: 1.1rem; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
@@ -125,7 +211,28 @@
         .edit-controls { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
         .edit-group { display: flex; align-items: center; gap: 4px; }
         .edit-group label { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); }
-        .edit-input, .edit-select { padding: 4px 8px; font-size: 0.85rem; border: 1px solid var(--border); border-radius: 6px; background: #fff; }
+        .edit-input, .edit-select {
+            padding: 6px 10px;
+            font-size: 0.85rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #fff;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .edit-input:focus, .edit-select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            outline: none;
+        }
+        select.edit-select {
+            min-width: 72px;
+            padding-right: 32px;
+            background-position:
+                calc(100% - 14px) calc(50% - 2px),
+                calc(100% - 9px) calc(50% - 2px),
+                calc(100% - 28px) 50%;
+            background-size: 5px 5px, 5px 5px, 1px 55%;
+        }
         .status-cell { text-align: center; cursor: pointer; user-select: none; width: 120px; }
         .checkbox-x { display: inline-flex; justify-content: center; align-items: center; width: 32px; height: 32px; border: 2px solid #cbd5e1; border-radius: 8px; font-weight: bold; font-size: 1.1rem; color: transparent; background: #fff; margin: 0 auto; transition: 0.2s; pointer-events: none; }
         .status-cell.active .checkbox-x { background: #dbeafe; border-color: var(--accent); color: var(--accent); }
@@ -393,6 +500,23 @@
             font-size: 1.1rem;
             font-weight: 700;
         }
+        #viewPrep .installati-table-wrap {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        #viewPrep .installati-header {
+            background: #2563eb;
+            color: white;
+            padding: 14px 20px;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+        .portal-nav-btn .nav-badge.badge-prep {
+            background: #2563eb;
+        }
         .portal-nav-btn .nav-badge.badge-standby {
             background: #d97706;
         }
@@ -452,6 +576,10 @@
     <div class="portal-brand">📋 Portale Clienti</div>
     <button type="button" class="portal-nav-btn active" id="navNote" onclick="switchView('note')">
         📝 Note clienti
+    </button>
+    <button type="button" class="portal-nav-btn" id="navPrep" onclick="switchView('prep')">
+        📋 Pre-pianificazione
+        <span class="nav-badge badge-prep" id="navPrepCount">0</span>
     </button>
     <button type="button" class="portal-nav-btn" id="navInstallati" onclick="switchView('installati')">
         ✅ Installazioni eseguite
@@ -569,6 +697,18 @@
 
     <div id="tablesContainer"></div>
 </div><!-- /#viewNote -->
+
+<div id="viewPrep" class="view-panel">
+    <div class="header-bar">
+        <div class="header-title-group">
+            <h1>📋 Pre-pianificazione</h1>
+        </div>
+    </div>
+    <div class="installati-table-wrap">
+        <div class="installati-header">Clienti in attesa di assegnazione a tappa o spedizione</div>
+        <div id="prepTableContainer"></div>
+    </div>
+</div><!-- /#viewPrep -->
 
 <div id="viewInstallati" class="view-panel">
     <div class="header-bar">
@@ -1249,8 +1389,15 @@
 
     window.onInAttesaToggle = function() {
         const checked = document.getElementById('inAttesaCheck').checked;
+        const dataInput = document.getElementById('data');
         tappaInput.disabled = checked;
         spedizioneInput.disabled = checked;
+        if (dataInput) {
+            dataInput.disabled = checked;
+            dataInput.required = !checked;
+            dataInput.style.opacity = checked ? '0.5' : '1';
+            if (checked) dataInput.value = '';
+        }
         if (checked) {
             tappaInput.value = '';
             spedizioneInput.value = '';
@@ -1289,23 +1436,29 @@
             spedizioneFromClienteStesso = true;
         }
 
-        if (!nomeVal || !localitaVal || !provinciaVal || !regioneVal || !dataVal) {
-            alert("Compila tutti i campi obbligatori (inclusi provincia e regione).");
+        const inAttesa = document.getElementById('inAttesaCheck').checked;
+
+        if (!nomeVal || !localitaVal || !provinciaVal || !regioneVal) {
+            alert("Compila tutti i campi obbligatori (nome, località, provincia e regione).");
             return;
         }
 
-        const inAttesa = document.getElementById('inAttesaCheck').checked;
+        if (!inAttesa && !dataVal) {
+            alert("Inserisci la data, oppure spunta \"In attesa di assegnazione\".");
+            return;
+        }
 
         if (!inAttesa && !tappaVal && !spedizioneVal) {
             alert("Inserisci una Tappa oppure una Spedizione, oppure spunta \"In attesa di assegnazione\".");
             return;
         }
 
-        // Se in attesa, forza tappa e spedizione vuote
+        // Se in attesa (pre-pianificazione), forza tappa/spedizione/data vuote
         if (inAttesa) {
             tappaVal = '';
             spedizioneVal = '';
         }
+        const dataFinale = inAttesa ? '' : dataVal;
 
         // Memorizza la spedizione SOLO se non proviene da "Cliente stesso"
         if (spedizioneVal && !spedizioneFromClienteStesso) {
@@ -1340,7 +1493,7 @@
             regione: regioneVal,
             tappa: tappaVal,
             spedizione: spedizioneVal,
-            data: dataVal,
+            data: dataFinale,
             calendarizzato: false,
             preavviso: false,
             disponibilita: false,
@@ -1745,9 +1898,6 @@
 
         // Barra navigazione tappe (+ pill In attesa se ci sono)
         let stagesPills = '';
-        if (inAttesaCount > 0) {
-            stagesPills += `<button class="stage-pill" style="border-color:#f59e0b; color:#b45309; background:#fffbeb;" onclick="scrollToStage('IN_ATTESA')">⏳ In attesa (${inAttesaCount})</button>`;
-        }
         stagesPills += stages.map(stage => {
             const safeId = stage.replace(/[^a-zA-Z0-9-_]/g, '_');
             return `<button class="stage-pill" onclick="scrollToStage('${safeId}')">🚩 ${stage}</button>`;
@@ -1797,8 +1947,12 @@
         if (document.getElementById('navStandbyCount')) {
             document.getElementById('navStandbyCount').textContent = clients.filter(c => c.standby && !c.installato).length;
         }
+        if (document.getElementById('navPrepCount')) {
+            document.getElementById('navPrepCount').textContent = clients.filter(c => !c.installato && !c.standby && !(c.tappa || '').trim() && !(c.spedizione || '').trim()).length;
+        }
         if (currentView === 'standby') renderStandbyPage();
         if (currentView === 'installati') renderInstallatiPage();
+        if (currentView === 'prep') renderPrepPage();
             return;
         }
 
@@ -2005,13 +2159,7 @@
             container.appendChild(groupEl);
         }
 
-        // 1. Clienti in attesa (non installati, senza tappa né spedizione)
-        const inAttesa = filteredClients.filter(c => !c.installato && !c.standby && !(c.tappa || '').trim() && !(c.spedizione || '').trim());
-        if (inAttesa.length > 0) {
-            createGroup('In attesa', inAttesa, 'attesa');
-        }
-
-        // 2. Gruppi Tappe (non installati, con tappa e senza spedizione)
+        // 1. Gruppi Tappe (Pre-pianificazione è nel portale) (non installati, con tappa e senza spedizione)
         const groupedTappe = {};
         filteredClients.forEach(client => {
             if (client.installato || client.standby) return;
@@ -2047,8 +2195,12 @@
         if (document.getElementById('navStandbyCount')) {
             document.getElementById('navStandbyCount').textContent = clients.filter(c => c.standby && !c.installato).length;
         }
+        if (document.getElementById('navPrepCount')) {
+            document.getElementById('navPrepCount').textContent = clients.filter(c => !c.installato && !c.standby && !(c.tappa || '').trim() && !(c.spedizione || '').trim()).length;
+        }
         if (currentView === 'standby') renderStandbyPage();
         if (currentView === 'installati') renderInstallatiPage();
+        if (currentView === 'prep') renderPrepPage();
     }
 
 
@@ -2104,14 +2256,80 @@
         container.innerHTML = html;
     }
 
+    function renderPrepPage() {
+        const container = document.getElementById('prepTableContainer');
+        const countEl = document.getElementById('navPrepCount');
+        const list = clients.filter(c => !c.installato && !c.standby && !(c.tappa || '').trim() && !(c.spedizione || '').trim());
+        if (countEl) countEl.textContent = list.length;
+        if (!container) return;
+
+        if (list.length === 0) {
+            container.innerHTML = '<p style="text-align:center; color: var(--text-muted); padding: 40px;">Nessun cliente in pre-pianificazione.</p>';
+            return;
+        }
+
+        list.sort((a, b) => new Date(a.data || 0) - new Date(b.data || 0));
+
+        let html = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>Cliente / Modelli</th>
+                        <th>Località</th>
+                        <th>Assegna</th>
+                        <th style="width: 130px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        list.forEach(client => {
+            const modelsText = (client.modelli || []).map(m => {
+                return `<span class="model-badge">${m.nome}${m.qta ? ' <span class="model-qta-badge">' + m.qta + ' pz</span>' : ''}</span>`;
+            }).join(' ') || '-';
+            html += `
+                <tr>
+                    <td>
+                        <strong>${client.nome}</strong>
+                        <div class="models-list" style="margin-top:6px;">${modelsText}</div>
+                        <div style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;">📅 ${client.data || '-'}</div>
+                    </td>
+                    <td>
+                        📍 ${client.localita || '-'}<br>
+                        <span style="font-size:0.8rem; color:var(--text-muted);">${client.provincia || ''} ${client.regione ? '· ' + client.regione : ''}</span>
+                    </td>
+                    <td>
+                        <div class="edit-controls" style="margin-top:0;">
+                            <div class="edit-group">
+                                <label>🚩 Tappa:</label>
+                                <input type="text" class="edit-input" value="" placeholder="Assegna tappa..." list="tappeDatalist" autocomplete="off" onchange="updateStage('${client.id}', this.value)">
+                            </div>
+                            <div class="edit-group">
+                                <label>📦 Spedizione:</label>
+                                <input type="text" class="edit-input" value="" placeholder="Assegna spedizione..." list="spedizioniDatalist" autocomplete="off" onchange="updateSpedizione('${client.id}', this.value)">
+                            </div>
+                        </div>
+                    </td>
+                    <td style="white-space:nowrap;">
+                        <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
+                    </td>
+                </tr>
+            `;
+        });
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    }
+
     window.switchView = function(view) {
         currentView = view;
         document.getElementById('viewNote').classList.toggle('active', view === 'note');
+        document.getElementById('viewPrep').classList.toggle('active', view === 'prep');
         document.getElementById('viewInstallati').classList.toggle('active', view === 'installati');
         document.getElementById('viewStandby').classList.toggle('active', view === 'standby');
         document.getElementById('navNote').classList.toggle('active', view === 'note');
+        document.getElementById('navPrep').classList.toggle('active', view === 'prep');
         document.getElementById('navInstallati').classList.toggle('active', view === 'installati');
         document.getElementById('navStandby').classList.toggle('active', view === 'standby');
+        if (view === 'prep') renderPrepPage();
         if (view === 'installati') renderInstallatiPage();
         if (view === 'standby') renderStandbyPage();
     };
