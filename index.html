@@ -1426,24 +1426,38 @@
         }
     });
 
-    // ===== Login =====
-    const APP_PASSWORD = 'giovannimilan94';
+    // ===== Login (password offuscata con hash SHA-256) =====
+    const APP_PASSWORD_HASH = '7c308b373dd6cf04f3154f62f20b3d609937879ced6b597c1f606a2568a0e566';
 
-    window.checkLogin = function(e) {
+    async function sha256Hex(str) {
+        const data = new TextEncoder().encode(str);
+        const buf = await crypto.subtle.digest('SHA-256', data);
+        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    window.checkLogin = async function(e) {
         e.preventDefault();
         const input = document.getElementById('loginPassword');
         const err = document.getElementById('loginError');
-        if (input.value === APP_PASSWORD) {
-            sessionStorage.setItem('note_clienti_auth', '1');
-            document.getElementById('loginOverlay').style.display = 'none';
-            document.body.classList.remove('locked');
-            err.textContent = '';
-            input.value = '';
-        } else {
-            err.textContent = 'Password non corretta';
-            input.value = '';
-            input.focus();
+        const btn = e.target.querySelector('button[type="submit"]');
+        if (btn) btn.disabled = true;
+        try {
+            const hash = await sha256Hex(input.value);
+            if (hash === APP_PASSWORD_HASH) {
+                sessionStorage.setItem('note_clienti_auth', '1');
+                document.getElementById('loginOverlay').style.display = 'none';
+                document.body.classList.remove('locked');
+                err.textContent = '';
+                input.value = '';
+            } else {
+                err.textContent = 'Password non corretta';
+                input.value = '';
+                input.focus();
+            }
+        } catch (err2) {
+            err.textContent = 'Errore di verifica';
         }
+        if (btn) btn.disabled = false;
         return false;
     };
 
