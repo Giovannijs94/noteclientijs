@@ -1044,14 +1044,14 @@
     window.scrollToStage = function(stageId) {
         const el = document.getElementById(`stage-group-${stageId}`);
         if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            el.scrollIntoView({ behavior: 'instant', block: 'start' });
         }
     }
 
     window.scrollToSpedizione = function(spedId) {
         const el = document.getElementById(`sped-group-${spedId}`);
         if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            el.scrollIntoView({ behavior: 'instant', block: 'start' });
         }
     }
 
