@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Note Clienti</title>
+    <style>
+        :root {
+            --primary: #1e293b;
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --border: #cbd5e1;
+            --text: #0f172a;
+            --text-muted: #64748b;
+            --danger: #ef4444;
+            --danger-bg: #fef2f2;
+            --radius: 10px;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: var(--bg); color: var(--text); padding: 20px 24px; line-height: 1.5; }
+        .container { width: 100%; max-width: 1560px; margin: 0 auto; }
+        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 16px; }
+        .header-title-group h1 { font-size: 1.8rem; color: var(--primary); font-weight: 700; }
+        .header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 8px; font-size: 0.875rem; font-weight: 600; border: 1px solid var(--border); background-color: var(--card-bg); color: var(--primary); cursor: pointer; transition: all 0.2s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .btn:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-primary { background-color: var(--accent); color: white; border: none; }
+        .btn-primary:hover { background-color: var(--accent-hover); color: white; }
+        .card { background-color: var(--card-bg); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); margin-bottom: 20px; border: 1px solid var(--border); }
+        .card-title { font-size: 1.1rem; font-weight: 700; color: var(--primary); margin-bottom: 16px; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px; margin-bottom: 20px; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group label { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+        .input-control, .select-control { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; background: #fff; outline: none; }
+        .input-control:focus, .select-control:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+        .models-container { display: flex; flex-direction: column; gap: 10px; }
+        .model-select-row { display: flex; gap: 8px; align-items: center; }
+        .model-actions-btns { display: flex; gap: 4px; }
+        .btn-icon { padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: #f8fafc; cursor: pointer; }
+        .btn-icon.danger:hover { background-color: var(--danger-bg); border-color: var(--danger); color: var(--danger); }
+        .btn-add-subfield { background: none; border: 1px dashed var(--accent); color: var(--accent); padding: 8px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; cursor: pointer; margin-top: 4px; align-self: flex-start; }
+        .search-card { background: var(--card-bg); border-radius: var(--radius); padding: 14px 20px; box-shadow: var(--shadow); margin-bottom: 14px; border: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+        .search-input { flex-grow: 1; padding: 10px 16px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem; outline: none; }
+        
+        /* Barca Rapida Tappe */
+        .stages-nav-bar { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 20px; white-space: nowrap; }
+        .stage-pill { background: var(--card-bg); border: 1px solid var(--border); color: var(--primary); padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.04); transition: all 0.2s; }
+        .stage-pill:hover { background: var(--accent); color: white; border-color: var(--accent); }
+
+        .stage-group { margin-bottom: 24px; background: var(--card-bg); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--border); scroll-margin-top: 20px; }
+        .stage-header { background: var(--primary); color: white; padding: 14px 20px; font-size: 1.1rem; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
+        .stage-footer { padding: 14px 20px; background: #f8fafc; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+        .btn-route { background: #7c3aed; color: white; border: none; }
+        .btn-route-alt { background: #0284c7; color: white; border: none; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 14px 18px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        th { background: #f8fafc; color: var(--text-muted); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+        .client-info strong { display: block; font-size: 1.1rem; color: var(--primary); margin-bottom: 4px; }
+        .models-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; align-items: center; }
+        .model-badge { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; padding: 4px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+        .model-qta-badge { background: var(--accent); color: white; font-size: 0.75rem; padding: 1px 6px; border-radius: 8px; cursor: pointer; }
+        .btn-del-badge { background: none; border: none; color: #ef4444; cursor: pointer; font-weight: bold; font-size: 0.9rem; }
+        .btn-add-inline { background: #f1f5f9; border: 1px dashed #cbd5e1; color: #475569; border-radius: 12px; padding: 4px 10px; font-size: 0.75rem; font-weight: 700; cursor: pointer; }
+        .client-location-link { display: inline-flex; align-items: center; gap: 4px; font-size: 0.85rem; color: var(--accent); font-weight: 600; text-decoration: none; margin-right: 10px; }
+        .client-badge-meta { display: inline-block; font-size: 0.75rem; background: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--border); font-weight: 600; margin-right: 4px; }
+        .edit-controls { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+        .edit-group { display: flex; align-items: center; gap: 4px; }
+        .edit-group label { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); }
+        .edit-input, .edit-select { padding: 4px 8px; font-size: 0.85rem; border: 1px solid var(--border); border-radius: 6px; background: #fff; }
+        .status-cell { text-align: center; cursor: pointer; user-select: none; width: 120px; }
+        .checkbox-x { display: inline-flex; justify-content: center; align-items: center; width: 32px; height: 32px; border: 2px solid #cbd5e1; border-radius: 8px; font-weight: bold; font-size: 1.1rem; color: transparent; background: #fff; margin: 0 auto; transition: 0.2s; pointer-events: none; }
+        .status-cell.active .checkbox-x { background: #dbeafe; border-color: var(--accent); color: var(--accent); }
+        .status-cell:hover .checkbox-x { border-color: var(--accent); }
+        .disp-cell { min-width: 300px; }
+        .disp-container { display: flex; align-items: center; gap: 10px; }
+        .note-input { flex-grow: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem; outline: none; }
+        .note-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+        .inline-add-box { margin-top: 8px; padding: 10px; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(4px); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal { background: white; border-radius: var(--radius); padding: 24px; max-width: 500px; width: 90%; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .modal-header h3 { font-size: 1.2rem; color: var(--primary); }
+        .modal-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted); }
+        .modal-body { max-height: 350px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        .modal-model-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; }
+
+        /* Bottone torna in alto */
+        .btn-back-to-top {
+            position: fixed;
+            bottom: 28px;
+            right: 28px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: white;
+            border: none;
+            font-size: 1.4rem;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+            z-index: 900;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.25s, transform 0.2s;
+            opacity: 0;
+        }
+        .btn-back-to-top.visible {
+            display: flex;
+            opacity: 1;
+        }
+        .btn-back-to-top:hover {
+            background: var(--accent-hover);
+            transform: translateY(-3px);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-bar">
+        <div class="header-title-group">
+            <h1>📋 Gestione Note Clienti</h1>
+        </div>
+        <div class="header-actions">
+            <button type="button" class="btn" onclick="openModelsModal()">⚙️ Modelli</button>
+            <button type="button" class="btn" onclick="openSpedizioniModal()">📦 Spedizioni</button>
+            <button type="button" class="btn" onclick="exportBackup()">💾 Scarica Backup</button>
+            <button type="button" class="btn" onclick="document.getElementById('importFileInput').click()">📂 Ripristina</button>
+            <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="importBackup(event)">
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">➕ Aggiungi Nuovo Cliente</div>
+        <form id="clientForm">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="nome">Nome Cliente</label>
+                    <input type="text" id="nome" class="input-control" required placeholder="Es. Mario Rossi" oninput="onNomeInput()">
+                </div>
+                
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>Modello/i e Quantità</label>
+                    <div id="modelsContainer" class="models-container"></div>
+                    <button type="button" class="btn-add-subfield" onclick="addModelSelectRow()">+ Aggiungi altro modello</button>
+                </div>
+
+                <div class="form-group">
+                    <label for="localita">Località / Paese</label>
+                    <input type="text" id="localita" class="input-control" required placeholder="Es. Casamassima" oninput="onLocalitaInput(this.value)">
+                </div>
+
+                <div class="form-group">
+                    <label for="provincia">Provincia</label>
+                    <select id="provincia" class="select-control" required>
+                        <option value="">Seleziona provincia...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="regione">Regione</label>
+                    <select id="regione" class="select-control" required>
+                        <option value="">Seleziona regione...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="tappaInput">Tappa</label>
+                    <input type="text" id="tappaInput" class="input-control" list="tappeDatalist" placeholder="Scrivi o seleziona tappa..." autocomplete="off" oninput="onTappaOrSpedizioneInput('tappa')">
+                    <datalist id="tappeDatalist"></datalist>
+                </div>
+
+                <div class="form-group">
+                    <label for="spedizioneInput">Spedizione</label>
+                    <input type="text" id="spedizioneInput" class="input-control" list="spedizioniDatalist" placeholder="Scrivi o seleziona spedizione..." autocomplete="off" oninput="onSpedizioneInput()" onchange="onSpedizioneInput()">
+                    <datalist id="spedizioniDatalist"></datalist>
+                </div>
+
+                <div class="form-group">
+                    <label for="data">Data</label>
+                    <input type="date" id="data" class="input-control" required>
+                </div>
+            </div>
+            <button type="submit" id="submitBtn" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 12px;">+ Aggiungi Cliente</button>
+        </form>
+    </div>
+
+    <datalist id="modelliDatalist"></datalist>
+
+    <div class="search-card">
+        <span style="font-weight: 700; color: var(--primary);">🔍 Cerca:</span>
+        <input type="text" id="searchInput" class="search-input" placeholder="Filtra per cliente, località, provincia, regione, modello o note..." oninput="render()">
+    </div>
+
+    <!-- BARRA DI NAVIGAZIONE RAPIDA TAPPE -->
+    <div id="stagesNavBar" class="stages-nav-bar"></div>
+
+    <!-- BARRA DI NAVIGAZIONE RAPIDA SPEDIZIONI -->
+    <div id="spedizioniNavBar" class="stages-nav-bar"></div>
+
+    <div id="tablesContainer"></div>
+</div>
+
+<div id="modelsModal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>⚙️ Modelli Salvati</h3>
+            <button class="modal-close" onclick="closeModelsModal()">✕</button>
+        </div>
+        <div class="modal-body" id="modalModelsList"></div>
+        <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-primary" style="flex: 1;" onclick="promptNewModel()">+ Nuovo Modello</button>
+            <button type="button" class="btn" onclick="closeModelsModal()">Chiudi</button>
+        </div>
+    </div>
+</div>
+
+<div id="spedizioniModal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>📦 Spedizioni Memorizzate</h3>
+            <button class="modal-close" onclick="closeSpedizioniModal()">✕</button>
+        </div>
+        <div class="modal-body" id="modalSpedizioniList"></div>
+        <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn" style="flex: 1;" onclick="closeSpedizioniModal()">Chiudi</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const ITALIAN_REGIONS = [
+        "Abruzzo", "Basilicata", "Calabria", "Campania", "Emilia-Romagna", 
+        "Friuli-Venezia Giulia", "Lazio", "Liguria", "Lombardia", "Marche", 
+        "Molise", "Piemonte", "Puglia", "Sardegna", "Sicilia", 
+        "Toscana", "Trentino-Alto Adige", "Umbria", "Valle d'Aosta", "Veneto"
+    ];
+
+    const ITALIAN_PROVINCES = [
+        "AG", "AL", "AN", "AO", "AR", "AP", "AT", "AV", "BA", "BT", "BL", "BN", "BG", "BI", "BO", "BZ", "BS", "BR", "CA", "CL", 
+        "CB", "CI", "CE", "CT", "CZ", "EN", "FM", "FE", "FI", "FG", "FC", "FR", "GE", "GO", "GR", "IM", "IS", "SP", "LT", "LE", 
+        "LC", "LI", "LO", "LU", "MC", "MN", "MS", "MT", "ME", "MI", "MO", "MB", "NA", "NO", "NU", "OT", "OR", "PD", "PA", "PR", 
+        "PV", "PG", "PU", "PE", "PC", "PI", "PT", "PN", "PZ", "PO", "RG", "RA", "RC", "RE", "RI", "RN", "RM", "RO", "SA", "SS", 
+        "SV", "SI", "SR", "SO", "SU", "TA", "TE", "TR", "TO", "TP", "TN", "TV", "TS", "UD", "VA", "VE", "VB", "VC", "VR", "VS", "VT", "VV"
+    ];
+
+    const LOCATION_DATABASE = [
+        // PUGLIA
+        { keys: ["bari", "altamura", "molfetta", "bitonto", "monopoli", "corato", "casamassima", "putignano", "conversano", "gioia del colle", "triggiano", "modugno", "noicattaro", "rutigliano", "valenzano", "acquaviva delle fontane", "santeramo in colle", "noci", "alberobello", "polignano a mare", "mola di bari", "giovinazzo", "bitritto", "sannicandro di bari", "palo del colle", "grumo appula", "toritto", "barium", "cassano delle murge", "turi", "terlizzi", "ruvo di puglia", "mottola"], prov: "BA", reg: "Puglia" },
+        { keys: ["taranto", "castellaneta", "massafra", "grottaglie", "manduria", "ginsosa", "san giorgio ionico", "pulsano", "leporano", "fragagnano", "lizzano", "avetrana", "carosino", "montemesola", "maruggio", "statte", "crispiano"], prov: "TA", reg: "Puglia" },
+        { keys: ["lecce", "copertino", "gallipoli", "nardò", "galatina", "casarano", "tricase", "maglie", "melendugno", "leverano", "monteroni di lecce", "surbo", "trepuzzi", "campi salentina", "casarano", "matino", "aradeo", "collepasso", "taviano", "racale", "alliste", "sannicola", "melissano", "tuglie", "neviano", "cutrofiano", "soleto", "carpignano salentino", "martano", "calimera", "carpignano", "otranto", "melpignano", "maglie", "borsa", "castrì di lecce", "lequile", "san cesario di lecce", "san pietro in lama", "veglie", "salice salentino", "guagnano", "novi velia"], prov: "LE", reg: "Puglia" },
+        { keys: ["foggia", "cerignola", "manfredonia", "vieste", "san severo", "lucera", "san giovanni rotondo", "trinitapoli", "san marco in lamis", "torremaggiore", "apicena", "monte sant'angelo", "margherita di savoia", "ripacandida", "deliceto", "accadia", "bovino", "ischitella", "carpino", "rodi garganico", "peschici", "mattinata", "zapponeta", "stornara", "stornarella", "ordona", "ordona", "carapelle", "orthona"], prov: "FG", reg: "Puglia" },
+        { keys: ["brindisi", "fasano", "ostuni", "francavilla fontana", "ceglie messapica", "mesagne", "carovigno", "san pietro vernotico", "oristano", "torchiarolo", "san pancrazio salentino", "cellino san marco", "latiano", "torre santa susanna", "san vito dei normanni"], prov: "BR", reg: "Puglia" },
+        { keys: ["barletta", "trani", "andria", "bisceglie", "margherita di savoja", "canosa di puglia", "minervino murge", "spinazzola"], prov: "BT", reg: "Puglia" },
+
+        // LOMBARDIA
+        { keys: ["milano", "sesto san giovanni", "cinisello balsamo", "legnano", "rho", "cologno monzese", "paderno dugnano", "abbiategrasso", "cernusco sul naviglio", "pioltello", "san giuliano milanese", "corsico", "buccinasco", "parabiago", "garbagnate milanese", "bollate", "san donato milanese", "assago", "rozzano", "cormano", "trezzano sul naviglio", "inveruno", "mesero", "settimo milanese", "magenta", "melzo", "cassan d'adda", "san zenone al lambro", "san colombano al lambro"], prov: "MI", reg: "Lombardia" },
+        { keys: ["brescia", "rovato", "lumezzane", "desenzano del garda", "montichiari", "palazzolo sull'oglio", "chiari", "ghedi", "leme", "sarezzo", "gavardo", "rezzato", "breno", "darfo boario terme", "iene", "salò", "desenzano"], prov: "BS", reg: "Lombardia" },
+        { keys: ["monza", "lissone", "seregno", "desio", "cesano maderno", "vimercate", "limbiate", "brugherio", "giussano", "muggiò", "meda", "seveso", "carate brianza", "arcore", "briosco", "verano brianza"], prov: "MB", reg: "Lombardia" },
+        { keys: ["bergamo", "treviglio", "seriate", "dalmine", "romano di lombardia", "albino", "caravaggio", "alzano lombardo", "nembro", "ponte san pietro", "sorisole", "stezzano", "zanica", "osio sotto", "scanzorosciate"], prov: "BG", reg: "Lombardia" },
+        { keys: ["como", "cantù", "erba", "mariano comense", "olgiate comasco", "lomazzo", "fenegrò", "appiano gentile", "fino mornasco", "cermenate", "turate", "lipomo"], prov: "CO", reg: "Lombardia" },
+        { keys: ["varese", "busto arsizio", "gallarate", "saronno", "cassano magnago", "tradate", "somma lombardo", "caronno pertusella", "malnate", "samarate", "luino", "laveno-mombello", "castiglione olona"], prov: "VA", reg: "Lombardia" },
+        { keys: ["pavia", "vigevano", "voghera", "mortara", "stradella", "garlasco", "broni", "casorate primo", "casteggio", "sannazzaro de' burgondi"], prov: "PV", reg: "Lombardia" },
+        { keys: ["mantova", "castiglione delle stiviere", "suzzara", "viadana", "porto mantovano", "curtatone", "goito", "castel goffredo", "san benedetto po", "mantova"], prov: "MN", reg: "Lombardia" },
+        { keys: ["cremona", "crema", "casalmaggiore", "castelleone", "soresina", "pandino", "spino d'adda"], prov: "CR", reg: "Lombardia" },
+        { keys: ["lecco", "merate", "calolziocorte", "osnago", "mandello del lario", "valmadrera", "galbiate", "colico"], prov: "LC", reg: "Lombardia" },
+        { keys: ["lodi", "codogno", "casalpusterlengo", "sant'angelo lodigiano", "maleo", "livraga", "san fiorano"], prov: "LO", reg: "Lombardia" },
+        { keys: ["sondrio", "tirano", "chiavenna", "bormio", "livigno", "morbegno", "sondalo", "campodolcino"], prov: "SO", reg: "Lombardia" },
+
+        // LAZIO
+        { keys: ["roma", "guidonia montecelio", "fiumicino", "pomezia", "tivoli", "anzio", "velletri", "civitavecchia", "ciampino", "marino", "albano laziale", "nettuno", "ardea", "ladispoli", "cerveteri", "fiumicino", "monterotondo", "ciampino", "frascati", "grottaferrata", "genzano di roma", "colleferro", "valmontone", "zagarolo", "palombara sabina", "mentana", "campagnano di roma", "bracciano", "formello", "sant'oreste"], prov: "RM", reg: "Lazio" },
+        { keys: ["latina", "aprilia", "terracina", "formia", "fondi", "gaeta", "sabaudia", "cisterna di latina", "sezze", "pontinia", "castelforte", "minturno", "ponza", "ventotene"], prov: "LT", reg: "Lazio" },
+        { keys: ["frosinone", "cassino", "sora", "ceccano", "alatri", "priverno", "anagni", "ferentino", "isola del liri", "pontecorvo", "roccasecca", "vico nel lazio"], prov: "FR", reg: "Lazio" },
+        { keys: ["viterbo", "tarquinia", "montefiascone", "viterbese", "civita castellana", "vitorchiano", "ronciglione", "bagnoregio", "bolsena", "capranica"], prov: "VT", reg: "Lazio" },
+        { keys: ["rieti", "cittaducale", "poggio mirteto", "fara in sabina", "magliano sabina", "antrodoco", "leonessa"], prov: "RI", reg: "Lazio" },
+
+        // CAMPANIA
+        { keys: ["napoli", "giugliano in campania", "torre del greco", "pozzuoli", "casoria", "castellammare di stabia", "acerra", "marano di napoli", "portici", "somma vesuviana", "pompei", "ercolano", "torre annunziata", "ischia", "capri", "aversa", "nolana", "afragola", "melito di napoli", "casalnuovo di napoli", "quarto", "san giorgio a cremano", "poggiomarino", "san giuseppe vesuviano", "brusciano", "mariglianella", "marigliano", "caivano", "cardito", "crispano", "frattamaggiore", "frattaminore", "sant'antimo", "grumo nevano", "villaricca", "qualiano", "calvizzano", "marano", "pozzuoli", "bacoli", "monte di procida", "ischia", "forio", "barano d'ischia", "serrara fontana", "lacco ameno", "casamicciola terme", "anacapri"], prov: "NA", reg: "Campania" },
+        { keys: ["salerno", "cava de' tirreni", "battipaglia", "nocera inferiore", "scafati", "eboli", "pagani", "angri", "sarno", "nocera superiore", "agropoli", "fisciano", "baronissi", "vallo della lucania", "sapri", "padula", "campagna", "giiffoni valle piana"], prov: "SA", reg: "Campania" },
+        { keys: ["caserta", "aversa", "santa maria capua vetere", "marcianise", "mondragone", "teverola", "sessa aurunca", "castel volturno", "orta di atella", "succivo", "sant'arpino", "capua", "teano", "piedimonte matese", "alife"], prov: "CE", reg: "Campania" },
+        { keys: ["avellino", "ariano irpino", "solofra", "merogliano", "atripalda", "montoro", "cervinara", "grottaminarda", "bisaccia", "lacedonia"], prov: "AV", reg: "Campania" },
+        { keys: ["benevento", "montesarchio", "sant'agata de' goti", "san giorgio del sannio", "apice", "airola", "morcone", "guardia sanframondi"], prov: "BN", reg: "Campania" },
+
+        // SICILIA
+        { keys: ["palermo", "bagheria", "monreale", "partinico", "carini", "cefalù", "misilmeri", "villabate", "termini immerese", "corleone", "san giuseppe jato", "cinisi", "terrasini", "altavilla milicia"], prov: "PA", reg: "Sicilia" },
+        { keys: ["catania", "acireale", "paternò", "misterbianco", "caltagirone", "giesi", "giarre", "mascalucia", "gravina di catania", "sant'agata li battiati", "catania", "san giovanni la punta", "acicastello", "acitrezza", "vizzini", "piazza armerina", "ramacca", "palagonia", "militello in val di catania"], prov: "CT", reg: "Sicilia" },
+        { keys: ["messina", "barcellona pozzo di gotto", "milazzo", "patti", "lipari", "taormina", "capo d'orlando", "sant'agata di militello", "spadafora", "notarile", "giardini naxos", "roccalumera", "santa teresa di riva"], prov: "ME", reg: "Sicilia" },
+        { keys: ["siracusa", "avola", "noto", "pachino", "lentini", "floridia", "augusta", "carlentini", "solarino", "sortino", "portopalo di capopassero"], prov: "SR", reg: "Sicilia" },
+        { keys: ["trapani", "marsala", "alcamo", "castellammare del golfo", "erice", "mazara del vallo", "sciacca", "valderice", "favignana", "campobello di mazara", "partanna", "castelvetrano"], prov: "TP", reg: "Sicilia" },
+        { keys: ["ragusa", "modica", "vittoria", "comiso", "scicli", "ispica", "santa croce camerina", "monterosso almo", "chiaramonte gulfi"], prov: "RG", reg: "Sicilia" },
+        { keys: ["caltanissetta", "gela", "niscemi", "san cataldo", "mussomeli", "riesi", "delia", "butera", "serradifalco"], prov: "CL", reg: "Sicilia" },
+        { keys: ["agrigento", "sciaca", "porto empedocle", "licata", "favara", "canicattì", "racalmuto", "ribera", "menfi", "palma di montechiaro", "lampedusa e linosa"], prov: "AG", reg: "Sicilia" },
+        { keys: ["enna", "piazza armerina", "nicosia", "troina", "agira", "leonforte", "barratili", "regalbuto", "piazza armerina"], prov: "EN", reg: "Sicilia" },
+
+        // VENETO
+        { keys: ["venezia", "chioggia", "san donà di piave", "mestre", "portogruaro", "jesolo", "mirano", "spinea", "dolo", "martellago", "scorzè", "noventa di piave", "cavallino-treporti", "san biagio di callalta", "musile di piave"], prov: "VE", reg: "Veneto" },
+        { keys: ["verona", "villafranca di verona", "legnago", "san bonifacio", "bussolengo", "pescantina", "san giovanni lupatoto", "valpolicella", "bardolino", "lazise", "peschiera del garda", "malcesine", "soave", "buscoldo"], prov: "VR", reg: "Veneto" },
+        { keys: ["padova", "cittadella", "este", "monselice", "albignasego", "selvazzano dentro", "padova", "vigodarzere", "cadoneghe", "piombino dese", "campodarsego", "borgoricco", "saonara"], prov: "PD", reg: "Veneto" },
+        { keys: ["vicenza", "bassano del grappa", "schio", "valdagno", "arzignano", "montecchio maggiore", "thiene", "chiampo", "lonigo", "rossano veneto", "marostica"], prov: "VI", reg: "Veneto" },
+        { keys: ["treviso", "conegliano", "castelfranco veneto", "montebelluna", "oderzo", "vittorio veneto", "mogliano veneto", "treviso", "casale sul sile", "preganziol", "roncade", "trebaseleghe"], prov: "TV", reg: "Veneto" },
+        { keys: ["rovigo", "adria", "porto tolle", "lendinara", "stienta", "taglio di po", "badia polesine", "rocling"], prov: "RO", reg: "Veneto" },
+        { keys: ["belluno", "feltre", "cortina d'ampezzo", "sedico", "longarone", "agordo", "cadore"], prov: "BL", reg: "Veneto" },
+
+        // EMILIA-ROMAGNA
+        { keys: ["bologna", "imola", "san lazzaro di savena", "casalecchio di reno", "sasso marconi", "zeta", "zola predosa", "pianoro", "castel maggiore", "san giovanni in persiceto", "budrio", "medicina", "molinella", "castenaso"], prov: "BO", reg: "Emilia-Romagna" },
+        { keys: ["modena", "carpi", "sassuolo", "formigine", "mirandola", "fiorano modenese", "maranello", "vignola", "soliera", "castelfranco emilia", "nonantola", "san felice sul panaro"], prov: "MO", reg: "Emilia-Romagna" },
+        { keys: ["parma", "fidenza", "salsomaggiore terme", "collecchio", "noceto", "medesano", "traversetolo", "langhirano", "fontanellato"], prov: "PR", reg: "Emilia-Romagna" },
+        { keys: ["reggio emilia", "reggio nell'emilia", "correggio", "scandiano", "guastalla", "casalgrande", "novellara", "sant'ilario d'enza", "rubiera"], prov: "RE", reg: "Emilia-Romagna" },
+        { keys: ["ravenna", "faenza", "lugo", "cervia", "bagnacavallo", "alfonsine", "massalombarda", "ravenna"], prov: "RA", reg: "Emilia-Romagna" },
+        { keys: ["rimini", "riccione", "cattolica", "bellaria-igea marina", "misano adriatico", "santarcangelo di romagna", "verucchio"], prov: "RN", reg: "Emilia-Romagna" },
+        { keys: ["ferrara", "cento", "comacchio", "argenta", "codigoro", "portomaggiore", "copparo", "bondeno", "tresigallo"], prov: "FE", reg: "Emilia-Romagna" },
+        { keys: ["forlì", "cesena", "cesenatico", "savignano sul rubicone", "san mauro pascoli", "meldola", "predappio", "bertinoro", "gambettola"], prov: "FC", reg: "Emilia-Romagna" },
+        { keys: ["piacenza", "fiorenzuola d'arda", "castel san giovanni", "rottofreno", "borgonovo val tidone", "rivergaro", "pontenure"], prov: "PC", reg: "Emilia-Romagna" },
+
+        // PIEMONTE
+        { keys: ["torino", "moncalieri", "collegno", "rivoli", "nichelino", "settimo torinese", "grugliasco", "chieri", "pinerolo", "venaria reale", "carmagnola", "chivasso", "ivrea", "orbassano", "beinasco", "pianezza", "san mauro torinese", "rivalta di torino", "gassino torinese"], prov: "TO", reg: "Piemonte" },
+        { keys: ["novara", "borgomanero", "trecate", "arona", "galliate", "omegna", "cameri", "bellinzago novarese"], prov: "NO", reg: "Piemonte" },
+        { keys: ["alessandria", "casale monferrato", "tortona", "acqui terme", "novi ligure", "valenza", "ovada", "spinetta marengo"], prov: "AL", reg: "Piemonte" },
+        { keys: ["asti", "canelli", "nizza monferrato", "san damiano d'asti", "villafranca d'asti"], prov: "AT", reg: "Piemonte" },
+        { keys: ["cuneo", "bra", "alba", "fossano", "mondovì", "saluzzo", "savigliano", "borgo san dalmazzo", "racconigi", "busca", "cossano belbo", "dogliani"], prov: "CN", reg: "Piemonte" },
+        { keys: ["vercelli", "borgosesia", "santhià", "gattinara", "serravalle sesia", "varallo"], prov: "VC", reg: "Piemonte" },
+        { keys: ["biella", "cossato", "vigliano biellese", "candelo", "mosso", "valdilana"], prov: "BI", reg: "Piemonte" },
+        { keys: ["verbania", "domodossola", "omegna", "gravellona toce", "stresa", "baveno", "cannobio"], prov: "VB", reg: "Piemonte" },
+
+        // TOSCANA
+        { keys: ["firenze", "scandicci", "sesto fiorentino", "empoli", "campi bisenzio", "bagno a ripoli", "fiesole", "figline e incisa valdarno", "pontassieve", "signa", "borgo san lorenzo", "lastra a signa", "calenzano", "greve in chianti"], prov: "FI", reg: "Toscana" },
+        { keys: ["prato", "montemurlo", "vaiano", "cantagallo", "vernio"], prov: "PO", reg: "Toscana" },
+        { keys: ["livorno", "piombino", "cecina", "rosignano marittimo", "portoferraio", "collesalvetti", "campiglia marittima", "san vincenzo", "capraia isola"], prov: "LI", reg: "Toscana" },
+        { keys: ["arezzo", "cortona", "sansepolcro", "montevarchi", "san giovanni valdarno", "castiglion fiorentino", "bibbiena", "teranuova bracciolini"], prov: "AR", reg: "Toscana" },
+        { keys: ["pistoia", "montecatini terme", "pescia", "quarrata", "monsummano terme", "agliana", "borgo a mozzano", "lamporecchio"], prov: "PT", reg: "Toscana" },
+        { keys: ["pisa", "pontedera", "san giuliano terme", "volterra", "caskina", "vecchiano", "bientina", "largo", "calci", "san miniato", "fucecchio"], prov: "PI", reg: "Toscana" },
+        { keys: ["lucca", "viareggio", "capannori", "camaiore", "pietrasanta", "forte dei marmi", "massarosa", "porcari", "gallicano"], prov: "LU", reg: "Toscana" },
+        { keys: ["grosseto", "follonica", "orbetello", "argentario", "follonica", "castiglione della pescaia", "scansano", "mansiano", "pitigliano", "capalbio"], prov: "GR", reg: "Toscana" },
+        { keys: ["siena", "poggibonsi", "colle di val d'elsa", "montepulciano", "chianciano terme", "san gimignano", "sovicille", "castelnuovo berardenga", "sinalunga", "chianti"], prov: "SI", reg: "Toscana" },
+        { keys: ["massa", "carrara", "aulla", "montignoso", "fivizzano", "pontremoli", "licciana nardi"], prov: "MS", reg: "Toscana" },
+
+        // CALABRIA
+        { keys: ["reggio calabria", "reggio di calabria", "palmi", "gioia tauro", "siderno", "locri", "rosarno", "villa san giovanni", "taurianova", "polistena", "melito di porto salvo", "bagnara calabra", "cittanova"], prov: "RC", reg: "Calabria" },
+        { keys: ["catanzaro", "lamezia terme", "soverato", "borgia", "squillace", "sellia marina", "chiaravalle centrale"], prov: "CZ", reg: "Calabria" },
+        { keys: ["cosenza", "rende", "castrovillari", "paola", "scalea", "corigliano-rossano", "montalto uffugo", "acri", "cetraro", "san giovanni in fiore", "trebisacce", "diamante", "fuscaldo"], prov: "CS", reg: "Calabria" },
+        { keys: ["crotone", "isole capo rizzuto", "cutro", "cirò marina", "strongoli", "petilia policastro", "mesoraca"], prov: "KR", reg: "Calabria" },
+        { keys: ["vibo valentia", "tropea", "pizzo", "serra san bruzo", "filadelfia", "vibo", "nicotera"], prov: "VV", reg: "Calabria" },
+
+        // SARDEGNA
+        { keys: ["cagliari", "quartu sant'elena", "selargius", "assee", "monserrato", "quartucciu", "capoterra", "sestu", "elmas", "dolianova", "sinnai", "villasimius", "pula", "maracalagonis"], prov: "CA", reg: "Sardegna" },
+        { keys: ["sassari", "alghero", "porto torres", "ozieri", "castelsardo", "sorso", "sennori", "ittiri", "bonorva", "bosa", "stintino"], prov: "SS", reg: "Sardegna" },
+        { keys: ["nuoro", "siniscola", "macomer", "tortolì", "lanusei", "dorgali", "fonni", "orosei", "baunei", "bortigiadas"], prov: "NU", reg: "Sardegna" },
+        { keys: ["oristano", "terralba", "bosa", "marrubiu", "ghilarza", "cabras", "mogoro"], prov: "OR", reg: "Sardegna" },
+        { keys: ["olbia", "tempio pausania", "la maddalena", "arzachena", "porto cervo", "palau", "san teodoro", "budoni", "santa teresa gallura", "calangianus"], prov: "OT", reg: "Sardegna" },
+        { keys: ["carbonia", "iglesias", "sanluri", "villacidro", "guspini", "sant'antioco", "carloforte", "portoscuso", "domusnovas", "gonnesa"], prov: "SU", reg: "Sardegna" },
+
+        // LIGURIA
+        { keys: ["genova", "rapallo", "chiavari", "sestri levante", "arenzano", "lavagna", "santa margherita ligure", "recco", "cogoleto", "busalla", "campomorone", "pontedecimo", "nervi", "voltri"], prov: "GE", reg: "Liguria" },
+        { keys: ["la spezia", "sarzana", "lerici", "arcola", "castelnuovo magra", "santo stefano di magra", "follo", "bonassola", "levanto", "monterosso al mare"], prov: "SP", reg: "Liguria" },
+        { keys: ["savona", "albenga", "varazze", "cairo montenotte", "alassio", "finale ligure", "loano", "pietra ligure", "vado ligure", "carcare"], prov: "SV", reg: "Liguria" },
+        { keys: ["imperia", "sanremo", "ventimiglia", "bordighera", "taggia", "diano marina", "ospedaletti", "san lorenzo al mare", "dolceacqua"], prov: "IM", reg: "Liguria" },
+
+        // MARCHE
+        { keys: ["ancona", "jesi", "osimo", "senigallia", "fabriano", "falconara marittima", "castelfidardo", "chiaman", "chiaravalle", "loreto", "moie"], prov: "AN", reg: "Marche" },
+        { keys: ["pesaro", "fano", "urbino", "fossombrone", "pergola", "gabbicce mare", "montelabbate", "tavullia", "mombaroccio"], prov: "PU", reg: "Marche" },
+        { keys: ["ascoli piceno", "san benedetto del tronto", "grottammare", "folignano", "monsampolo del tronto", "castorano", "ripatransone"], prov: "AP", reg: "Marche" },
+        { keys: ["macerata", "civitanova marche", "recanati", "tolentino", "san severino marche", "potenza picena", "corridonia", "morrovalle"], prov: "MC", reg: "Marche" },
+        { keys: ["fermo", "porto sant'elpidio", "porto san giorgio", "sant'elpidio a mare", "montegranaro", "monte urano", "servigliano"], prov: "FM", reg: "Marche" },
+
+        // ABRUZZO
+        { keys: ["pescara", "montesilvano", "città sant'angelo", "penne", "spoltore", "cepagatti", "pittoroni", "pineto"], prov: "PE", reg: "Abruzzo" },
+        { keys: ["teramo", "giulianova", "roseto degli abruzzi", "martinsicuro", "alba adriatica", "tortoreto", "pineto", "silvi", "atri", "castelli"], prov: "TE", reg: "Abruzzo" },
+        { keys: ["l'aquila", "avezzano", "sulmona", "celano", "pizzoferrato", "pizzoli", "scanno", "castel di sangro"], prov: "AQ", reg: "Abruzzo" },
+        { keys: ["chieti", "lanciano", "vasto", "ortona", "francavilla al mare", "san salvo", "casoli", "guardiagrele", "fara san martino", "atessa"], prov: "CH", reg: "Abruzzo" },
+
+        // FRIULI-VENEZIA GIULIA
+        { keys: ["trieste", "muggia", "duino-aurisina", "sgonico", "san dorligo della valle"], prov: "TS", reg: "Friuli-Venezia Giulia" },
+        { keys: ["udine", "codroipo", "cervignano del friuli", "tarvisio", "gemona del friuli", "tolmezzo", "san daniele del friuli", "lignano sabbiadoro", "buja", "tricesimo", "pavia di udine"], prov: "UD", reg: "Friuli-Venezia Giulia" },
+        { keys: ["pordenone", "sacile", "san vito al tagliamento", "spilimbergo", "maniago", "aviano", "caneva", "roveredo in piano", "cordovado"], prov: "PN", reg: "Friuli-Venezia Giulia" },
+        { keys: ["gorizia", "monfalcone", "grado", "cormons", "sagrado", "san pier d'isonzo", "redipuglia"], prov: "GO", reg: "Friuli-Venezia Giulia" },
+
+        // TRENTINO-ALTO ADIGE
+        { keys: ["trento", "rovereto", "pergine valsugana", "riva del garda", "arco", "cavalese", "cles", "tione di trento", "mezzolombardo", "lavis", "mori", "ala", "borgo valsugana", "predazzo", "san martino di castrozza", "madonna di campiglio"], prov: "TN", reg: "Trentino-Alto Adige" },
+        { keys: ["bolzano", "merano", "bressanone", "brixen", "brunico", "vipiteno", "laives", "san candido", "chiusa", "egna", "silandro", "ortisei", "selva di val gardena", "dobbiaco", "naturno"], prov: "BZ", reg: "Trentino-Alto Adige" },
+
+        // UMBRIA
+        { keys: ["perugia", "foligno", "città di castello", "spoleto", "gubbio", "assisi", "bastia umbra", "castiglione del lago", "marsciano", "todi", "magione", "corciano", "umbertide", "gualdo tadino", "passignano sul trasimeno", "panicale"], prov: "PG", reg: "Umbria" },
+        { keys: ["terni", "orvieto", "narni", "amelia", "san gemini", "stroncone", "acquasparta", "fabro"], prov: "TR", reg: "Umbria" },
+
+        // BASILICATA
+        { keys: ["potenza", "melfi", "lavello", "venosa", "avigliano", "lauria", "rionero in vulture", "lagonegro", "villa d'agri", "marsicovetere", "tito", "picerno"], prov: "PZ", reg: "Basilicata" },
+        { keys: ["matera", "policoro", "pisticci", "ferrandina", "scanzano jonico", "montescaglioso", "metaponto", "tursi", "stigliano", "grottole"], prov: "MT", reg: "Basilicata" },
+
+        // MOLISE
+        { keys: ["campobasso", "termoli", "bojano", "larino", "campomarino", "guglionesi", "ferrazzano", "riccia", "montenero di bisaccia"], prov: "CB", reg: "Molise" },
+        { keys: ["isernia", "venafro", "agnone", "frosolone", "roccasicura", "castel di sangro"], prov: "IS", reg: "Molise" },
+
+        // VALLE D'AOSTA
+        { keys: ["aosta", "chatillon", "saint-vincent", "pont-saint-martin", "sarre", "verres", "courmayeur", "breuil-cervinia", "donnas", "quart", "nus", "fenis", "gressoney-saint-jean", "valtournenche", "la thuile"], prov: "AO", reg: "Valle d'Aosta" }
+    ];
+
+    let clients = JSON.parse(localStorage.getItem('note_clienti_data')) || [
+        { id: '1', nome: 'Esempio Cliente', modelli: [{nome: 'Modello Alpha', qta: 2}], localita: 'Casamassima', provincia: 'BA', regione: 'Puglia', tappa: 'Bari', spedizione: '', data: '2026-06-01', calendarizzato: false, preavviso: false, disponibilita: false, notaDisponibilita: '' }
+    ];
+    let savedModels = JSON.parse(localStorage.getItem('note_clienti_modelli')) || ["Modello Alpha", "Modello Beta", "Modello Gamma"];
+    let savedSpedizioni = JSON.parse(localStorage.getItem('note_clienti_spedizioni')) || [];
+    let activeInlineAddId = null;
+    let spedizioneFromClienteStesso = false;
+
+    const form = document.getElementById('clientForm');
+    const container = document.getElementById('tablesContainer');
+    const tappaInput = document.getElementById('tappaInput');
+    const spedizioneInput = document.getElementById('spedizioneInput');
+    const tappeDatalist = document.getElementById('tappeDatalist');
+    const spedizioniDatalist = document.getElementById('spedizioniDatalist');
+    const modelliDatalist = document.getElementById('modelliDatalist');
+    const modelsContainer = document.getElementById('modelsContainer');
+    const regioneSelect = document.getElementById('regione');
+    const provinciaSelect = document.getElementById('provincia');
+    const stagesNavBar = document.getElementById('stagesNavBar');
+    const spedizioniNavBar = document.getElementById('spedizioniNavBar');
+
+    function saveToLocalStorage() {
+        localStorage.setItem('note_clienti_data', JSON.stringify(clients));
+    }
+
+    function init() {
+        populateDropdowns();
+        updateModelliDatalist();
+        updateSpedizioniDatalist();
+        renderModelSelectRows();
+        render();
+    }
+
+    function populateDropdowns() {
+        regioneSelect.innerHTML = '<option value="">Seleziona regione...</option>';
+        ITALIAN_REGIONS.forEach(reg => {
+            const opt = document.createElement('option');
+            opt.value = reg;
+            opt.textContent = reg;
+            regioneSelect.appendChild(opt);
+        });
+
+        provinciaSelect.innerHTML = '<option value="">Seleziona provincia...</option>';
+        ITALIAN_PROVINCES.forEach(prov => {
+            const opt = document.createElement('option');
+            opt.value = prov;
+            opt.textContent = prov;
+            provinciaSelect.appendChild(opt);
+        });
+    }
+
+    function resolveLocationData(localitaStr) {
+        if (!localitaStr) return { prov: "", reg: "" };
+        const text = localitaStr.toLowerCase().trim();
+        // Preferisce la chiave più lunga che combacia (es. "reggio calabria" vince su "reggio")
+        let best = null;
+        let bestLen = 0;
+        for (const item of LOCATION_DATABASE) {
+            for (const kw of item.keys) {
+                if (text.includes(kw) && kw.length > bestLen) {
+                    best = item;
+                    bestLen = kw.length;
+                }
+            }
+        }
+        if (best) return { prov: best.prov, reg: best.reg };
+        return { prov: "", reg: "" };
+    }
+
+    window.onLocalitaInput = function(val) {
+        const res = resolveLocationData(val);
+        if (res.prov) provinciaSelect.value = res.prov;
+        if (res.reg) regioneSelect.value = res.reg;
+    }
+
+    function updateModelliDatalist() {
+        modelliDatalist.innerHTML = '';
+        savedModels.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m;
+            modelliDatalist.appendChild(opt);
+        });
+    }
+
+    function updateSpedizioniDatalist() {
+        spedizioniDatalist.innerHTML = '';
+        // Prima voce fissa: "Cliente stesso"
+        const optSelf = document.createElement('option');
+        optSelf.value = 'Cliente stesso';
+        spedizioniDatalist.appendChild(optSelf);
+        // Poi le spedizioni memorizzate
+        savedSpedizioni.forEach(s => {
+            if (s !== 'Cliente stesso') {
+                const opt = document.createElement('option');
+                opt.value = s;
+                spedizioniDatalist.appendChild(opt);
+            }
+        });
+    }
+
+    window.autoSaveNewSpedizione = function(val) {
+        const clean = val.trim();
+        if (clean && clean !== 'Cliente stesso' && !savedSpedizioni.includes(clean)) {
+            savedSpedizioni.push(clean);
+            savedSpedizioni.sort();
+            localStorage.setItem('note_clienti_spedizioni', JSON.stringify(savedSpedizioni));
+            updateSpedizioniDatalist();
+        }
+    }
+
+    window.onSpedizioneInput = function() {
+        const val = spedizioneInput.value.trim();
+        const nomeVal = document.getElementById('nome').value.trim();
+
+        if (val === 'Cliente stesso') {
+            // Ha scelto "Cliente stesso" → usa il nome e NON memorizzare
+            spedizioneFromClienteStesso = true;
+            if (nomeVal) {
+                spedizioneInput.value = nomeVal;
+            }
+        } else if (spedizioneFromClienteStesso && val === nomeVal) {
+            // Sta ancora usando il nome del cliente (modalità Cliente stesso attiva)
+            // non fare nulla, lascia il flag true
+        } else {
+            // Ha digitato/selezionato qualcosa di diverso → memorizzabile
+            spedizioneFromClienteStesso = false;
+        }
+
+        // Se ha scritto qualcosa, svuota tappa
+        if (spedizioneInput.value.trim()) {
+            tappaInput.value = '';
+        }
+    }
+
+    window.onNomeInput = function() {
+        // Se è attiva la modalità "Cliente stesso", aggiorna la spedizione col nuovo nome
+        if (spedizioneFromClienteStesso) {
+            const nomeVal = document.getElementById('nome').value.trim();
+            if (nomeVal) {
+                spedizioneInput.value = nomeVal;
+            }
+        }
+    }
+
+    function getQuantityOptionsHTML(selectedQta = 1) {
+        let html = '';
+        for (let i = 1; i <= 10; i++) {
+            html += `<option value="${i}" ${i == selectedQta ? 'selected' : ''}>${i} pz</option>`;
+        }
+        return html;
+    }
+
+    window.addModelSelectRow = function(valoreModello = '', qta = 1) {
+        const row = document.createElement('div');
+        row.className = 'model-select-row';
+        row.innerHTML = `
+            <input type="text" class="input-control model-input" list="modelliDatalist" value="${valoreModello}" placeholder="Digita modello..." required autocomplete="off" onchange="autoSaveNewTypedModel(this.value)">
+            <select class="select-control model-qta-select" style="width: 90px;">
+                ${getQuantityOptionsHTML(qta)}
+            </select>
+            <div class="model-actions-btns">
+                <button type="button" class="btn-icon" onclick="editSelectedModelRow(this)" title="Rinomina">✏️</button>
+                <button type="button" class="btn-icon danger" onclick="deleteSelectedModelRow(this)" title="Elimina">🗑️</button>
+                <button type="button" class="btn-icon danger" onclick="removeModelRow(this)" title="Rimuovi">✕</button>
+            </div>
+        `;
+        modelsContainer.appendChild(row);
+    }
+
+    function renderModelSelectRows() {
+        modelsContainer.innerHTML = '';
+        window.addModelSelectRow();
+    }
+
+    window.removeModelRow = function(btn) {
+        if (modelsContainer.children.length > 1) {
+            btn.closest('.model-select-row').remove();
+        } else {
+            alert("Mantieni almeno un modello.");
+        }
+    }
+
+    window.autoSaveNewTypedModel = function(val) {
+        const clean = val.trim();
+        if (clean && !savedModels.includes(clean)) {
+            savedModels.push(clean);
+            savedModels.sort();
+            localStorage.setItem('note_clienti_modelli', JSON.stringify(savedModels));
+            updateModelliDatalist();
+        }
+    }
+
+    window.editSelectedModelRow = function(btn) {
+        const val = btn.closest('.model-select-row').querySelector('.model-input').value.trim();
+        if (!val) return;
+        window.renameModelGlobal(val);
+    }
+
+    window.deleteSelectedModelRow = function(btn) {
+        const val = btn.closest('.model-select-row').querySelector('.model-input').value.trim();
+        if (!val) return;
+        window.deleteModelGlobal(val);
+    }
+
+    window.promptNewModel = function() {
+        const name = prompt("Nome del nuovo modello:");
+        if (name && name.trim() !== '') {
+            const clean = name.trim();
+            if (!savedModels.includes(clean)) {
+                savedModels.push(clean);
+                savedModels.sort();
+                localStorage.setItem('note_clienti_modelli', JSON.stringify(savedModels));
+                updateModelliDatalist();
+                renderModelsModalList();
+            }
+        }
+    }
+
+    window.renameModelGlobal = function(oldName) {
+        const newName = prompt(`Rinomina "${oldName}" in:`, oldName);
+        if (!newName || newName.trim() === '' || newName.trim() === oldName) return;
+        const clean = newName.trim();
+        const idx = savedModels.indexOf(oldName);
+        if (idx !== -1) savedModels[idx] = clean;
+        savedModels.sort();
+        localStorage.setItem('note_clienti_modelli', JSON.stringify(savedModels));
+        updateModelliDatalist();
+        renderModelsModalList();
+    }
+
+    window.deleteModelGlobal = function(modelName) {
+        if (!confirm(`Eliminare "${modelName}" dall'elenco?`)) return;
+        savedModels = savedModels.filter(m => m !== modelName);
+        localStorage.setItem('note_clienti_modelli', JSON.stringify(savedModels));
+        updateModelliDatalist();
+        renderModelsModalList();
+    }
+
+    window.openModelsModal = function() {
+        renderModelsModalList();
+        document.getElementById('modelsModal').style.display = 'flex';
+    }
+
+    window.closeModelsModal = function() {
+        document.getElementById('modelsModal').style.display = 'none';
+    }
+
+    function renderModelsModalList() {
+        const listEl = document.getElementById('modalModelsList');
+        if (savedModels.length === 0) {
+            listEl.innerHTML = '<p style="color:var(--text-muted); text-align:center;">Nessun modello.</p>';
+            return;
+        }
+        listEl.innerHTML = savedModels.map(m => `
+            <div class="modal-model-item">
+                <span>${m}</span>
+                <div style="display:flex; gap:6px;">
+                    <button class="btn-icon" onclick="renameModelGlobal('${m.replace(/'/g, "\\'")}')">✏️</button>
+                    <button class="btn-icon danger" onclick="deleteModelGlobal('${m.replace(/'/g, "\\'")}')">🗑️</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // ===== Gestione Spedizioni Memorizzate =====
+    window.openSpedizioniModal = function() {
+        renderSpedizioniModalList();
+        document.getElementById('spedizioniModal').style.display = 'flex';
+    }
+
+    window.closeSpedizioniModal = function() {
+        document.getElementById('spedizioniModal').style.display = 'none';
+    }
+
+    function renderSpedizioniModalList() {
+        const listEl = document.getElementById('modalSpedizioniList');
+        if (savedSpedizioni.length === 0) {
+            listEl.innerHTML = '<p style="color:var(--text-muted); text-align:center;">Nessuna spedizione memorizzata.</p>';
+            return;
+        }
+        listEl.innerHTML = savedSpedizioni.map(s => `
+            <div class="modal-model-item">
+                <span>${s}</span>
+                <div style="display:flex; gap:6px;">
+                    <button class="btn-icon danger" onclick="deleteSpedizioneGlobal('${s.replace(/'/g, "\\'")}')" title="Elimina">🗑️</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    window.deleteSpedizioneGlobal = function(spedName) {
+        if (!confirm(`Eliminare "${spedName}" dall'elenco delle spedizioni memorizzate?`)) return;
+        savedSpedizioni = savedSpedizioni.filter(s => s !== spedName);
+        localStorage.setItem('note_clienti_spedizioni', JSON.stringify(savedSpedizioni));
+        updateSpedizioniDatalist();
+        renderSpedizioniModalList();
+    }
+
+    window.onTappaOrSpedizioneInput = function(type) {
+        if (type === 'tappa' && tappaInput.value.trim()) {
+            spedizioneInput.value = '';
+        } else if (type === 'spedizione' && spedizioneInput.value.trim()) {
+            tappaInput.value = '';
+        }
+    }
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        const nomeVal = document.getElementById('nome').value.trim();
+        const localitaVal = document.getElementById('localita').value.trim();
+        const provinciaVal = provinciaSelect.value;
+        const regioneVal = regioneSelect.value;
+        const tappaVal = tappaInput.value.trim();
+        let spedizioneVal = spedizioneInput.value.trim();
+        const dataVal = document.getElementById('data').value;
+
+        // Se ha scelto "Cliente stesso", usa il nome del cliente (senza salvarlo nella lista)
+        if (spedizioneVal === 'Cliente stesso' || spedizioneFromClienteStesso) {
+            spedizioneVal = nomeVal;
+            spedizioneInput.value = nomeVal;
+            spedizioneFromClienteStesso = true;
+        }
+
+        if (!nomeVal || !localitaVal || !provinciaVal || !regioneVal || !dataVal) {
+            alert("Compila tutti i campi obbligatori (inclusi provincia e regione).");
+            return;
+        }
+
+        if (!tappaVal && !spedizioneVal) {
+            alert("Inserisci almeno una Tappa oppure una Spedizione.");
+            return;
+        }
+
+        // Memorizza la spedizione SOLO se non proviene da "Cliente stesso"
+        if (spedizioneVal && !spedizioneFromClienteStesso) {
+            window.autoSaveNewSpedizione(spedizioneVal);
+        }
+        spedizioneFromClienteStesso = false;
+
+        const rows = document.querySelectorAll('#modelsContainer .model-select-row');
+        const modelli = [];
+
+        rows.forEach(row => {
+            const inputEl = row.querySelector('.model-input');
+            const qtaSelect = row.querySelector('.model-qta-select');
+            if (inputEl && inputEl.value.trim() !== '') {
+                const modelName = inputEl.value.trim();
+                modelli.push({ nome: modelName, qta: parseInt(qtaSelect.value) || 1 });
+                window.autoSaveNewTypedModel(modelName);
+            }
+        });
+
+        if (modelli.length === 0) {
+            alert("Inserisci almeno un modello.");
+            return;
+        }
+
+        const newClient = {
+            id: 'id_' + Date.now() + Math.random().toString(36).substring(2, 7),
+            nome: nomeVal,
+            modelli: modelli,
+            localita: localitaVal,
+            provincia: provinciaVal,
+            regione: regioneVal,
+            tappa: tappaVal,
+            spedizione: spedizioneVal,
+            data: dataVal,
+            calendarizzato: false,
+            preavviso: false,
+            disponibilita: false,
+            notaDisponibilita: ''
+        };
+
+        clients.push(newClient);
+        saveToLocalStorage();
+        form.reset();
+        renderModelSelectRows();
+        render();
+    });
+
+    window.toggleStatus = function(id, field) {
+        const client = clients.find(c => String(c.id) === String(id));
+        if (!client) {
+            console.warn('Cliente non trovato:', id);
+            return;
+        }
+        client[field] = !Boolean(client[field]);
+        saveToLocalStorage();
+        render();
+    }
+
+    // Event delegation per le caselle di stato e le note (più affidabile degli onclick inline)
+    document.getElementById('tablesContainer').addEventListener('click', function(e) {
+        const cell = e.target.closest('[data-toggle-id]');
+        if (cell) {
+            e.preventDefault();
+            e.stopPropagation();
+            const id = cell.getAttribute('data-toggle-id');
+            const field = cell.getAttribute('data-toggle-field');
+            if (id && field) {
+                window.toggleStatus(id, field);
+            }
+        }
+    });
+
+    document.getElementById('tablesContainer').addEventListener('input', function(e) {
+        if (e.target.classList.contains('note-input') && e.target.hasAttribute('data-note-id')) {
+            const id = e.target.getAttribute('data-note-id');
+            window.updateNote(id, e.target.value);
+        }
+    });
+
+    window.toggleInlineAddModel = function(id) {
+        activeInlineAddId = (activeInlineAddId === id) ? null : id;
+        render();
+    }
+
+    window.saveInlineModel = function(id) {
+        const inputEl = document.getElementById(`inline-model-input-${id}`);
+        const qtaEl = document.getElementById(`inline-model-qta-${id}`);
+        if (inputEl && inputEl.value.trim() !== '') {
+            const client = clients.find(c => c.id === id);
+            if (client) {
+                client.modelli.push({ nome: inputEl.value.trim(), qta: parseInt(qtaEl.value) || 1 });
+                window.autoSaveNewTypedModel(inputEl.value.trim());
+                activeInlineAddId = null;
+                saveToLocalStorage();
+                render();
+            }
+        }
+    }
+
+    window.editModelQuantity = function(id, index) {
+        const client = clients.find(c => c.id === id);
+        if (client && client.modelli[index]) {
+            const newQta = prompt(`Modifica quantità per "${client.modelli[index].nome}":`, client.modelli[index].qta || 1);
+            if (newQta !== null) {
+                const parsed = parseInt(newQta);
+                if (parsed > 0) {
+                    client.modelli[index].qta = parsed;
+                    saveToLocalStorage();
+                    render();
+                }
+            }
+        }
+    }
+
+    window.removeModelFromClient = function(id, index) {
+        const client = clients.find(c => c.id === id);
+        if (client && client.modelli[index] !== undefined) {
+            client.modelli.splice(index, 1);
+            saveToLocalStorage();
+            render();
+        }
+    }
+
+    window.updateStage = function(id, newStage) {
+        const client = clients.find(c => c.id === id);
+        if (client) {
+            const val = newStage.trim();
+            client.tappa = val;
+            if (val) client.spedizione = ''; // solo una delle due
+            saveToLocalStorage();
+            render();
+        }
+    }
+
+    window.updateSpedizione = function(id, newSped) {
+        const client = clients.find(c => c.id === id);
+        if (client) {
+            let val = newSped.trim();
+            let fromClienteStesso = false;
+            // Se ha scelto "Cliente stesso", usa il nome del cliente (senza salvarlo)
+            if (val === 'Cliente stesso') {
+                val = client.nome;
+                fromClienteStesso = true;
+            }
+            client.spedizione = val;
+            if (val) client.tappa = ''; // solo una delle due
+            if (val && !fromClienteStesso) window.autoSaveNewSpedizione(val);
+            saveToLocalStorage();
+            render();
+        }
+    }
+
+    window.updateProvincia = function(id, newProv) {
+        const client = clients.find(c => c.id === id);
+        if (client) {
+            client.provincia = newProv;
+            saveToLocalStorage();
+            render();
+        }
+    }
+
+    window.updateRegion = function(id, newRegion) {
+        const client = clients.find(c => c.id === id);
+        if (client) {
+            client.regione = newRegion;
+            saveToLocalStorage();
+            render();
+        }
+    }
+
+    window.updateDate = function(id, newDate) {
+        const client = clients.find(c => c.id === id);
+        if (client && newDate) {
+            client.data = newDate;
+            saveToLocalStorage();
+            render();
+        }
+    }
+
+    window.updateNote = function(id, text) {
+        const client = clients.find(c => c.id === id);
+        if (client) {
+            client.notaDisponibilita = text;
+            localStorage.setItem('note_clienti_data', JSON.stringify(clients));
+        }
+    }
+
+    window.deleteClient = function(id) {
+        if(confirm("Eliminare questo cliente?")) {
+            clients = clients.filter(c => c.id !== id);
+            saveToLocalStorage();
+            render();
+        }
+    }
+
+    window.deleteStage = function(stageName) {
+        if (confirm(`Eliminare l'intera tappa "${stageName}"?`)) {
+            clients = clients.filter(c => (c.tappa || '').trim() !== stageName);
+            saveToLocalStorage();
+            render();
+        }
+    }
+
+    window.deleteSpedizione = function(spedName) {
+        if (confirm(`Eliminare l'intera spedizione "${spedName}"?`)) {
+            clients = clients.filter(c => (c.spedizione || '').trim() !== spedName);
+            saveToLocalStorage();
+            render();
+        }
+    }
+
+    window.scrollToStage = function(stageId) {
+        const el = document.getElementById(`stage-group-${stageId}`);
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    window.scrollToSpedizione = function(spedId) {
+        const el = document.getElementById(`sped-group-${spedId}`);
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    function sortClientsGeographically(list) {
+        if (list.length <= 1) return list;
+        let unvisited = [...list];
+        let sorted = [];
+        let current = unvisited.shift();
+        sorted.push(current);
+
+        while (unvisited.length > 0) {
+            let nearestIdx = 0;
+            let minDiff = Infinity;
+            for (let i = 0; i < unvisited.length; i++) {
+                let locA = current.localita.toLowerCase().trim();
+                let locB = unvisited[i].localita.toLowerCase().trim();
+                let diff = Math.abs(locA.length - locB.length);
+                if (locA === locB) diff = -10;
+                if (diff < minDiff) { minDiff = diff; nearestIdx = i; }
+            }
+            current = unvisited.splice(nearestIdx, 1)[0];
+            sorted.push(current);
+        }
+        return sorted;
+    }
+
+    window.openRoute = function(stageClients, startFromCasamassima) {
+        if (!stageClients || stageClients.length === 0) return;
+        let orderedClients = sortClientsGeographically(stageClients);
+        const locations = orderedClients.map(c => c.localita.trim()).filter(l => l !== '');
+        if (locations.length === 0) return;
+
+        let origin = startFromCasamassima ? 'Casamassima, BA' : locations[0];
+        let destination = locations[locations.length - 1];
+        let waypoints = startFromCasamassima ? locations.slice(0, -1) : locations.slice(1, -1);
+
+        let mapUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`;
+        if (waypoints.length > 0) {
+            mapUrl += `&waypoints=${waypoints.map(w => encodeURIComponent(w)).join('|')}`;
+        }
+        window.open(mapUrl, '_blank');
+    }
+
+    window.exportBackup = function() {
+        const backupData = { version: 17, clients, savedModels, savedSpedizioni };
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+        const a = document.createElement('a');
+        a.href = dataStr;
+        a.download = `backup_${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+    }
+
+    window.importBackup = function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const imported = JSON.parse(e.target.result);
+                if (imported.clients && confirm("Ripristinare i dati?")) {
+                    clients = imported.clients.map(client => {
+                        const resolved = resolveLocationData(client.localita);
+                        return {
+                            ...client,
+                            provincia: resolved.prov || client.provincia || '',
+                            regione: resolved.reg || client.regione || '',
+                            spedizione: client.spedizione || ''
+                        };
+                    });
+
+                    if (imported.savedModels) savedModels = imported.savedModels;
+                    if (imported.savedSpedizioni) savedSpedizioni = imported.savedSpedizioni;
+                    saveToLocalStorage();
+                    localStorage.setItem('note_clienti_modelli', JSON.stringify(savedModels));
+                    localStorage.setItem('note_clienti_spedizioni', JSON.stringify(savedSpedizioni));
+                    init();
+                    alert("Ripristino e correzione automatica completati!");
+                }
+            } catch (err) {
+                alert("Errore file backup.");
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    function render() {
+        // Normalizza campi di ogni cliente
+        clients.forEach(c => {
+            if (c.spedizione === undefined) c.spedizione = '';
+            c.calendarizzato = (c.calendarizzato === true || c.calendarizzato === 'true');
+            c.preavviso = (c.preavviso === true || c.preavviso === 'true');
+            c.disponibilita = (c.disponibilita === true || c.disponibilita === 'true');
+        });
+
+        // Tappe (solo clienti che hanno tappa e non spedizione)
+        const stages = Array.from(new Set(
+            clients.filter(c => (c.tappa || '').trim() && !(c.spedizione || '').trim())
+                   .map(c => c.tappa.trim())
+        )).sort();
+
+        tappeDatalist.innerHTML = '';
+        stages.forEach(stage => {
+            const opt = document.createElement('option');
+            opt.value = stage;
+            tappeDatalist.appendChild(opt);
+        });
+
+        // Aggiorna solo il datalist (non aggiunge automaticamente i nomi dei clienti)
+        updateSpedizioniDatalist();
+
+        // Lista spedizioni per la barra di navigazione (dai clienti)
+        const spedizioni = Array.from(new Set(
+            clients.filter(c => (c.spedizione || '').trim())
+                   .map(c => c.spedizione.trim())
+        )).sort();
+
+        // Barra navigazione tappe
+        if (stages.length > 0) {
+            stagesNavBar.style.display = 'flex';
+            stagesNavBar.innerHTML = stages.map(stage => {
+                const safeId = stage.replace(/[^a-zA-Z0-9-_]/g, '_');
+                return `<button class="stage-pill" onclick="scrollToStage('${safeId}')">🚩 ${stage}</button>`;
+            }).join('');
+        } else {
+            stagesNavBar.style.display = 'none';
+        }
+
+        // Barra navigazione spedizioni
+        if (spedizioni.length > 0) {
+            spedizioniNavBar.style.display = 'flex';
+            spedizioniNavBar.innerHTML = spedizioni.map(sped => {
+                const safeId = sped.replace(/[^a-zA-Z0-9-_]/g, '_');
+                return `<button class="stage-pill" style="border-color:#7c3aed; color:#7c3aed;" onclick="scrollToSpedizione('${safeId}')">📦 ${sped}</button>`;
+            }).join('');
+        } else {
+            spedizioniNavBar.style.display = 'none';
+        }
+
+        container.innerHTML = '';
+        const searchTerm = document.getElementById('searchInput')?.value.toLowerCase().trim() || '';
+
+        const filteredClients = clients.filter(c => {
+            const matchModels = c.modelli ? c.modelli.some(m => m.nome.toLowerCase().includes(searchTerm)) : false;
+            return (
+                c.nome.toLowerCase().includes(searchTerm) ||
+                matchModels ||
+                c.localita.toLowerCase().includes(searchTerm) ||
+                (c.provincia && c.provincia.toLowerCase().includes(searchTerm)) ||
+                (c.regione && c.regione.toLowerCase().includes(searchTerm)) ||
+                (c.tappa && c.tappa.toLowerCase().includes(searchTerm)) ||
+                (c.spedizione && c.spedizione.toLowerCase().includes(searchTerm)) ||
+                (c.notaDisponibilita && c.notaDisponibilita.toLowerCase().includes(searchTerm))
+            );
+        });
+
+        if (filteredClients.length === 0) {
+            container.innerHTML = `<p style="text-align:center; color: var(--text-muted); padding: 40px;">${searchTerm ? 'Nessun risultato.' : 'Nessun cliente registrato.'}</p>`;
+            return;
+        }
+
+        // Helper per creare una tabella di gruppo (tappa o spedizione)
+        function createGroup(groupName, groupClients, isSpedizione) {
+            groupClients.sort((a, b) => new Date(a.data) - new Date(b.data));
+
+            const safeId = groupName.replace(/[^a-zA-Z0-9-_]/g, '_');
+            const groupEl = document.createElement('div');
+            groupEl.className = 'stage-group';
+            groupEl.id = isSpedizione ? `sped-group-${safeId}` : `stage-group-${safeId}`;
+
+            const headerIcon = isSpedizione ? '📦' : '🚩';
+            const headerLabel = isSpedizione ? 'Spedizione' : 'Tappa';
+            const deleteFn = isSpedizione ? 'deleteSpedizione' : 'deleteStage';
+            const headerBg = isSpedizione ? 'background:#7c3aed;' : '';
+
+            let tableHTML = `
+                <div class="stage-header" style="${headerBg}">
+                    <span>${headerIcon} ${headerLabel}: ${groupName}</span>
+                    <button class="btn btn-icon danger" style="color:white; border-color:transparent; background:rgba(255,255,255,0.2)" onclick="${deleteFn}('${groupName.replace(/'/g, "\\'")}')">🗑️ Cancella ${headerLabel}</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Cliente / Modelli</th>
+                            <th style="text-align: center;">Calendarizzato</th>
+                            <th style="text-align: center;">Preavviso</th>
+                            <th>Disponibilità / Note</th>
+                            <th style="width: 40px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            groupClients.forEach(client => {
+                const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(client.localita)}`;
+                const modelsHTML = (client.modelli || []).map((mod, idx) => `
+                    <span class="model-badge">
+                        ${mod.nome}
+                        <span class="model-qta-badge" onclick="editModelQuantity('${client.id}', ${idx})" title="Modifica Q.tà">${mod.qta || 1} pz</span>
+                        <button class="btn-del-badge" onclick="removeModelFromClient('${client.id}', ${idx})">×</button>
+                    </span>
+                `).join('');
+
+                const isAddingModel = (activeInlineAddId === client.id);
+                const inlineAddHTML = isAddingModel ? `
+                    <div class="inline-add-box">
+                        <input type="text" id="inline-model-input-${client.id}" class="input-control" list="modelliDatalist" style="flex:1; min-width:160px;" placeholder="Digita modello..." autocomplete="off">
+                        <select id="inline-model-qta-${client.id}" class="select-control" style="width:80px;">
+                            ${getQuantityOptionsHTML(1)}
+                        </select>
+                        <button class="btn btn-primary" style="padding:6px 12px;" onclick="saveInlineModel('${client.id}')">Salva</button>
+                        <button class="btn" style="padding:6px 12px;" onclick="toggleInlineAddModel('${client.id}')">✕</button>
+                    </div>
+                ` : '';
+
+                const provinciaOptionsHTML = ITALIAN_PROVINCES.map(prov => `<option value="${prov}" ${prov === client.provincia ? 'selected' : ''}>${prov}</option>`).join('');
+                const regionOptionsHTML = ITALIAN_REGIONS.map(reg => `<option value="${reg}" ${reg === client.regione ? 'selected' : ''}>${reg}</option>`).join('');
+
+                tableHTML += `
+                    <tr>
+                        <td class="client-info">
+                            <strong>${client.nome}</strong>
+                            <div class="models-list">
+                                ${modelsHTML}
+                                <button class="btn-add-inline" onclick="toggleInlineAddModel('${client.id}')">+ modello</button>
+                            </div>
+                            ${inlineAddHTML}
+                            <div style="margin-top: 4px;">
+                                <a href="${mapUrl}" target="_blank" rel="noopener" class="client-location-link">📍 ${client.localita} 🔗</a>
+                            </div>
+                            <div class="edit-controls">
+                                <div class="edit-group">
+                                    <label>📅 Data:</label>
+                                    <input type="date" class="edit-input" value="${client.data || ''}" onchange="updateDate('${client.id}', this.value)">
+                                </div>
+                                <div class="edit-group">
+                                    <label>🏷️ Prov:</label>
+                                    <select class="edit-select" onchange="updateProvincia('${client.id}', this.value)">
+                                        <option value="">-</option>
+                                        ${provinciaOptionsHTML}
+                                    </select>
+                                </div>
+                                <div class="edit-group">
+                                    <label>🏛️ Regione:</label>
+                                    <select class="edit-select" onchange="updateRegion('${client.id}', this.value)">
+                                        <option value="">-</option>
+                                        ${regionOptionsHTML}
+                                    </select>
+                                </div>
+                                ${!isSpedizione ? `
+                                <div class="edit-group">
+                                    <label>🚩 Tappa:</label>
+                                    <input type="text" class="edit-input" value="${client.tappa || ''}" onchange="updateStage('${client.id}', this.value)">
+                                </div>
+                                ` : ''}
+                            </div>
+                        </td>
+                        <td class="status-cell ${(client.calendarizzato === true) ? 'active' : ''}" data-toggle-id="${client.id}" data-toggle-field="calendarizzato">
+                            <div class="checkbox-x">${(client.calendarizzato === true) ? '✓' : ''}</div>
+                        </td>
+                        <td class="status-cell ${(client.preavviso === true) ? 'active' : ''}" data-toggle-id="${client.id}" data-toggle-field="preavviso">
+                            <div class="checkbox-x">${(client.preavviso === true) ? '✓' : ''}</div>
+                        </td>
+                        <td class="disp-cell">
+                            <div class="disp-container">
+                                <div class="status-cell ${(client.disponibilita === true) ? 'active' : ''}" data-toggle-id="${client.id}" data-toggle-field="disponibilita">
+                                    <div class="checkbox-x">${(client.disponibilita === true) ? '✓' : ''}</div>
+                                </div>
+                                <input type="text" class="note-input" placeholder="Note orario..." value="${client.notaDisponibilita || ''}" data-note-id="${client.id}">
+                            </div>
+                        </td>
+                        <td>
+                            <button class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            const groupDataJSON = JSON.stringify(groupClients).replace(/'/g, "&apos;");
+
+            tableHTML += `
+                    </tbody>
+                </table>
+                <div class="stage-footer">
+                    <button class="btn btn-route" onclick='openRoute(${groupDataJSON}, true)'>📍 Percorso da Casamassima (BA)</button>
+                    <button class="btn btn-route-alt" onclick='openRoute(${groupDataJSON}, false)'>🗺️ Percorso in sequenza</button>
+                </div>
+            `;
+            groupEl.innerHTML = tableHTML;
+            container.appendChild(groupEl);
+        }
+
+        // 1. Gruppi Tappe (clienti con tappa e senza spedizione)
+        const groupedTappe = {};
+        filteredClients.forEach(client => {
+            const hasSped = (client.spedizione || '').trim();
+            const hasTappa = (client.tappa || '').trim();
+            if (hasTappa && !hasSped) {
+                if (!groupedTappe[hasTappa]) groupedTappe[hasTappa] = [];
+                groupedTappe[hasTappa].push(client);
+            }
+        });
+        Object.keys(groupedTappe).sort().forEach(stage => {
+            createGroup(stage, groupedTappe[stage], false);
+        });
+
+        // 2. Gruppi Spedizioni
+        const groupedSped = {};
+        filteredClients.forEach(client => {
+            const hasSped = (client.spedizione || '').trim();
+            if (hasSped) {
+                if (!groupedSped[hasSped]) groupedSped[hasSped] = [];
+                groupedSped[hasSped].push(client);
+            }
+        });
+        Object.keys(groupedSped).sort().forEach(sped => {
+            createGroup(sped, groupedSped[sped], true);
+        });
+
+        // 3. Clienti senza tappa né spedizione
+        const senzaGruppo = filteredClients.filter(c => !(c.tappa || '').trim() && !(c.spedizione || '').trim());
+        if (senzaGruppo.length > 0) {
+            createGroup('SENZA TAPPA / SPEDIZIONE', senzaGruppo, false);
+        }
+    }
+
+    // Bottone "Torna in alto"
+    window.scrollToTop = function() {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    window.addEventListener('scroll', function() {
+        const btn = document.getElementById('backToTopBtn');
+        if (!btn) return;
+        if (window.scrollY > 300) {
+            btn.classList.add('visible');
+        } else {
+            btn.classList.remove('visible');
+        }
+    });
+
+    init();
+</script>
+
+<button type="button" id="backToTopBtn" class="btn-back-to-top" onclick="scrollToTop()" title="Torna in alto">↑</button>
+
+</body>
+</html>
