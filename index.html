@@ -21,7 +21,7 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: var(--bg); color: var(--text); padding: 20px 24px; line-height: 1.5; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: var(--bg); color: var(--text); padding: 0; margin: 0; line-height: 1.5; }
         .container { width: 100%; max-width: 1560px; margin: 0 auto; }
         .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 16px; }
         .header-title-group h1 { font-size: 1.8rem; color: var(--primary); font-weight: 700; }
@@ -87,6 +87,66 @@
         .modal-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted); }
         .modal-body { max-height: 350px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
         .modal-model-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; }
+
+        .confirm-modal .modal {
+            text-align: center;
+            max-width: 420px;
+            padding: 32px 28px 24px;
+        }
+        .confirm-modal .confirm-icon {
+            width: 72px;
+            height: 72px;
+            margin: 0 auto 16px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+            animation: confirmPop 0.35s ease;
+        }
+        @keyframes confirmPop {
+            0% { transform: scale(0.5); opacity: 0; }
+            70% { transform: scale(1.08); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .confirm-modal h3 {
+            font-size: 1.25rem;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+        .confirm-modal .confirm-name {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #16a34a;
+            margin-bottom: 8px;
+        }
+        .confirm-modal .confirm-desc {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+            line-height: 1.45;
+        }
+        .confirm-modal .confirm-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .confirm-modal .confirm-actions .btn {
+            min-width: 120px;
+            justify-content: center;
+            padding: 10px 16px;
+        }
+        .btn-success {
+            background: #16a34a;
+            color: white;
+            border: none;
+        }
+        .btn-success:hover {
+            background: #15803d;
+            color: white;
+            border-color: #15803d;
+        }
 
         /* Bottone torna in alto */
         .btn-back-to-top {
@@ -165,9 +225,113 @@
             justify-content: center;
             padding: 12px;
         }
-        body.locked .container,
+        body.locked .app-layout,
         body.locked .btn-back-to-top {
             display: none !important;
+        }
+
+        .app-layout {
+            display: flex;
+            align-items: stretch;
+            min-height: 100vh;
+        }
+        .portal-nav {
+            position: sticky;
+            top: 0;
+            align-self: flex-start;
+            width: 220px;
+            min-width: 220px;
+            max-height: 100vh;
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 20px 12px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .portal-nav .portal-brand {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: white;
+            padding: 8px 12px 16px;
+            border-bottom: 1px solid #334155;
+            margin-bottom: 8px;
+        }
+        .portal-nav-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            text-align: left;
+            padding: 12px 14px;
+            border: none;
+            border-radius: 10px;
+            background: transparent;
+            color: #94a3b8;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .portal-nav-btn:hover {
+            background: #1e293b;
+            color: #e2e8f0;
+        }
+        .portal-nav-btn.active {
+            background: #2563eb;
+            color: white;
+        }
+        .portal-nav-btn .nav-badge {
+            margin-left: auto;
+            background: #16a34a;
+            color: white;
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+        .portal-nav-btn.active .nav-badge {
+            background: rgba(255,255,255,0.25);
+        }
+        .main-content {
+            flex: 1;
+            min-width: 0;
+            padding: 20px 24px;
+        }
+        .view-panel { display: none; }
+        .view-panel.active { display: block; }
+        #viewInstallati .installati-table-wrap {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        #viewInstallati .installati-header {
+            background: #16a34a;
+            color: white;
+            padding: 14px 20px;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+        @media (max-width: 900px) {
+            .app-layout { flex-direction: column; }
+            .portal-nav {
+                position: relative;
+                width: 100%;
+                min-width: 100%;
+                max-height: none;
+                flex-direction: row;
+                flex-wrap: wrap;
+                align-items: center;
+            }
+            .portal-nav .portal-brand {
+                width: 100%;
+                border-bottom: none;
+                padding-bottom: 8px;
+                margin-bottom: 0;
+            }
+            .portal-nav-btn { flex: 1; min-width: 140px; justify-content: center; }
         }
     </style>
 </head>
@@ -185,7 +349,19 @@
     </div>
 </div>
 
-<div class="container">
+<div class="app-layout">
+<nav class="portal-nav">
+    <div class="portal-brand">📋 Portale Clienti</div>
+    <button type="button" class="portal-nav-btn active" id="navNote" onclick="switchView('note')">
+        📝 Note clienti
+    </button>
+    <button type="button" class="portal-nav-btn" id="navInstallati" onclick="switchView('installati')">
+        ✅ Installazioni eseguite
+        <span class="nav-badge" id="navInstallatiCount">0</span>
+    </button>
+</nav>
+<div class="container main-content">
+<div id="viewNote" class="view-panel active">
     <div class="header-bar">
         <div class="header-title-group">
             <h1>📋 Gestione Note Clienti</h1>
@@ -275,7 +451,22 @@
     <div id="spedizioniNavBar" class="stages-nav-bar"></div>
 
     <div id="tablesContainer"></div>
-</div>
+</div><!-- /#viewNote -->
+
+<div id="viewInstallati" class="view-panel">
+    <div class="header-bar">
+        <div class="header-title-group">
+            <h1>✅ Installazioni eseguite</h1>
+        </div>
+    </div>
+    <div class="installati-table-wrap">
+        <div class="installati-header">Clienti con installazione completata</div>
+        <div id="installatiTableContainer"></div>
+    </div>
+</div><!-- /#viewInstallati -->
+
+</div><!-- /.main-content -->
+</div><!-- /.app-layout -->
 
 <div id="modelsModal" class="modal-overlay">
     <div class="modal">
@@ -300,6 +491,19 @@
         <div class="modal-body" id="modalSpedizioniList"></div>
         <div style="display: flex; gap: 8px;">
             <button type="button" class="btn" style="flex: 1;" onclick="closeSpedizioniModal()">Chiudi</button>
+        </div>
+    </div>
+</div>
+
+<div id="confirmInstallModal" class="modal-overlay confirm-modal">
+    <div class="modal">
+        <div class="confirm-icon">✅</div>
+        <h3>Installazione eseguita?</h3>
+        <div class="confirm-name" id="confirmInstallName"></div>
+        <p class="confirm-desc">Il cliente verrà spostato nella sezione<br><strong>Installazioni eseguite</strong>.</p>
+        <div class="confirm-actions">
+            <button type="button" class="btn" onclick="closeConfirmInstall()">Annulla</button>
+            <button type="button" class="btn btn-success" onclick="confirmInstallato()">Sì, conferma</button>
         </div>
     </div>
 </div>
@@ -471,7 +675,7 @@
     ];
 
     let clients = JSON.parse(localStorage.getItem('note_clienti_data')) || [
-        { id: '1', nome: 'Esempio Cliente', modelli: [{nome: 'Modello Alpha', qta: 2}], localita: 'Casamassima', provincia: 'BA', regione: 'Puglia', tappa: 'Bari', spedizione: '', data: '2026-06-01', calendarizzato: false, preavviso: false, disponibilita: false, notaDisponibilita: '' }
+        { id: '1', nome: 'Esempio Cliente', modelli: [{nome: 'Modello Alpha', qta: 2}], localita: 'Casamassima', provincia: 'BA', regione: 'Puglia', tappa: 'Bari', spedizione: '', data: '2026-06-01', calendarizzato: false, preavviso: false, disponibilita: false, notaDisponibilita: '', installato: false }
     ];
     let savedModels = JSON.parse(localStorage.getItem('note_clienti_modelli')) || ["Modello Alpha", "Modello Beta", "Modello Gamma"];
     let savedSpedizioni = JSON.parse(localStorage.getItem('note_clienti_spedizioni')) || [];
@@ -865,7 +1069,8 @@
             calendarizzato: false,
             preavviso: false,
             disponibilita: false,
-            notaDisponibilita: ''
+            notaDisponibilita: '',
+            installato: false
         };
 
         clients.push(newClient);
@@ -884,6 +1089,41 @@
             return;
         }
         client[field] = !Boolean(client[field]);
+        saveToLocalStorage();
+        render();
+    }
+
+    let pendingInstallId = null;
+
+    window.markInstallato = function(id) {
+        const client = clients.find(c => String(c.id) === String(id));
+        if (!client) return;
+        pendingInstallId = id;
+        document.getElementById('confirmInstallName').textContent = client.nome;
+        document.getElementById('confirmInstallModal').style.display = 'flex';
+    }
+
+    window.closeConfirmInstall = function() {
+        pendingInstallId = null;
+        document.getElementById('confirmInstallModal').style.display = 'none';
+    }
+
+    window.confirmInstallato = function() {
+        if (!pendingInstallId) return;
+        const client = clients.find(c => String(c.id) === String(pendingInstallId));
+        if (client) {
+            client.installato = true;
+            saveToLocalStorage();
+            render();
+        }
+        pendingInstallId = null;
+        document.getElementById('confirmInstallModal').style.display = 'none';
+    }
+
+    window.unmarkInstallato = function(id) {
+        const client = clients.find(c => String(c.id) === String(id));
+        if (!client) return;
+        client.installato = false;
         saveToLocalStorage();
         render();
     }
@@ -1144,6 +1384,7 @@
             c.calendarizzato = (c.calendarizzato === true || c.calendarizzato === 'true');
             c.preavviso = (c.preavviso === true || c.preavviso === 'true');
             c.disponibilita = (c.disponibilita === true || c.disponibilita === 'true');
+            c.installato = (c.installato === true || c.installato === 'true');
         });
 
         // Tappe (solo clienti che hanno tappa e non spedizione)
@@ -1169,7 +1410,8 @@
         )).sort();
 
         // Conta clienti in attesa (per la pill)
-        const inAttesaCount = clients.filter(c => !(c.tappa || '').trim() && !(c.spedizione || '').trim()).length;
+        const inAttesaCount = clients.filter(c => !c.installato && !(c.tappa || '').trim() && !(c.spedizione || '').trim()).length;
+        const installatiCount = clients.filter(c => c.installato).length;
 
         // Barra navigazione tappe (+ pill In attesa se ci sono)
         let stagesPills = '';
@@ -1218,6 +1460,10 @@
 
         if (filteredClients.length === 0) {
             container.innerHTML = `<p style="text-align:center; color: var(--text-muted); padding: 40px;">${searchTerm ? 'Nessun risultato.' : 'Nessun cliente registrato.'}</p>`;
+            renderInstallatiPage();
+        if (document.getElementById('navInstallatiCount')) {
+            document.getElementById('navInstallatiCount').textContent = clients.filter(c => c.installato).length;
+        }
             return;
         }
 
@@ -1226,15 +1472,21 @@
         function createGroup(groupName, groupClients, type) {
             const isSpedizione = type === 'spedizione';
             const isAttesa = type === 'attesa';
+            const isInstallato = type === 'installati';
             groupClients.sort((a, b) => new Date(a.data) - new Date(b.data));
 
-            const safeId = isAttesa ? 'IN_ATTESA' : groupName.replace(/[^a-zA-Z0-9-_]/g, '_');
+            const safeId = isAttesa ? 'IN_ATTESA' : (isInstallato ? 'INSTALLATI' : groupName.replace(/[^a-zA-Z0-9-_]/g, '_'));
             const groupEl = document.createElement('div');
             groupEl.className = 'stage-group';
             groupEl.id = isSpedizione ? `sped-group-${safeId}` : `stage-group-${safeId}`;
 
             let headerIcon, headerLabel, headerBg, deleteBtn;
-            if (isAttesa) {
+            if (isInstallato) {
+                headerIcon = '✅';
+                headerLabel = 'Installazioni eseguite';
+                headerBg = 'background:#16a34a;';
+                deleteBtn = '';
+            } else if (isAttesa) {
                 headerIcon = '⏳';
                 headerLabel = 'In attesa di assegnazione';
                 headerBg = 'background:#d97706;';
@@ -1251,9 +1503,48 @@
                 deleteBtn = `<button class="btn btn-icon danger" style="color:white; border-color:transparent; background:rgba(255,255,255,0.2)" onclick="deleteStage('${groupName.replace(/'/g, "\\'")}')">🗑️ Cancella Tappa</button>`;
             }
 
+            // Sezione installati: tabella semplificata
+            if (isInstallato) {
+                let tableHTML = `
+                <div class="stage-header" style="${headerBg}">
+                    <span>${headerIcon} ${headerLabel} (${groupClients.length})</span>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Modello/i</th>
+                            <th>Paese / Località</th>
+                            <th>Regione</th>
+                            <th style="width: 120px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                `;
+                groupClients.forEach(client => {
+                    const modelsText = (client.modelli || []).map(m => m.nome + (m.qta ? ' (' + m.qta + ' pz)' : '')).join(', ') || '-';
+                    tableHTML += `
+                        <tr>
+                            <td><strong>${client.nome}</strong></td>
+                            <td>${modelsText}</td>
+                            <td>📍 ${client.localita || '-'}</td>
+                            <td>${client.regione || '-'}</td>
+                            <td style="white-space:nowrap;">
+                                <button class="btn" style="padding:4px 8px; font-size:0.75rem;" onclick="unmarkInstallato('${client.id}')" title="Ripristina">↩ Ripristina</button>
+                                <button class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                tableHTML += `</tbody></table>`;
+                groupEl.innerHTML = tableHTML;
+                container.appendChild(groupEl);
+                return;
+            }
+
             let tableHTML = `
                 <div class="stage-header" style="${headerBg}">
-                    <span>${headerIcon} ${isAttesa ? headerLabel + ' (' + groupClients.length + ')' : headerLabel + ': ' + groupName}</span>
+                    <span>${headerIcon} ${(isAttesa || isInstallato) ? headerLabel + ' (' + groupClients.length + ')' : headerLabel + ': ' + groupName}</span>
                     ${deleteBtn}
                 </div>
                 <table>
@@ -1357,6 +1648,7 @@
                             </div>
                         </td>
                         <td>
+                            <button class="btn" style="padding:4px 8px; font-size:0.7rem; background:#16a34a; color:white; border:none; margin-bottom:4px;" onclick="markInstallato('${client.id}')" title="Installazione eseguita">✅ Installato</button>
                             <button class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
                         </td>
                     </tr>
@@ -1377,15 +1669,16 @@
             container.appendChild(groupEl);
         }
 
-        // 1. Clienti in attesa (senza tappa né spedizione) — in alto
-        const inAttesa = filteredClients.filter(c => !(c.tappa || '').trim() && !(c.spedizione || '').trim());
+        // 1. Clienti in attesa (non installati, senza tappa né spedizione)
+        const inAttesa = filteredClients.filter(c => !c.installato && !(c.tappa || '').trim() && !(c.spedizione || '').trim());
         if (inAttesa.length > 0) {
             createGroup('In attesa', inAttesa, 'attesa');
         }
 
-        // 2. Gruppi Tappe (clienti con tappa e senza spedizione)
+        // 2. Gruppi Tappe (non installati, con tappa e senza spedizione)
         const groupedTappe = {};
         filteredClients.forEach(client => {
+            if (client.installato) return;
             const hasSped = (client.spedizione || '').trim();
             const hasTappa = (client.tappa || '').trim();
             if (hasTappa && !hasSped) {
@@ -1397,9 +1690,10 @@
             createGroup(stage, groupedTappe[stage], 'tappa');
         });
 
-        // 3. Gruppi Spedizioni
+        // 3. Gruppi Spedizioni (non installati)
         const groupedSped = {};
         filteredClients.forEach(client => {
+            if (client.installato) return;
             const hasSped = (client.spedizione || '').trim();
             if (hasSped) {
                 if (!groupedSped[hasSped]) groupedSped[hasSped] = [];
@@ -1409,6 +1703,72 @@
         Object.keys(groupedSped).sort().forEach(sped => {
             createGroup(sped, groupedSped[sped], 'spedizione');
         });
+
+        renderInstallatiPage();
+        if (document.getElementById('navInstallatiCount')) {
+            document.getElementById('navInstallatiCount').textContent = clients.filter(c => c.installato).length;
+        }
+    }
+
+
+    let currentView = 'note';
+
+    window.switchView = function(view) {
+        currentView = view;
+        document.getElementById('viewNote').classList.toggle('active', view === 'note');
+        document.getElementById('viewInstallati').classList.toggle('active', view === 'installati');
+        document.getElementById('navNote').classList.toggle('active', view === 'note');
+        document.getElementById('navInstallati').classList.toggle('active', view === 'installati');
+        if (view === 'installati') renderInstallatiPage();
+    };
+
+    function renderInstallatiPage() {
+        const container = document.getElementById('installatiTableContainer');
+        const countEl = document.getElementById('navInstallatiCount');
+        const installati = clients.filter(c => c.installato);
+        if (countEl) countEl.textContent = installati.length;
+
+        if (installati.length === 0) {
+            container.innerHTML = '<p style="text-align:center; color: var(--text-muted); padding: 40px;">Nessuna installazione eseguita.</p>';
+            return;
+        }
+
+        installati.sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'it'));
+
+        let html = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Modello/i</th>
+                        <th>Paese / Località</th>
+                        <th>Provincia</th>
+                        <th>Regione</th>
+                        <th style="width: 140px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        installati.forEach(client => {
+            const modelsText = (client.modelli || []).map(m => {
+                return `<span class="model-badge">${m.nome}${m.qta ? ' <span class="model-qta-badge">' + m.qta + ' pz</span>' : ''}</span>`;
+            }).join(' ') || '-';
+            html += `
+                <tr>
+                    <td><strong>${client.nome}</strong></td>
+                    <td><div class="models-list">${modelsText}</div></td>
+                    <td>📍 ${client.localita || '-'}</td>
+                    <td>${client.provincia || '-'}</td>
+                    <td>${client.regione || '-'}</td>
+                    <td style="white-space:nowrap;">
+                        <button type="button" class="btn" style="padding:4px 8px; font-size:0.75rem;" onclick="unmarkInstallato('${client.id}')">↩ Ripristina</button>
+                        <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
+                    </td>
+                </tr>
+            `;
+        });
+        html += '</tbody></table>';
+        container.innerHTML = html;
     }
 
     // Bottone "Torna in alto"
