@@ -169,6 +169,13 @@
                     </select>
                 </div>
 
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer; text-transform:none; font-size:0.9rem; color:var(--text);">
+                        <input type="checkbox" id="inAttesaCheck" style="width:18px; height:18px; cursor:pointer;" onchange="onInAttesaToggle()">
+                        ⏳ In attesa di assegnazione
+                    </label>
+                </div>
+
                 <div class="form-group">
                     <label for="tappaInput">Tappa</label>
                     <input type="text" id="tappaInput" class="input-control" list="tappeDatalist" placeholder="Scrivi o seleziona tappa..." autocomplete="off" oninput="onTappaOrSpedizioneInput('tappa')">
@@ -697,7 +704,23 @@
         renderSpedizioniModalList();
     }
 
+    window.onInAttesaToggle = function() {
+        const checked = document.getElementById('inAttesaCheck').checked;
+        tappaInput.disabled = checked;
+        spedizioneInput.disabled = checked;
+        if (checked) {
+            tappaInput.value = '';
+            spedizioneInput.value = '';
+            tappaInput.style.opacity = '0.5';
+            spedizioneInput.style.opacity = '0.5';
+        } else {
+            tappaInput.style.opacity = '1';
+            spedizioneInput.style.opacity = '1';
+        }
+    }
+
     window.onTappaOrSpedizioneInput = function(type) {
+        if (document.getElementById('inAttesaCheck').checked) return;
         if (type === 'tappa' && tappaInput.value.trim()) {
             spedizioneInput.value = '';
         } else if (type === 'spedizione' && spedizioneInput.value.trim()) {
@@ -712,7 +735,7 @@
         const localitaVal = document.getElementById('localita').value.trim();
         const provinciaVal = provinciaSelect.value;
         const regioneVal = regioneSelect.value;
-        const tappaVal = tappaInput.value.trim();
+        let tappaVal = tappaInput.value.trim();
         let spedizioneVal = spedizioneInput.value.trim();
         const dataVal = document.getElementById('data').value;
 
@@ -728,9 +751,17 @@
             return;
         }
 
-        if (!tappaVal && !spedizioneVal) {
-            alert("Inserisci almeno una Tappa oppure una Spedizione.");
+        const inAttesa = document.getElementById('inAttesaCheck').checked;
+
+        if (!inAttesa && !tappaVal && !spedizioneVal) {
+            alert("Inserisci una Tappa oppure una Spedizione, oppure spunta \"In attesa di assegnazione\".");
             return;
+        }
+
+        // Se in attesa, forza tappa e spedizione vuote
+        if (inAttesa) {
+            tappaVal = '';
+            spedizioneVal = '';
         }
 
         // Memorizza la spedizione SOLO se non proviene da "Cliente stesso"
@@ -776,6 +807,8 @@
         clients.push(newClient);
         saveToLocalStorage();
         form.reset();
+        document.getElementById('inAttesaCheck').checked = false;
+        window.onInAttesaToggle();
         renderModelSelectRows();
         render();
     });
@@ -1071,13 +1104,22 @@
                    .map(c => c.spedizione.trim())
         )).sort();
 
-        // Barra navigazione tappe
-        if (stages.length > 0) {
+        // Conta clienti in attesa (per la pill)
+        const inAttesaCount = clients.filter(c => !(c.tappa || '').trim() && !(c.spedizione || '').trim()).length;
+
+        // Barra navigazione tappe (+ pill In attesa se ci sono)
+        let stagesPills = '';
+        if (inAttesaCount > 0) {
+            stagesPills += `<button class="stage-pill" style="border-color:#f59e0b; color:#b45309; background:#fffbeb;" onclick="scrollToStage('IN_ATTESA')">⏳ In attesa (${inAttesaCount})</button>`;
+        }
+        stagesPills += stages.map(stage => {
+            const safeId = stage.replace(/[^a-zA-Z0-9-_]/g, '_');
+            return `<button class="stage-pill" onclick="scrollToStage('${safeId}')">🚩 ${stage}</button>`;
+        }).join('');
+
+        if (stagesPills) {
             stagesNavBar.style.display = 'flex';
-            stagesNavBar.innerHTML = stages.map(stage => {
-                const safeId = stage.replace(/[^a-zA-Z0-9-_]/g, '_');
-                return `<button class="stage-pill" onclick="scrollToStage('${safeId}')">🚩 ${stage}</button>`;
-            }).join('');
+            stagesNavBar.innerHTML = stagesPills;
         } else {
             stagesNavBar.style.display = 'none';
         }
@@ -1115,24 +1157,40 @@
             return;
         }
 
-        // Helper per creare una tabella di gruppo (tappa o spedizione)
-        function createGroup(groupName, groupClients, isSpedizione) {
+        // Helper per creare una tabella di gruppo (tappa / spedizione / in attesa)
+        // type: 'tappa' | 'spedizione' | 'attesa'
+        function createGroup(groupName, groupClients, type) {
+            const isSpedizione = type === 'spedizione';
+            const isAttesa = type === 'attesa';
             groupClients.sort((a, b) => new Date(a.data) - new Date(b.data));
 
-            const safeId = groupName.replace(/[^a-zA-Z0-9-_]/g, '_');
+            const safeId = isAttesa ? 'IN_ATTESA' : groupName.replace(/[^a-zA-Z0-9-_]/g, '_');
             const groupEl = document.createElement('div');
             groupEl.className = 'stage-group';
             groupEl.id = isSpedizione ? `sped-group-${safeId}` : `stage-group-${safeId}`;
 
-            const headerIcon = isSpedizione ? '📦' : '🚩';
-            const headerLabel = isSpedizione ? 'Spedizione' : 'Tappa';
-            const deleteFn = isSpedizione ? 'deleteSpedizione' : 'deleteStage';
-            const headerBg = isSpedizione ? 'background:#7c3aed;' : '';
+            let headerIcon, headerLabel, headerBg, deleteBtn;
+            if (isAttesa) {
+                headerIcon = '⏳';
+                headerLabel = 'In attesa di assegnazione';
+                headerBg = 'background:#d97706;';
+                deleteBtn = '';
+            } else if (isSpedizione) {
+                headerIcon = '📦';
+                headerLabel = 'Spedizione';
+                headerBg = 'background:#7c3aed;';
+                deleteBtn = `<button class="btn btn-icon danger" style="color:white; border-color:transparent; background:rgba(255,255,255,0.2)" onclick="deleteSpedizione('${groupName.replace(/'/g, "\\'")}')">🗑️ Cancella Spedizione</button>`;
+            } else {
+                headerIcon = '🚩';
+                headerLabel = 'Tappa';
+                headerBg = '';
+                deleteBtn = `<button class="btn btn-icon danger" style="color:white; border-color:transparent; background:rgba(255,255,255,0.2)" onclick="deleteStage('${groupName.replace(/'/g, "\\'")}')">🗑️ Cancella Tappa</button>`;
+            }
 
             let tableHTML = `
                 <div class="stage-header" style="${headerBg}">
-                    <span>${headerIcon} ${headerLabel}: ${groupName}</span>
-                    <button class="btn btn-icon danger" style="color:white; border-color:transparent; background:rgba(255,255,255,0.2)" onclick="${deleteFn}('${groupName.replace(/'/g, "\\'")}')">🗑️ Cancella ${headerLabel}</button>
+                    <span>${headerIcon} ${isAttesa ? headerLabel + ' (' + groupClients.length + ')' : headerLabel + ': ' + groupName}</span>
+                    ${deleteBtn}
                 </div>
                 <table>
                     <thead>
@@ -1203,12 +1261,21 @@
                                         ${regionOptionsHTML}
                                     </select>
                                 </div>
-                                ${!isSpedizione ? `
+                                ${isAttesa ? `
+                                <div class="edit-group">
+                                    <label>🚩 Tappa:</label>
+                                    <input type="text" class="edit-input" value="${client.tappa || ''}" onchange="updateStage('${client.id}', this.value)" placeholder="Scrivi o seleziona tappa..." list="tappeDatalist" autocomplete="off">
+                                </div>
+                                <div class="edit-group">
+                                    <label>📦 Spedizione:</label>
+                                    <input type="text" class="edit-input" value="${client.spedizione || ''}" onchange="updateSpedizione('${client.id}', this.value)" placeholder="Assegna spedizione..." list="spedizioniDatalist">
+                                </div>
+                                ` : (!isSpedizione ? `
                                 <div class="edit-group">
                                     <label>🚩 Tappa:</label>
                                     <input type="text" class="edit-input" value="${client.tappa || ''}" onchange="updateStage('${client.id}', this.value)">
                                 </div>
-                                ` : ''}
+                                ` : '')}
                             </div>
                         </td>
                         <td class="status-cell ${(client.calendarizzato === true) ? 'active' : ''}" data-toggle-id="${client.id}" data-toggle-field="calendarizzato">
@@ -1246,7 +1313,13 @@
             container.appendChild(groupEl);
         }
 
-        // 1. Gruppi Tappe (clienti con tappa e senza spedizione)
+        // 1. Clienti in attesa (senza tappa né spedizione) — in alto
+        const inAttesa = filteredClients.filter(c => !(c.tappa || '').trim() && !(c.spedizione || '').trim());
+        if (inAttesa.length > 0) {
+            createGroup('In attesa', inAttesa, 'attesa');
+        }
+
+        // 2. Gruppi Tappe (clienti con tappa e senza spedizione)
         const groupedTappe = {};
         filteredClients.forEach(client => {
             const hasSped = (client.spedizione || '').trim();
@@ -1257,10 +1330,10 @@
             }
         });
         Object.keys(groupedTappe).sort().forEach(stage => {
-            createGroup(stage, groupedTappe[stage], false);
+            createGroup(stage, groupedTappe[stage], 'tappa');
         });
 
-        // 2. Gruppi Spedizioni
+        // 3. Gruppi Spedizioni
         const groupedSped = {};
         filteredClients.forEach(client => {
             const hasSped = (client.spedizione || '').trim();
@@ -1270,14 +1343,8 @@
             }
         });
         Object.keys(groupedSped).sort().forEach(sped => {
-            createGroup(sped, groupedSped[sped], true);
+            createGroup(sped, groupedSped[sped], 'spedizione');
         });
-
-        // 3. Clienti senza tappa né spedizione
-        const senzaGruppo = filteredClients.filter(c => !(c.tappa || '').trim() && !(c.spedizione || '').trim());
-        if (senzaGruppo.length > 0) {
-            createGroup('SENZA TAPPA / SPEDIZIONE', senzaGruppo, false);
-        }
     }
 
     // Bottone "Torna in alto"
