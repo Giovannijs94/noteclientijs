@@ -371,7 +371,8 @@
         }
         .view-panel { display: none; }
         .view-panel.active { display: block; }
-        #viewInstallati .installati-table-wrap {
+        #viewInstallati .installati-table-wrap,
+        #viewStandby .installati-table-wrap {
             background: var(--card-bg);
             border-radius: var(--radius);
             border: 1px solid var(--border);
@@ -384,6 +385,32 @@
             padding: 14px 20px;
             font-size: 1.1rem;
             font-weight: 700;
+        }
+        #viewStandby .installati-header {
+            background: #d97706;
+            color: white;
+            padding: 14px 20px;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+        .portal-nav-btn .nav-badge.badge-standby {
+            background: #d97706;
+        }
+        .btn-standby {
+            background: #d97706;
+            color: white;
+            border: none;
+        }
+        .btn-standby:hover {
+            background: #b45309;
+            color: white;
+            border-color: #b45309;
+        }
+        .confirm-modal.confirm-standby .confirm-icon {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+        }
+        .confirm-modal.confirm-standby .confirm-name {
+            color: #d97706;
         }
         @media (max-width: 900px) {
             .app-layout { flex-direction: column; }
@@ -429,6 +456,10 @@
     <button type="button" class="portal-nav-btn" id="navInstallati" onclick="switchView('installati')">
         ✅ Installazioni eseguite
         <span class="nav-badge" id="navInstallatiCount">0</span>
+    </button>
+    <button type="button" class="portal-nav-btn" id="navStandby" onclick="switchView('standby')">
+        ⏸️ Stand-by
+        <span class="nav-badge badge-standby" id="navStandbyCount">0</span>
     </button>
 </nav>
 <div class="container main-content">
@@ -551,6 +582,18 @@
     </div>
 </div><!-- /#viewInstallati -->
 
+<div id="viewStandby" class="view-panel">
+    <div class="header-bar">
+        <div class="header-title-group">
+            <h1>⏸️ Stand-by</h1>
+        </div>
+    </div>
+    <div class="installati-table-wrap">
+        <div class="installati-header">Clienti che hanno rimandato</div>
+        <div id="standbyTableContainer"></div>
+    </div>
+</div><!-- /#viewStandby -->
+
 </div><!-- /.main-content -->
 </div><!-- /.app-layout -->
 
@@ -617,6 +660,20 @@
         <div class="confirm-actions">
             <button type="button" class="btn" onclick="closeRenameModel()">Annulla</button>
             <button type="button" class="btn btn-primary" onclick="confirmRenameModel()">Salva</button>
+        </div>
+    </div>
+</div>
+
+
+<div id="confirmStandbyModal" class="modal-overlay confirm-modal confirm-standby">
+    <div class="modal">
+        <div class="confirm-icon">⏸️</div>
+        <h3>Mettere in Stand-by?</h3>
+        <div class="confirm-name" id="confirmStandbyName"></div>
+        <p class="confirm-desc">Il cliente verrà spostato nella sezione<br><strong>Stand-by</strong> (ha rimandato).</p>
+        <div class="confirm-actions">
+            <button type="button" class="btn" onclick="closeConfirmStandby()">Annulla</button>
+            <button type="button" class="btn btn-standby" onclick="confirmStandby()">Sì, metti in stand-by</button>
         </div>
     </div>
 </div>
@@ -801,7 +858,7 @@
     ];
 
     let clients = JSON.parse(localStorage.getItem('note_clienti_data')) || [
-        { id: '1', nome: 'Esempio Cliente', modelli: [{nome: 'Modello Alpha', qta: 2}], localita: 'Casamassima', provincia: 'BA', regione: 'Puglia', tappa: 'Bari', spedizione: '', data: '2026-06-01', calendarizzato: false, preavviso: false, disponibilita: false, notaDisponibilita: '', installato: false }
+        { id: '1', nome: 'Esempio Cliente', modelli: [{nome: 'Modello Alpha', qta: 2}], localita: 'Casamassima', provincia: 'BA', regione: 'Puglia', tappa: 'Bari', spedizione: '', data: '2026-06-01', calendarizzato: false, preavviso: false, disponibilita: false, notaDisponibilita: '', installato: false, standby: false }
     ];
     let savedModels = JSON.parse(localStorage.getItem('note_clienti_modelli')) || ["Modello Alpha", "Modello Beta", "Modello Gamma"];
     let savedSpedizioni = JSON.parse(localStorage.getItem('note_clienti_spedizioni')) || [];
@@ -1288,7 +1345,8 @@
             preavviso: false,
             disponibilita: false,
             notaDisponibilita: '',
-            installato: false
+            installato: false,
+            standby: false
         };
 
         clients.push(newClient);
@@ -1331,6 +1389,7 @@
         const client = clients.find(c => String(c.id) === String(pendingInstallId));
         if (client) {
             client.installato = true;
+            client.standby = false;
             saveToLocalStorage();
             render();
         }
@@ -1342,6 +1401,42 @@
         const client = clients.find(c => String(c.id) === String(id));
         if (!client) return;
         client.installato = false;
+        saveToLocalStorage();
+        render();
+    }
+
+    let pendingStandbyId = null;
+
+    window.markStandby = function(id) {
+        const client = clients.find(c => String(c.id) === String(id));
+        if (!client) return;
+        pendingStandbyId = id;
+        document.getElementById('confirmStandbyName').textContent = client.nome;
+        document.getElementById('confirmStandbyModal').style.display = 'flex';
+    }
+
+    window.closeConfirmStandby = function() {
+        pendingStandbyId = null;
+        document.getElementById('confirmStandbyModal').style.display = 'none';
+    }
+
+    window.confirmStandby = function() {
+        if (!pendingStandbyId) return;
+        const client = clients.find(c => String(c.id) === String(pendingStandbyId));
+        if (client) {
+            client.standby = true;
+            client.installato = false;
+            saveToLocalStorage();
+            render();
+        }
+        pendingStandbyId = null;
+        document.getElementById('confirmStandbyModal').style.display = 'none';
+    }
+
+    window.unmarkStandby = function(id) {
+        const client = clients.find(c => String(c.id) === String(id));
+        if (!client) return;
+        client.standby = false;
         saveToLocalStorage();
         render();
     }
@@ -1619,6 +1714,7 @@
             c.preavviso = (c.preavviso === true || c.preavviso === 'true');
             c.disponibilita = (c.disponibilita === true || c.disponibilita === 'true');
             c.installato = (c.installato === true || c.installato === 'true');
+            c.standby = (c.standby === true || c.standby === 'true');
         });
 
         // Tappe (solo clienti che hanno tappa e non spedizione)
@@ -1644,7 +1740,7 @@
         )).sort();
 
         // Conta clienti in attesa (per la pill)
-        const inAttesaCount = clients.filter(c => !c.installato && !(c.tappa || '').trim() && !(c.spedizione || '').trim()).length;
+        const inAttesaCount = clients.filter(c => !c.installato && !c.standby && !(c.tappa || '').trim() && !(c.spedizione || '').trim()).length;
         const installatiCount = clients.filter(c => c.installato).length;
 
         // Barra navigazione tappe (+ pill In attesa se ci sono)
@@ -1698,6 +1794,11 @@
         if (document.getElementById('navInstallatiCount')) {
             document.getElementById('navInstallatiCount').textContent = clients.filter(c => c.installato).length;
         }
+        if (document.getElementById('navStandbyCount')) {
+            document.getElementById('navStandbyCount').textContent = clients.filter(c => c.standby && !c.installato).length;
+        }
+        if (currentView === 'standby') renderStandbyPage();
+        if (currentView === 'installati') renderInstallatiPage();
             return;
         }
 
@@ -1883,6 +1984,7 @@
                         </td>
                         <td>
                             <button class="btn" style="padding:4px 8px; font-size:0.7rem; background:#16a34a; color:white; border:none; margin-bottom:4px;" onclick="markInstallato('${client.id}')" title="Installazione eseguita">✅ Installato</button>
+                            <button class="btn" style="padding:4px 8px; font-size:0.7rem; background:#d97706; color:white; border:none; margin-bottom:4px;" onclick="markStandby('${client.id}')" title="Stand-by">⏸️ Stand-by</button>
                             <button class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
                         </td>
                     </tr>
@@ -1904,7 +2006,7 @@
         }
 
         // 1. Clienti in attesa (non installati, senza tappa né spedizione)
-        const inAttesa = filteredClients.filter(c => !c.installato && !(c.tappa || '').trim() && !(c.spedizione || '').trim());
+        const inAttesa = filteredClients.filter(c => !c.installato && !c.standby && !(c.tappa || '').trim() && !(c.spedizione || '').trim());
         if (inAttesa.length > 0) {
             createGroup('In attesa', inAttesa, 'attesa');
         }
@@ -1912,7 +2014,7 @@
         // 2. Gruppi Tappe (non installati, con tappa e senza spedizione)
         const groupedTappe = {};
         filteredClients.forEach(client => {
-            if (client.installato) return;
+            if (client.installato || client.standby) return;
             const hasSped = (client.spedizione || '').trim();
             const hasTappa = (client.tappa || '').trim();
             if (hasTappa && !hasSped) {
@@ -1927,7 +2029,7 @@
         // 3. Gruppi Spedizioni (non installati)
         const groupedSped = {};
         filteredClients.forEach(client => {
-            if (client.installato) return;
+            if (client.installato || client.standby) return;
             const hasSped = (client.spedizione || '').trim();
             if (hasSped) {
                 if (!groupedSped[hasSped]) groupedSped[hasSped] = [];
@@ -1942,18 +2044,76 @@
         if (document.getElementById('navInstallatiCount')) {
             document.getElementById('navInstallatiCount').textContent = clients.filter(c => c.installato).length;
         }
+        if (document.getElementById('navStandbyCount')) {
+            document.getElementById('navStandbyCount').textContent = clients.filter(c => c.standby && !c.installato).length;
+        }
+        if (currentView === 'standby') renderStandbyPage();
+        if (currentView === 'installati') renderInstallatiPage();
     }
 
 
     let currentView = 'note';
 
+    function renderStandbyPage() {
+        const container = document.getElementById('standbyTableContainer');
+        const countEl = document.getElementById('navStandbyCount');
+        const list = clients.filter(c => c.standby && !c.installato);
+        if (countEl) countEl.textContent = list.length;
+
+        if (!container) return;
+        if (list.length === 0) {
+            container.innerHTML = '<p style="text-align:center; color: var(--text-muted); padding: 40px;">Nessun cliente in stand-by.</p>';
+            return;
+        }
+
+        list.sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'it'));
+
+        let html = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Modello/i</th>
+                        <th>Paese / Località</th>
+                        <th>Provincia</th>
+                        <th>Regione</th>
+                        <th style="width: 140px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        list.forEach(client => {
+            const modelsText = (client.modelli || []).map(m => {
+                return `<span class="model-badge">${m.nome}${m.qta ? ' <span class="model-qta-badge">' + m.qta + ' pz</span>' : ''}</span>`;
+            }).join(' ') || '-';
+            html += `
+                <tr>
+                    <td><strong>${client.nome}</strong></td>
+                    <td><div class="models-list">${modelsText}</div></td>
+                    <td>📍 ${client.localita || '-'}</td>
+                    <td>${client.provincia || '-'}</td>
+                    <td>${client.regione || '-'}</td>
+                    <td style="white-space:nowrap;">
+                        <button type="button" class="btn" style="padding:4px 8px; font-size:0.75rem;" onclick="unmarkStandby('${client.id}')">↩ Ripristina</button>
+                        <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
+                    </td>
+                </tr>
+            `;
+        });
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    }
+
     window.switchView = function(view) {
         currentView = view;
         document.getElementById('viewNote').classList.toggle('active', view === 'note');
         document.getElementById('viewInstallati').classList.toggle('active', view === 'installati');
+        document.getElementById('viewStandby').classList.toggle('active', view === 'standby');
         document.getElementById('navNote').classList.toggle('active', view === 'note');
         document.getElementById('navInstallati').classList.toggle('active', view === 'installati');
+        document.getElementById('navStandby').classList.toggle('active', view === 'standby');
         if (view === 'installati') renderInstallatiPage();
+        if (view === 'standby') renderStandbyPage();
     };
 
     function renderInstallatiPage() {
