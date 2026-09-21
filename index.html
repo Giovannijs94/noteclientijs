@@ -704,8 +704,57 @@
             <h1>📋 Pre-pianificazione</h1>
         </div>
     </div>
+
+    <div class="card" style="margin-bottom:16px;">
+        <div class="card-title">➕ Aggiungi cliente in Pre-pianificazione</div>
+        <form id="prepClientForm">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="prepNome">Nome Cliente</label>
+                    <input type="text" id="prepNome" class="input-control" required placeholder="Es. Mario Rossi">
+                </div>
+                <div class="form-group">
+                    <label for="prepModello">Modello</label>
+                    <input type="text" id="prepModello" class="input-control" list="modelliDatalist" placeholder="Digita modello..." autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label for="prepQta">Quantità</label>
+                    <select id="prepQta" class="select-control">
+                        <option value="1">1 pz</option>
+                        <option value="2">2 pz</option>
+                        <option value="3">3 pz</option>
+                        <option value="4">4 pz</option>
+                        <option value="5">5 pz</option>
+                        <option value="6">6 pz</option>
+                        <option value="7">7 pz</option>
+                        <option value="8">8 pz</option>
+                        <option value="9">9 pz</option>
+                        <option value="10">10 pz</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="prepLocalita">Località / Paese</label>
+                    <input type="text" id="prepLocalita" class="input-control" required placeholder="Es. Casamassima" oninput="onPrepLocalitaInput(this.value)">
+                </div>
+                <div class="form-group">
+                    <label for="prepProvincia">Provincia</label>
+                    <select id="prepProvincia" class="select-control" required>
+                        <option value="">Seleziona provincia...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="prepRegione">Regione</label>
+                    <select id="prepRegione" class="select-control" required>
+                        <option value="">Seleziona regione...</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:12px; margin-top:8px;">+ Aggiungi in Pre-pianificazione</button>
+        </form>
+    </div>
+
     <div class="installati-table-wrap">
-        <div class="installati-header">Clienti in attesa di assegnazione a tappa o spedizione</div>
+        <div class="installati-header">Clienti raggruppati per regione</div>
         <div id="prepTableContainer"></div>
     </div>
 </div><!-- /#viewPrep -->
@@ -1723,6 +1772,14 @@
         }
     }
 
+    window.updateNotaPrep = function(id, text) {
+        const client = clients.find(c => String(c.id) === String(id));
+        if (client) {
+            client.notaPrep = text;
+            saveToLocalStorage();
+        }
+    }
+
     let pendingDeleteId = null;
 
     window.deleteClient = function(id) {
@@ -2256,7 +2313,85 @@
         container.innerHTML = html;
     }
 
+    function populatePrepDropdowns() {
+        const prepReg = document.getElementById('prepRegione');
+        const prepProv = document.getElementById('prepProvincia');
+        if (!prepReg || !prepProv) return;
+        if (prepReg.options.length <= 1) {
+            ITALIAN_REGIONS.forEach(reg => {
+                const opt = document.createElement('option');
+                opt.value = reg;
+                opt.textContent = reg;
+                prepReg.appendChild(opt);
+            });
+            ITALIAN_PROVINCES.forEach(prov => {
+                const opt = document.createElement('option');
+                opt.value = prov;
+                opt.textContent = prov;
+                prepProv.appendChild(opt);
+            });
+        }
+    }
+
+    window.onPrepLocalitaInput = function(val) {
+        const res = resolveLocationData(val);
+        const prepProv = document.getElementById('prepProvincia');
+        const prepReg = document.getElementById('prepRegione');
+        if (res.prov && prepProv) prepProv.value = res.prov;
+        if (res.reg && prepReg) prepReg.value = res.reg;
+    };
+
+    (function setupPrepForm() {
+        const prepForm = document.getElementById('prepClientForm');
+        if (!prepForm || prepForm.dataset.bound) return;
+        prepForm.dataset.bound = '1';
+        prepForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const nomeVal = document.getElementById('prepNome').value.trim();
+            const localitaVal = document.getElementById('prepLocalita').value.trim();
+            const provinciaVal = document.getElementById('prepProvincia').value;
+            const regioneVal = document.getElementById('prepRegione').value;
+            const modelloVal = document.getElementById('prepModello').value.trim();
+            const qtaVal = parseInt(document.getElementById('prepQta').value, 10) || 1;
+
+            if (!nomeVal || !localitaVal || !provinciaVal || !regioneVal) {
+                alert('Compila nome, località, provincia e regione.');
+                return;
+            }
+
+            const modelli = [];
+            if (modelloVal) {
+                modelli.push({ nome: modelloVal, qta: qtaVal });
+                window.autoSaveNewTypedModel(modelloVal);
+            }
+
+            const newClient = {
+                id: 'id_' + Date.now() + Math.random().toString(36).substring(2, 7),
+                nome: nomeVal,
+                modelli: modelli,
+                localita: localitaVal,
+                provincia: provinciaVal,
+                regione: regioneVal,
+                tappa: '',
+                spedizione: '',
+                data: '',
+                calendarizzato: false,
+                preavviso: false,
+                disponibilita: false,
+                notaDisponibilita: '',
+                installato: false,
+                standby: false
+            };
+            clients.push(newClient);
+            saveToLocalStorage();
+            prepForm.reset();
+            render();
+            renderPrepPage();
+        });
+    })();
+
     function renderPrepPage() {
+        populatePrepDropdowns();
         const container = document.getElementById('prepTableContainer');
         const countEl = document.getElementById('navPrepCount');
         const list = clients.filter(c => !c.installato && !c.standby && !(c.tappa || '').trim() && !(c.spedizione || '').trim());
@@ -2268,54 +2403,80 @@
             return;
         }
 
-        list.sort((a, b) => new Date(a.data || 0) - new Date(b.data || 0));
-
-        let html = `
-            <table>
-                <thead>
-                    <tr>
-                        <th>Cliente / Modelli</th>
-                        <th>Località</th>
-                        <th>Assegna</th>
-                        <th style="width: 130px;"></th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-        list.forEach(client => {
-            const modelsText = (client.modelli || []).map(m => {
-                return `<span class="model-badge">${m.nome}${m.qta ? ' <span class="model-qta-badge">' + m.qta + ' pz</span>' : ''}</span>`;
-            }).join(' ') || '-';
-            html += `
-                <tr>
-                    <td>
-                        <strong>${client.nome}</strong>
-                        <div class="models-list" style="margin-top:6px;">${modelsText}</div>
-                        <div style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;">📅 ${client.data || '-'}</div>
-                    </td>
-                    <td>
-                        📍 ${client.localita || '-'}<br>
-                        <span style="font-size:0.8rem; color:var(--text-muted);">${client.provincia || ''} ${client.regione ? '· ' + client.regione : ''}</span>
-                    </td>
-                    <td>
-                        <div class="edit-controls" style="margin-top:0;">
-                            <div class="edit-group">
-                                <label>🚩 Tappa:</label>
-                                <input type="text" class="edit-input" value="" placeholder="Assegna tappa..." list="tappeDatalist" autocomplete="off" onchange="updateStage('${client.id}', this.value)">
-                            </div>
-                            <div class="edit-group">
-                                <label>📦 Spedizione:</label>
-                                <input type="text" class="edit-input" value="" placeholder="Assegna spedizione..." list="spedizioniDatalist" autocomplete="off" onchange="updateSpedizione('${client.id}', this.value)">
-                            </div>
-                        </div>
-                    </td>
-                    <td style="white-space:nowrap;">
-                        <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
-                    </td>
-                </tr>
-            `;
+        // Raggruppa per regione
+        const byRegion = {};
+        list.forEach(c => {
+            const reg = (c.regione || '').trim() || 'Senza regione';
+            if (!byRegion[reg]) byRegion[reg] = [];
+            byRegion[reg].push(c);
         });
-        html += '</tbody></table>';
+
+        const regions = Object.keys(byRegion).sort((a, b) => {
+            if (a === 'Senza regione') return 1;
+            if (b === 'Senza regione') return -1;
+            return a.localeCompare(b, 'it');
+        });
+
+        let html = '';
+        regions.forEach(reg => {
+            const group = byRegion[reg];
+            group.sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'it'));
+            html += `
+                <div style="border-bottom:1px solid var(--border);">
+                    <div style="background:#eff6ff; padding:10px 16px; font-weight:700; color:#1e40af; display:flex; justify-content:space-between; align-items:center;">
+                        <span>🏛️ ${reg}</span>
+                        <span style="font-size:0.8rem; background:#2563eb; color:white; padding:2px 10px; border-radius:999px;">${group.length}</span>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Cliente / Modelli</th>
+                                <th>Località</th>
+                                <th>Assegna</th>
+                                <th style="width: 60px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            group.forEach(client => {
+                const modelsText = (client.modelli || []).map(m => {
+                    return `<span class="model-badge">${m.nome}${m.qta ? ' <span class="model-qta-badge">' + m.qta + ' pz</span>' : ''}</span>`;
+                }).join(' ') || '-';
+                html += `
+                    <tr>
+                        <td>
+                            <strong>${client.nome}</strong>
+                            <div class="models-list" style="margin-top:6px;">${modelsText}</div>
+                        </td>
+                        <td>
+                            📍 ${client.localita || '-'}<br>
+                            <span style="font-size:0.8rem; color:var(--text-muted);">${client.provincia || ''}</span>
+                        </td>
+                        <td>
+                            <div class="edit-controls" style="margin-top:0;">
+                                <div class="edit-group">
+                                    <label>🚩 Tappa:</label>
+                                    <input type="text" class="edit-input" value="" placeholder="Assegna tappa..." list="tappeDatalist" autocomplete="off" onchange="updateStage('${client.id}', this.value)">
+                                </div>
+                                <div class="edit-group">
+                                    <label>📦 Spedizione:</label>
+                                    <input type="text" class="edit-input" value="" placeholder="Assegna spedizione..." list="spedizioniDatalist" autocomplete="off" onchange="updateSpedizione('${client.id}', this.value)">
+                                </div>
+                            </div>
+                            <div style="margin-top:8px;">
+                                <label style="font-size:0.7rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">📝 Note</label>
+                                <input type="text" class="note-input" style="width:100%; margin-top:4px;" placeholder="Scrivi una nota..." value="${(client.notaPrep || '').replace(/"/g, '&quot;')}" oninput="updateNotaPrep('${client.id}', this.value)">
+                            </div>
+                        </td>
+                        <td>
+                            <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            html += `</tbody></table></div>`;
+        });
+
         container.innerHTML = html;
     }
 
