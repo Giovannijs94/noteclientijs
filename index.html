@@ -889,12 +889,124 @@
     ];
 
     const ITALIAN_PROVINCES = [
-        "AG", "AL", "AN", "AO", "AR", "AP", "AT", "AV", "BA", "BT", "BL", "BN", "BG", "BI", "BO", "BZ", "BS", "BR", "CA", "CL", 
-        "CB", "CI", "CE", "CT", "CZ", "EN", "FM", "FE", "FI", "FG", "FC", "FR", "GE", "GO", "GR", "IM", "IS", "SP", "LT", "LE", 
-        "LC", "LI", "LO", "LU", "MC", "MN", "MS", "MT", "ME", "MI", "MO", "MB", "NA", "NO", "NU", "OT", "OR", "PD", "PA", "PR", 
-        "PV", "PG", "PU", "PE", "PC", "PI", "PT", "PN", "PZ", "PO", "RG", "RA", "RC", "RE", "RI", "RN", "RM", "RO", "SA", "SS", 
-        "SV", "SI", "SR", "SO", "SU", "TA", "TE", "TR", "TO", "TP", "TN", "TV", "TS", "UD", "VA", "VE", "VB", "VC", "VR", "VS", "VT", "VV"
+        "AG", "AL", "AN", "AO", "AP", "AQ", "AR", "AT", "AV", "BA", "BG", "BI", "BL", "BN", "BO", "BR", "BS", "BT", "BZ", "CA", "CB", "CE", "CH", "CL", "CN", "CO", "CR", "CS", "CT", "CZ", "EN", "FC", "FE", "FG", "FI", "FM", "FR", "GE", "GO", "GR", "IM", "IS", "KR", "LC", "LE", "LI", "LO", "LT", "LU", "MB", "MC", "ME", "MI", "MN", "MO", "MS", "MT", "NA", "NO", "NU", "OR", "PA", "PC", "PD", "PE", "PG", "PI", "PN", "PO", "PR", "PT", "PU", "PV", "PZ", "RA", "RC", "RE", "RG", "RI", "RM", "RN", "RO", "SA", "SI", "SO", "SP", "SR", "SS", "SU", "SV", "TA", "TE", "TN", "TO", "TP", "TR", "TS", "TV", "UD", "VA", "VB", "VC", "VE", "VI", "VR", "VT", "VV"
     ];
+
+    // Sigla -> nome completo provincia (elenco completo)
+    const PROVINCE_NAMES = {
+        "AG": "Agrigento",
+        "AL": "Alessandria",
+        "AN": "Ancona",
+        "AO": "Aosta",
+        "AP": "Ascoli Piceno",
+        "AQ": "L'Aquila",
+        "AR": "Arezzo",
+        "AT": "Asti",
+        "AV": "Avellino",
+        "BA": "Bari",
+        "BG": "Bergamo",
+        "BI": "Biella",
+        "BL": "Belluno",
+        "BN": "Benevento",
+        "BO": "Bologna",
+        "BR": "Brindisi",
+        "BS": "Brescia",
+        "BT": "Barletta-Andria-Trani",
+        "BZ": "Bolzano",
+        "CA": "Cagliari",
+        "CB": "Campobasso",
+        "CE": "Caserta",
+        "CH": "Chieti",
+        "CL": "Caltanissetta",
+        "CN": "Cuneo",
+        "CO": "Como",
+        "CR": "Cremona",
+        "CS": "Cosenza",
+        "CT": "Catania",
+        "CZ": "Catanzaro",
+        "EN": "Enna",
+        "FC": "Forlì-Cesena",
+        "FE": "Ferrara",
+        "FG": "Foggia",
+        "FI": "Firenze",
+        "FM": "Fermo",
+        "FR": "Frosinone",
+        "GE": "Genova",
+        "GO": "Gorizia",
+        "GR": "Grosseto",
+        "IM": "Imperia",
+        "IS": "Isernia",
+        "KR": "Crotone",
+        "LC": "Lecco",
+        "LE": "Lecce",
+        "LI": "Livorno",
+        "LO": "Lodi",
+        "LT": "Latina",
+        "LU": "Lucca",
+        "MB": "Monza e Brianza",
+        "MC": "Macerata",
+        "ME": "Messina",
+        "MI": "Milano",
+        "MN": "Mantova",
+        "MO": "Modena",
+        "MS": "Massa-Carrara",
+        "MT": "Matera",
+        "NA": "Napoli",
+        "NO": "Novara",
+        "NU": "Nuoro",
+        "OR": "Oristano",
+        "PA": "Palermo",
+        "PC": "Piacenza",
+        "PD": "Padova",
+        "PE": "Pescara",
+        "PG": "Perugia",
+        "PI": "Pisa",
+        "PN": "Pordenone",
+        "PO": "Prato",
+        "PR": "Parma",
+        "PT": "Pistoia",
+        "PU": "Pesaro e Urbino",
+        "PV": "Pavia",
+        "PZ": "Potenza",
+        "RA": "Ravenna",
+        "RC": "Reggio Calabria",
+        "RE": "Reggio Emilia",
+        "RG": "Ragusa",
+        "RI": "Rieti",
+        "RM": "Roma",
+        "RN": "Rimini",
+        "RO": "Rovigo",
+        "SA": "Salerno",
+        "SI": "Siena",
+        "SO": "Sondrio",
+        "SP": "La Spezia",
+        "SR": "Siracusa",
+        "SS": "Sassari",
+        "SU": "Sud Sardegna",
+        "SV": "Savona",
+        "TA": "Taranto",
+        "TE": "Teramo",
+        "TN": "Trento",
+        "TO": "Torino",
+        "TP": "Trapani",
+        "TR": "Terni",
+        "TS": "Trieste",
+        "TV": "Treviso",
+        "UD": "Udine",
+        "VA": "Varese",
+        "VB": "Verbano-Cusio-Ossola",
+        "VC": "Vercelli",
+        "VE": "Venezia",
+        "VI": "Vicenza",
+        "VR": "Verona",
+        "VT": "Viterbo",
+        "VV": "Vibo Valentia"
+    };
+
+    function provinceLabel(code) {
+        const name = PROVINCE_NAMES[code];
+        return name ? (code + ' — ' + name) : code;
+    }
 
     const LOCATION_DATABASE = [
         // PUGLIA
@@ -1092,7 +1204,7 @@
         ITALIAN_PROVINCES.forEach(prov => {
             const opt = document.createElement('option');
             opt.value = prov;
-            opt.textContent = prov;
+            opt.textContent = provinceLabel(prov);
             provinciaSelect.appendChild(opt);
         });
     }
@@ -2128,7 +2240,7 @@
                     </div>
                 ` : '';
 
-                const provinciaOptionsHTML = ITALIAN_PROVINCES.map(prov => `<option value="${prov}" ${prov === client.provincia ? 'selected' : ''}>${prov}</option>`).join('');
+                const provinciaOptionsHTML = ITALIAN_PROVINCES.map(prov => `<option value="${prov}" ${prov === client.provincia ? 'selected' : ''}>${provinceLabel(prov)}</option>`).join('');
                 const regionOptionsHTML = ITALIAN_REGIONS.map(reg => `<option value="${reg}" ${reg === client.regione ? 'selected' : ''}>${reg}</option>`).join('');
 
                 tableHTML += `
@@ -2327,7 +2439,7 @@
             ITALIAN_PROVINCES.forEach(prov => {
                 const opt = document.createElement('option');
                 opt.value = prov;
-                opt.textContent = prov;
+                opt.textContent = provinceLabel(prov);
                 prepProv.appendChild(opt);
             });
         }
