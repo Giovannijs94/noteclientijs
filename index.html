@@ -740,6 +740,10 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label for="prepNota">Nota</label>
+                    <input type="text" id="prepNota" class="input-control" placeholder="Es. richiamare a settembre...">
+                </div>
+                <div class="form-group">
                     <label for="prepLocalita">Località / Paese</label>
                     <input type="text" id="prepLocalita" class="input-control" required placeholder="Es. Casamassima" oninput="onPrepLocalitaInput(this.value)">
                 </div>
@@ -761,7 +765,7 @@
     </div>
 
     <div class="installati-table-wrap">
-        <div class="installati-header">Clienti raggruppati per regione</div>
+        <div class="installati-header">Clienti in pre-pianificazione</div>
         <div id="prepTableContainer"></div>
     </div>
 </div><!-- /#viewPrep -->
@@ -1186,6 +1190,7 @@
     let savedModels = JSON.parse(localStorage.getItem('note_clienti_modelli')) || ["Modello Alpha", "Modello Beta", "Modello Gamma"];
     let savedSpedizioni = JSON.parse(localStorage.getItem('note_clienti_spedizioni')) || [];
     let activeInlineAddId = null;
+    let prepGroupMode = localStorage.getItem('note_clienti_prep_group') || 'regione';
     let spedizioneFromClienteStesso = false;
 
     const form = document.getElementById('clientForm');
@@ -2674,6 +2679,7 @@
         prepForm.addEventListener('submit', function(e) {
             e.preventDefault();
             const nomeVal = document.getElementById('prepNome').value.trim();
+            const notaVal = (document.getElementById('prepNota')?.value || '').trim();
             const localitaVal = document.getElementById('prepLocalita').value.trim();
             const provinciaVal = document.getElementById('prepProvincia').value;
             const regioneVal = document.getElementById('prepRegione').value;
@@ -2705,6 +2711,7 @@
                 preavviso: false,
                 disponibilita: false,
                 notaDisponibilita: '',
+                notaPrep: notaVal,
                 installato: false,
                 standby: false
             };
@@ -2729,7 +2736,7 @@
             return;
         }
 
-        // Raggruppa per regione
+        // Solo raggruppamento per regione
         const byRegion = {};
         list.forEach(c => {
             const reg = (c.regione || '').trim() || 'Senza regione';
@@ -2757,6 +2764,7 @@
                         <thead>
                             <tr>
                                 <th>Cliente / Modelli</th>
+                                <th>Nota</th>
                                 <th>Località</th>
                                 <th>Assegna</th>
                                 <th style="width: 60px;"></th>
@@ -2768,11 +2776,15 @@
                 const modelsText = (client.modelli || []).map(m => {
                     return `<span class="model-badge">${m.nome}${m.qta ? ' <span class="model-qta-badge">' + m.qta + ' pz</span>' : ''}</span>`;
                 }).join(' ') || '-';
+                const nota = (client.notaPrep || '').trim();
                 html += `
                     <tr>
                         <td>
                             <strong>${client.nome}</strong>
                             <div class="models-list" style="margin-top:6px;">${modelsText}</div>
+                        </td>
+                        <td>
+                            ${nota ? `<span style="display:inline-block; background:#fef3c7; color:#92400e; border:1px solid #fde68a; padding:6px 10px; border-radius:8px; font-size:0.85rem;">📝 ${nota.replace(/</g, '&lt;')}</span>` : '<span style="color:var(--text-muted); font-size:0.85rem;">—</span>'}
                         </td>
                         <td>
                             📍 ${client.localita || '-'}<br>
@@ -2788,10 +2800,6 @@
                                     <label>📦 Spedizione:</label>
                                     <input type="text" class="edit-input" value="" placeholder="Assegna spedizione..." list="spedizioniDatalist" autocomplete="off" onchange="updateSpedizione('${client.id}', this.value)">
                                 </div>
-                            </div>
-                            <div style="margin-top:8px;">
-                                <label style="font-size:0.7rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">📝 Note</label>
-                                <input type="text" class="note-input" style="width:100%; margin-top:4px;" placeholder="Scrivi una nota..." value="${(client.notaPrep || '').replace(/"/g, '&quot;')}" oninput="updateNotaPrep('${client.id}', this.value)">
                             </div>
                         </td>
                         <td>
