@@ -1799,22 +1799,56 @@
     });
 
     window.toggleInlineAddModel = function(id) {
-        activeInlineAddId = (activeInlineAddId === id) ? null : id;
+        const sid = String(id);
+        activeInlineAddId = (String(activeInlineAddId) === sid) ? null : sid;
         render();
+        if (activeInlineAddId) {
+            setTimeout(() => {
+                const inputEl = document.getElementById('inline-model-input-' + activeInlineAddId);
+                if (inputEl) {
+                    inputEl.focus();
+                    inputEl.select();
+                }
+            }, 30);
+        }
     }
 
     window.saveInlineModel = function(id) {
-        const inputEl = document.getElementById(`inline-model-input-${id}`);
-        const qtaEl = document.getElementById(`inline-model-qta-${id}`);
-        if (inputEl && inputEl.value.trim() !== '') {
-            const client = clients.find(c => c.id === id);
-            if (client) {
-                client.modelli.push({ nome: inputEl.value.trim(), qta: parseInt(qtaEl.value) || 1 });
-                window.autoSaveNewTypedModel(inputEl.value.trim());
-                activeInlineAddId = null;
-                saveToLocalStorage();
-                render();
-            }
+        const sid = String(id);
+        const inputEl = document.getElementById('inline-model-input-' + sid);
+        const qtaEl = document.getElementById('inline-model-qta-' + sid);
+        if (!inputEl) {
+            console.warn('Campo modello non trovato per', sid);
+            return;
+        }
+        const nome = inputEl.value.trim();
+        if (!nome) {
+            inputEl.focus();
+            inputEl.style.borderColor = '#dc2626';
+            return;
+        }
+        const client = clients.find(c => String(c.id) === sid);
+        if (!client) {
+            console.warn('Cliente non trovato', sid);
+            return;
+        }
+        if (!Array.isArray(client.modelli)) client.modelli = [];
+        const qta = qtaEl ? (parseInt(qtaEl.value, 10) || 1) : 1;
+        client.modelli.push({ nome: nome, qta: qta });
+        window.autoSaveNewTypedModel(nome);
+        activeInlineAddId = null;
+        saveToLocalStorage();
+        render();
+    }
+
+    window.onInlineModelKeydown = function(e, id) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            window.saveInlineModel(id);
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            activeInlineAddId = null;
+            render();
         }
     }
 
@@ -1963,6 +1997,94 @@
         }
     }
 
+    window.copyTrackingCode = function(code, el) {
+        const textToCopy = String(code || '').trim();
+        if (!textToCopy) return;
+        const done = () => {
+            if (el) {
+                const prev = el.textContent;
+                el.textContent = '✓ Copiato!';
+                el.style.background = '#dcfce7';
+                el.style.color = '#166534';
+                el.style.borderColor = '#86efac';
+                setTimeout(() => {
+                    el.textContent = prev;
+                    el.style.background = '#f5f3ff';
+                    el.style.color = '#5b21b6';
+                    el.style.borderColor = '#c4b5fd';
+                }, 1200);
+            }
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(textToCopy).then(done).catch(() => {
+                // fallback
+                const ta = document.createElement('textarea');
+                ta.value = textToCopy;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                done();
+            });
+        } else {
+            const ta = document.createElement('textarea');
+            ta.value = textToCopy;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            done();
+        }
+    }
+
+    window.saveTracking = function(id) {
+        const input = document.getElementById('tracking-input-' + id);
+        if (!input) return;
+        const val = input.value.trim();
+        if (!val) {
+            input.style.borderColor = '#dc2626';
+            input.focus();
+            return;
+        }
+        const client = clients.find(c => String(c.id) === String(id));
+        if (!client) return;
+        client.tracking = val;
+        client._editingTracking = false;
+        saveToLocalStorage();
+        render();
+    }
+
+    window.editTracking = function(id) {
+        const client = clients.find(c => String(c.id) === String(id));
+        if (!client) return;
+        client._editingTracking = true;
+        render();
+        setTimeout(() => {
+            const input = document.getElementById('tracking-input-' + id);
+            if (input) { input.focus(); input.select(); }
+        }, 40);
+    }
+
+    window.onTrackingKeydown = function(e, id) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            window.saveTracking(id);
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            const client = clients.find(c => String(c.id) === String(id));
+            if (client) client._editingTracking = false;
+            render();
+        }
+    }
+
+    function brtTrackingUrl(code) {
+        // Pagina ufficiale BRT: autocompila il campo (poi premi Cerca)
+        // Supporta brtcode / brtCode / parcelNumber come da app BRT
+        const c = encodeURIComponent(String(code).trim());
+        return 'https://services.brt.it/it/tracking?brtcode=' + c + '&brtCode=' + c + '&parcelNumber=' + c + '&shipmentNumber=' + c;
+    }
+
+
     let pendingDeleteId = null;
 
     window.deleteClient = function(id) {
@@ -2108,6 +2230,7 @@
             c.disponibilita = (c.disponibilita === true || c.disponibilita === 'true');
             c.installato = (c.installato === true || c.installato === 'true');
             c.standby = (c.standby === true || c.standby === 'true');
+            if (c.tracking === undefined) c.tracking = '';
         });
 
         // Tappe (solo clienti che hanno tappa e non spedizione)
@@ -2299,15 +2422,15 @@
                     </span>
                 `).join('');
 
-                const isAddingModel = (activeInlineAddId === client.id);
+                const isAddingModel = (String(activeInlineAddId) === String(client.id));
                 const inlineAddHTML = isAddingModel ? `
                     <div class="inline-add-box">
-                        <input type="text" id="inline-model-input-${client.id}" class="input-control" list="modelliDatalist" style="flex:1; min-width:160px;" placeholder="Digita modello..." autocomplete="off">
-                        <select id="inline-model-qta-${client.id}" class="select-control" style="width:80px;">
+                        <input type="text" id="inline-model-input-${client.id}" class="input-control" list="modelliDatalist" style="flex:1; min-width:160px;" placeholder="Digita o seleziona modello..." autocomplete="off" onkeydown="onInlineModelKeydown(event, '${client.id}')">
+                        <select id="inline-model-qta-${client.id}" class="select-control" style="width:90px;">
                             ${getQuantityOptionsHTML(1)}
                         </select>
-                        <button class="btn btn-primary" style="padding:6px 12px;" onclick="saveInlineModel('${client.id}')">Salva</button>
-                        <button class="btn" style="padding:6px 12px;" onclick="toggleInlineAddModel('${client.id}')">✕</button>
+                        <button type="button" class="btn btn-primary" style="padding:6px 12px;" onclick="saveInlineModel('${client.id}')">Salva</button>
+                        <button type="button" class="btn" style="padding:6px 12px;" onclick="toggleInlineAddModel('${client.id}')">✕</button>
                     </div>
                 ` : '';
 
@@ -2326,6 +2449,26 @@
                             <div style="margin-top: 4px;">
                                 <a href="${mapUrl}" target="_blank" rel="noopener" class="client-location-link">📍 ${client.localita} 🔗</a>
                             </div>
+                            ${isSpedizione ? (() => {
+                                const hasTrack = (client.tracking || '').trim() && !client._editingTracking;
+                                if (hasTrack) {
+                                    const code = client.tracking.trim();
+                                    return `<div style="margin-top:8px;">
+                                        <span style="font-size:0.7rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">📦 Tracking</span>
+                                        <div style="margin-top:4px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                            <span class="model-badge" style="background:#f5f3ff; color:#5b21b6; border-color:#c4b5fd; cursor:pointer; user-select:all;" title="Clicca per copiare" onclick="copyTrackingCode('${code.replace(/'/g, "\\'")}', this)" ondblclick="event.preventDefault(); editTracking('${client.id}');">${code}</span>
+                                            <button type="button" class="btn" style="padding:5px 12px; font-size:0.8rem; background:#7c3aed; color:white; border:none;" onclick="window.open('https://services.brt.it/it/tracking', '_blank')" title="Apri sito BRT">🔗 BRT Tracking</button>
+                                        </div>
+                                    </div>`;
+                                }
+                                return `<div style="margin-top:8px;">
+                                    <label style="font-size:0.7rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">📦 Tracking</label>
+                                    <div style="display:flex; gap:8px; margin-top:4px; align-items:center; flex-wrap:wrap;">
+                                        <input type="text" id="tracking-input-${client.id}" class="input-control" style="flex:1; min-width:160px; padding:8px 10px;" placeholder="Inserisci numero tracking BRT..." value="${(client.tracking || '').replace(/"/g, '&quot;')}" onkeydown="onTrackingKeydown(event, '${client.id}')">
+                                        <button type="button" class="btn btn-primary" style="padding:6px 12px;" onclick="saveTracking('${client.id}')">Salva</button>
+                                    </div>
+                                </div>`;
+                            })() : ''}
                             <div class="edit-controls">
                                 <div class="edit-group">
                                     <label>📅 Data:</label>
