@@ -203,6 +203,13 @@
         .client-info strong { display: block; font-size: 1.1rem; color: var(--primary); margin-bottom: 4px; }
         .models-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; align-items: center; }
         .model-badge { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; padding: 4px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+        .model-badge .model-name {
+            cursor: pointer;
+            border-bottom: 1px dashed transparent;
+        }
+        .model-badge .model-name:hover {
+            border-bottom-color: #1e40af;
+        }
         .model-qta-badge { background: var(--accent); color: white; font-size: 0.75rem; padding: 1px 6px; border-radius: 8px; cursor: pointer; }
         .btn-del-badge { background: none; border: none; color: #ef4444; cursor: pointer; font-weight: bold; font-size: 0.9rem; }
         .btn-add-inline { background: #f1f5f9; border: 1px dashed #cbd5e1; color: #475569; border-radius: 12px; padding: 4px 10px; font-size: 0.75rem; font-weight: 700; cursor: pointer; }
@@ -835,6 +842,21 @@
         <div class="confirm-actions">
             <button type="button" class="btn" onclick="closeConfirmDelete()">Annulla</button>
             <button type="button" class="btn btn-danger-solid" onclick="confirmDeleteClient()">Sì, elimina</button>
+        </div>
+    </div>
+</div>
+
+<div id="renameClientModelModal" class="modal-overlay confirm-modal">
+    <div class="modal">
+        <div class="confirm-icon" style="background:linear-gradient(135deg,#e0e7ff,#c7d2fe);">🧩</div>
+        <h3>Rinomina modello</h3>
+        <p class="confirm-desc" style="margin-bottom:6px;">Cliente: <strong id="renameClientModelClientName"></strong></p>
+        <p class="confirm-desc" style="margin-bottom:12px;">Nome attuale: <strong id="renameClientModelOldName"></strong></p>
+        <input type="text" id="renameClientModelInput" class="input-control" placeholder="Nuovo nome modello..." style="margin-bottom:10px; text-align:center;" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmRenameClientModel();}">
+        <div id="renameClientModelError" class="login-error" style="min-height:1.2em;"></div>
+        <div class="confirm-actions">
+            <button type="button" class="btn" onclick="closeRenameClientModel()">Annulla</button>
+            <button type="button" class="btn btn-primary" onclick="confirmRenameClientModel()">Salva</button>
         </div>
     </div>
 </div>
@@ -1796,6 +1818,55 @@
         }
     }
 
+    let pendingRenameClientModel = null;
+
+    window.renameClientModel = function(id, index) {
+        const client = clients.find(c => String(c.id) === String(id));
+        if (!client || !client.modelli || !client.modelli[index]) return;
+        pendingRenameClientModel = { id: id, index: index };
+        document.getElementById('renameClientModelClientName').textContent = client.nome;
+        document.getElementById('renameClientModelOldName').textContent = client.modelli[index].nome || '';
+        document.getElementById('renameClientModelInput').value = client.modelli[index].nome || '';
+        document.getElementById('renameClientModelError').textContent = '';
+        document.getElementById('renameClientModelModal').style.display = 'flex';
+        setTimeout(() => {
+            const inp = document.getElementById('renameClientModelInput');
+            inp.focus();
+            inp.select();
+        }, 50);
+    }
+
+    window.closeRenameClientModel = function() {
+        pendingRenameClientModel = null;
+        document.getElementById('renameClientModelModal').style.display = 'none';
+    }
+
+    window.confirmRenameClientModel = function() {
+        if (!pendingRenameClientModel) return;
+        const { id, index } = pendingRenameClientModel;
+        const client = clients.find(c => String(c.id) === String(id));
+        const err = document.getElementById('renameClientModelError');
+        if (!client || !client.modelli || !client.modelli[index]) {
+            window.closeRenameClientModel();
+            return;
+        }
+        const clean = document.getElementById('renameClientModelInput').value.trim();
+        if (!clean) {
+            err.textContent = 'Inserisci un nome valido.';
+            return;
+        }
+        if (clean === client.modelli[index].nome) {
+            window.closeRenameClientModel();
+            return;
+        }
+        client.modelli[index].nome = clean;
+        window.autoSaveNewTypedModel(clean);
+        saveToLocalStorage();
+        pendingRenameClientModel = null;
+        document.getElementById('renameClientModelModal').style.display = 'none';
+        render();
+    }
+
     window.editModelQuantity = function(id, index) {
         const client = clients.find(c => c.id === id);
         if (client && client.modelli[index]) {
@@ -2222,7 +2293,7 @@
                 const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(client.localita)}`;
                 const modelsHTML = (client.modelli || []).map((mod, idx) => `
                     <span class="model-badge">
-                        ${mod.nome}
+                        <span class="model-name" ondblclick="renameClientModel('${client.id}', ${idx})" title="Doppio click per rinominare">${mod.nome}</span>
                         <span class="model-qta-badge" onclick="editModelQuantity('${client.id}', ${idx})" title="Modifica Q.tà">${mod.qta || 1} pz</span>
                         <button class="btn-del-badge" onclick="removeModelFromClient('${client.id}', ${idx})">×</button>
                     </span>
