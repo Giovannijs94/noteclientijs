@@ -854,6 +854,20 @@
     </div>
 </div>
 
+
+<div id="editNotaPrepModal" class="modal-overlay confirm-modal">
+    <div class="modal">
+        <div class="confirm-icon" style="background:linear-gradient(135deg,#fef3c7,#fde68a);">📝</div>
+        <h3>Modifica nota</h3>
+        <p class="confirm-desc" style="margin-bottom:6px;">Cliente: <strong id="editNotaPrepClientName"></strong></p>
+        <input type="text" id="editNotaPrepInput" class="input-control" placeholder="Scrivi una nota..." style="margin-bottom:10px; text-align:center;" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmEditNotaPrep();}">
+        <div class="confirm-actions">
+            <button type="button" class="btn" onclick="closeEditNotaPrep()">Annulla</button>
+            <button type="button" class="btn btn-primary" onclick="confirmEditNotaPrep()">Salva</button>
+        </div>
+    </div>
+</div>
+
 <div id="renameClientModelModal" class="modal-overlay confirm-modal">
     <div class="modal">
         <div class="confirm-icon" style="background:linear-gradient(135deg,#e0e7ff,#c7d2fe);">🧩</div>
@@ -1998,6 +2012,39 @@
         }
     }
 
+    let pendingEditNotaPrepId = null;
+
+    window.editNotaPrep = function(id) {
+        const client = clients.find(c => String(c.id) === String(id));
+        if (!client) return;
+        pendingEditNotaPrepId = id;
+        document.getElementById('editNotaPrepClientName').textContent = client.nome || '';
+        document.getElementById('editNotaPrepInput').value = client.notaPrep || '';
+        document.getElementById('editNotaPrepModal').style.display = 'flex';
+        setTimeout(() => {
+            const inp = document.getElementById('editNotaPrepInput');
+            inp.focus();
+            inp.select();
+        }, 50);
+    }
+
+    window.closeEditNotaPrep = function() {
+        pendingEditNotaPrepId = null;
+        document.getElementById('editNotaPrepModal').style.display = 'none';
+    }
+
+    window.confirmEditNotaPrep = function() {
+        if (!pendingEditNotaPrepId) return;
+        const client = clients.find(c => String(c.id) === String(pendingEditNotaPrepId));
+        if (client) {
+            client.notaPrep = document.getElementById('editNotaPrepInput').value.trim();
+            saveToLocalStorage();
+        }
+        pendingEditNotaPrepId = null;
+        document.getElementById('editNotaPrepModal').style.display = 'none';
+        renderPrepPage();
+    }
+
     window.updateNotaPrep = function(id, text) {
         const client = clients.find(c => String(c.id) === String(id));
         if (client) {
@@ -2847,7 +2894,10 @@
                             <div class="models-list" style="margin-top:6px;">${modelsText}</div>
                         </td>
                         <td>
-                            ${nota ? `<span style="display:inline-block; background:#fef3c7; color:#92400e; border:1px solid #fde68a; padding:6px 10px; border-radius:8px; font-size:0.85rem;">📝 ${nota.replace(/</g, '&lt;')}</span>` : '<span style="color:var(--text-muted); font-size:0.85rem;">—</span>'}
+                            ${nota
+                                ? `<span style="display:inline-block; background:#fef3c7; color:#92400e; border:1px solid #fde68a; padding:6px 10px; border-radius:8px; font-size:0.85rem; cursor:pointer;" title="Doppio click per modificare" ondblclick="editNotaPrep('${client.id}')">📝 ${nota.replace(/</g, '&lt;')}</span>`
+                                : `<span style="color:var(--text-muted); font-size:0.85rem; cursor:pointer; border-bottom:1px dashed #cbd5e1;" title="Doppio click per aggiungere nota" ondblclick="editNotaPrep('${client.id}')">—</span>`
+                            }
                         </td>
                         <td>
                             ${formatScadenzaBadge(client.scadenza)}
