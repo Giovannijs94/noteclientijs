@@ -2956,41 +2956,72 @@
             return;
         }
 
-        installati.sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'it'));
-
-        let html = `
-            <table>
-                <thead>
-                    <tr>
-                        <th>Cliente</th>
-                        <th>Modello/i</th>
-                        <th>Paese / Località</th>
-                        <th>Provincia</th>
-                        <th>Regione</th>
-                        <th style="width: 140px;"></th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-        installati.forEach(client => {
-            const modelsText = (client.modelli || []).map(m => {
-                return `<span class="model-badge">${m.nome}${m.qta ? ' <span class="model-qta-badge">' + m.qta + ' pz</span>' : ''}</span>`;
-            }).join(' ') || '-';
-            html += `
-                <tr>
-                    <td><strong>${client.nome}</strong></td>
-                    <td><div class="models-list">${modelsText}</div></td>
-                    <td>📍 ${client.localita || '-'}</td>
-                    <td>${client.provincia || '-'}</td>
-                    <td>${client.regione || '-'}</td>
-                    <td style="white-space:nowrap;">
-                        <button type="button" class="btn" style="padding:4px 8px; font-size:0.75rem;" onclick="unmarkInstallato('${client.id}')">↩ Ripristina</button>
-                        <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
-                    </td>
-                </tr>
-            `;
+        // Raggruppa per tappa (o spedizione se non c'è tappa)
+        const byTappa = {};
+        installati.forEach(c => {
+            let key = (c.tappa || '').trim();
+            if (!key) {
+                const sped = (c.spedizione || '').trim();
+                key = sped ? ('Spedizione: ' + sped) : 'Senza tappa';
+            }
+            if (!byTappa[key]) byTappa[key] = [];
+            byTappa[key].push(c);
         });
-        html += '</tbody></table>';
+
+        const keys = Object.keys(byTappa).sort((a, b) => {
+            if (a === 'Senza tappa') return 1;
+            if (b === 'Senza tappa') return -1;
+            return a.localeCompare(b, 'it');
+        });
+
+        let html = '';
+        keys.forEach(key => {
+            const group = byTappa[key];
+            group.sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'it'));
+            const isSped = key.startsWith('Spedizione:');
+            const icon = isSped ? '📦' : '🚩';
+            const headerBg = isSped ? 'background:#f5f3ff; color:#5b21b6;' : 'background:#ecfdf5; color:#047857;';
+            const badgeBg = isSped ? '#7c3aed' : '#16a34a';
+            html += `
+                <div style="border-bottom:1px solid var(--border);">
+                    <div style="${headerBg} padding:10px 16px; font-weight:700; display:flex; justify-content:space-between; align-items:center;">
+                        <span>${icon} ${key}</span>
+                        <span style="font-size:0.8rem; background:${badgeBg}; color:white; padding:2px 10px; border-radius:999px;">${group.length}</span>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Modello/i</th>
+                                <th>Paese / Località</th>
+                                <th>Provincia</th>
+                                <th>Regione</th>
+                                <th style="width: 140px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            group.forEach(client => {
+                const modelsText = (client.modelli || []).map(m => {
+                    return `<span class="model-badge">${m.nome}${m.qta ? ' <span class="model-qta-badge">' + m.qta + ' pz</span>' : ''}</span>`;
+                }).join(' ') || '-';
+                html += `
+                    <tr>
+                        <td><strong>${client.nome}</strong></td>
+                        <td><div class="models-list">${modelsText}</div></td>
+                        <td>📍 ${client.localita || '-'}</td>
+                        <td>${client.provincia || '-'}</td>
+                        <td>${client.regione || '-'}</td>
+                        <td style="white-space:nowrap;">
+                            <button type="button" class="btn" style="padding:4px 8px; font-size:0.75rem;" onclick="unmarkInstallato('${client.id}')">↩ Ripristina</button>
+                            <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            html += `</tbody></table></div>`;
+        });
+
         container.innerHTML = html;
     }
 
