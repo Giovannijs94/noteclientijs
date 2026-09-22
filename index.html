@@ -744,6 +744,10 @@
                     <input type="text" id="prepNota" class="input-control" placeholder="Es. richiamare a settembre...">
                 </div>
                 <div class="form-group">
+                    <label for="prepScadenza">Scadenza</label>
+                    <input type="date" id="prepScadenza" class="input-control">
+                </div>
+                <div class="form-group">
                     <label for="prepLocalita">Località / Paese</label>
                     <input type="text" id="prepLocalita" class="input-control" required placeholder="Es. Casamassima" oninput="onPrepLocalitaInput(this.value)">
                 </div>
@@ -2002,6 +2006,14 @@
         }
     }
 
+    window.toggleInLavorazione = function(id) {
+        const client = clients.find(c => String(c.id) === String(id));
+        if (!client) return;
+        client.inLavorazione = !Boolean(client.inLavorazione);
+        saveToLocalStorage();
+        renderPrepPage();
+    }
+
     window.copyTrackingCode = function(code, el) {
         const textToCopy = String(code || '').trim();
         if (!textToCopy) return;
@@ -2236,6 +2248,7 @@
             c.installato = (c.installato === true || c.installato === 'true');
             c.standby = (c.standby === true || c.standby === 'true');
             if (c.tracking === undefined) c.tracking = '';
+            c.inLavorazione = (c.inLavorazione === true || c.inLavorazione === 'true');
         });
 
         // Tappe (solo clienti che hanno tappa e non spedizione)
@@ -2680,6 +2693,7 @@
             e.preventDefault();
             const nomeVal = document.getElementById('prepNome').value.trim();
             const notaVal = (document.getElementById('prepNota')?.value || '').trim();
+            const scadenzaVal = document.getElementById('prepScadenza')?.value || '';
             const localitaVal = document.getElementById('prepLocalita').value.trim();
             const provinciaVal = document.getElementById('prepProvincia').value;
             const regioneVal = document.getElementById('prepRegione').value;
@@ -2712,6 +2726,8 @@
                 disponibilita: false,
                 notaDisponibilita: '',
                 notaPrep: notaVal,
+                scadenza: scadenzaVal,
+                inLavorazione: false,
                 installato: false,
                 standby: false
             };
@@ -2722,6 +2738,36 @@
             renderPrepPage();
         });
     })();
+
+    function formatScadenzaBadge(scadenza) {
+        if (!scadenza) return '<span style="color:var(--text-muted);">—</span>';
+        const label = scadenza.split('-').reverse().join('/');
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const parts = String(scadenza).split('-');
+        if (parts.length !== 3) return `<span style="font-weight:600;">📅 ${label}</span>`;
+        const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        d.setHours(0, 0, 0, 0);
+        const diffDays = Math.round((d - today) / 86400000);
+        let color, bg, border;
+        if (diffDays <= 14) {
+            // urgente: entro 2 settimane (o scaduta)
+            color = '#b91c1c';
+            bg = '#fef2f2';
+            border = '#fecaca';
+        } else if (diffDays <= 30) {
+            // semi urgente: entro 1 mese
+            color = '#c2410c';
+            bg = '#fff7ed';
+            border = '#fed7aa';
+        } else {
+            // oltre 1 mese
+            color = '#15803d';
+            bg = '#f0fdf4';
+            border = '#bbf7d0';
+        }
+        return `<span style="display:inline-block; font-weight:700; color:${color}; background:${bg}; border:1px solid ${border}; padding:5px 10px; border-radius:8px; font-size:0.85rem;">📅 ${label}</span>`;
+    }
 
     function renderPrepPage() {
         populatePrepDropdowns();
@@ -2753,7 +2799,14 @@
         let html = '';
         regions.forEach(reg => {
             const group = byRegion[reg];
-            group.sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'it'));
+            group.sort((a, b) => {
+                const da = a.scadenza || '';
+                const db = b.scadenza || '';
+                if (!da && !db) return (a.nome || '').localeCompare(b.nome || '', 'it');
+                if (!da) return 1;  // senza scadenza in fondo
+                if (!db) return -1;
+                return da.localeCompare(db); // crescente
+            });
             html += `
                 <div style="border-bottom:1px solid var(--border);">
                     <div style="background:#eff6ff; padding:10px 16px; font-weight:700; color:#1e40af; display:flex; justify-content:space-between; align-items:center;">
@@ -2765,6 +2818,7 @@
                             <tr>
                                 <th>Cliente / Modelli</th>
                                 <th>Nota</th>
+                                <th>Scadenza</th>
                                 <th>Località</th>
                                 <th>Assegna</th>
                                 <th style="width: 60px;"></th>
@@ -2777,14 +2831,26 @@
                     return `<span class="model-badge">${m.nome}${m.qta ? ' <span class="model-qta-badge">' + m.qta + ' pz</span>' : ''}</span>`;
                 }).join(' ') || '-';
                 const nota = (client.notaPrep || '').trim();
+                const inLav = client.inLavorazione === true;
                 html += `
-                    <tr>
+                    <tr style="${inLav ? 'background:#f0fdf4;' : ''}">
                         <td>
-                            <strong>${client.nome}</strong>
+                            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                <strong>${client.nome}</strong>
+                                <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:0.8rem; color:${inLav ? '#16a34a' : 'var(--text-muted)'}; font-weight:600; user-select:none;" title="In lavorazione">
+                                    <span class="status-cell ${inLav ? 'active' : ''}" onclick="toggleInLavorazione('${client.id}')" style="width:auto;">
+                                        <div class="checkbox-x">${inLav ? '✓' : ''}</div>
+                                    </span>
+                                    In lavorazione
+                                </label>
+                            </div>
                             <div class="models-list" style="margin-top:6px;">${modelsText}</div>
                         </td>
                         <td>
                             ${nota ? `<span style="display:inline-block; background:#fef3c7; color:#92400e; border:1px solid #fde68a; padding:6px 10px; border-radius:8px; font-size:0.85rem;">📝 ${nota.replace(/</g, '&lt;')}</span>` : '<span style="color:var(--text-muted); font-size:0.85rem;">—</span>'}
+                        </td>
+                        <td>
+                            ${formatScadenzaBadge(client.scadenza)}
                         </td>
                         <td>
                             📍 ${client.localita || '-'}<br>
@@ -2894,7 +2960,7 @@
     });
 
     // ===== Login (password offuscata con hash SHA-256) =====
-    const APP_PASSWORD_HASH = '7c308b373dd6cf04f3154f62f20b3d609937879ced6b597c1f606a2568a0e566';
+    const APP_PASSWORD_HASH = 'c1a874609dc4dabee741f9832227626396e3cf3af3d2d9d380f71d230df2bae3';
 
     async function sha256Hex(str) {
         const data = new TextEncoder().encode(str);
