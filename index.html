@@ -768,11 +768,6 @@
         </form>
     </div>
 
-    <div class="search-card">
-        <span style="font-weight: 700; color: var(--primary);">🔍 Cerca:</span>
-        <input type="text" id="prepSearchInput" class="search-input" placeholder="Filtra per cliente, località, provincia, regione, modello, nota o tappa..." oninput="renderPrepPage()">
-    </div>
-
     <div class="installati-table-wrap">
         <div class="installati-header">Clienti in pre-pianificazione</div>
         <div id="prepTableContainer"></div>
@@ -2394,14 +2389,23 @@
             c.inLavorazione = (c.inLavorazione === true || c.inLavorazione === 'true');
         });
 
-        // Tappe (solo clienti che hanno tappa e non spedizione)
+        // Tappe attive in Note clienti: solo clienti non installati, non stand-by, non in pre-pianificazione
+        const activeNoteClients = clients.filter(c => !c.installato && !c.standby && !isInPrep(c));
         const stages = Array.from(new Set(
-            clients.filter(c => (c.tappa || '').trim() && !(c.spedizione || '').trim())
-                   .map(c => c.tappa.trim())
+            activeNoteClients
+                .filter(c => (c.tappa || '').trim() && !(c.spedizione || '').trim())
+                .map(c => c.tappa.trim())
+        )).sort();
+
+        // Datalist tappe: include anche quelle di clienti in prep (per poter riassegnare), ma non installati/stand-by
+        const stagesForDatalist = Array.from(new Set(
+            clients
+                .filter(c => !c.installato && !c.standby && (c.tappa || '').trim() && !(c.spedizione || '').trim())
+                .map(c => c.tappa.trim())
         )).sort();
 
         tappeDatalist.innerHTML = '';
-        stages.forEach(stage => {
+        stagesForDatalist.forEach(stage => {
             const opt = document.createElement('option');
             opt.value = stage;
             tappeDatalist.appendChild(opt);
@@ -2410,10 +2414,11 @@
         // Aggiorna solo il datalist (non aggiunge automaticamente i nomi dei clienti)
         updateSpedizioniDatalist();
 
-        // Lista spedizioni per la barra di navigazione (dai clienti)
+        // Lista spedizioni per la barra di navigazione (solo clienti attivi in Note clienti)
         const spedizioni = Array.from(new Set(
-            clients.filter(c => (c.spedizione || '').trim())
-                   .map(c => c.spedizione.trim())
+            activeNoteClients
+                .filter(c => (c.spedizione || '').trim())
+                .map(c => c.spedizione.trim())
         )).sort();
 
         // Conta clienti in attesa (per la pill)
@@ -2918,34 +2923,12 @@
         populatePrepDropdowns();
         const container = document.getElementById('prepTableContainer');
         const countEl = document.getElementById('navPrepCount');
-        const allPrep = clients.filter(c => isInPrep(c));
-        if (countEl) countEl.textContent = allPrep.length;
+        const list = clients.filter(c => isInPrep(c));
+        if (countEl) countEl.textContent = list.length;
         if (!container) return;
 
-        const searchTerm = (document.getElementById('prepSearchInput')?.value || '').toLowerCase().trim();
-        const list = searchTerm
-            ? allPrep.filter(c => {
-                const matchModels = (c.modelli || []).some(m => (m.nome || '').toLowerCase().includes(searchTerm));
-                return (
-                    (c.nome || '').toLowerCase().includes(searchTerm) ||
-                    matchModels ||
-                    (c.localita || '').toLowerCase().includes(searchTerm) ||
-                    (c.provincia || '').toLowerCase().includes(searchTerm) ||
-                    (c.regione || '').toLowerCase().includes(searchTerm) ||
-                    (c.tappa || '').toLowerCase().includes(searchTerm) ||
-                    (c.spedizione || '').toLowerCase().includes(searchTerm) ||
-                    (c.notaPrep || '').toLowerCase().includes(searchTerm)
-                );
-            })
-            : allPrep;
-
-        if (allPrep.length === 0) {
-            container.innerHTML = '<p style="text-align:center; color: var(--text-muted); padding: 40px;">Nessun cliente in pre-pianificazione.</p>';
-            return;
-        }
-
         if (list.length === 0) {
-            container.innerHTML = '<p style="text-align:center; color: var(--text-muted); padding: 40px;">Nessun risultato per la ricerca.</p>';
+            container.innerHTML = '<p style="text-align:center; color: var(--text-muted); padding: 40px;">Nessun cliente in pre-pianificazione.</p>';
             return;
         }
 
