@@ -2212,6 +2212,16 @@
         }
     }
 
+    window.scrollToPrepRegion = function(regId) {
+        const el = document.getElementById(regId);
+        if (!el) {
+            console.warn('Regione non trovata:', regId);
+            return;
+        }
+        const y = el.getBoundingClientRect().top + window.pageYOffset - 12;
+        window.scrollTo(0, Math.max(0, y));
+    }
+
     window.scrollToStage = function(stageId) {
         const el = document.getElementById(`stage-group-${stageId}`);
         if (el) {
@@ -2926,7 +2936,16 @@
             return a.localeCompare(b, 'it');
         });
 
-        let html = '';
+        // Pills regioni per salto rapido
+        let pillsHtml = '<div class="stages-nav-bar" style="margin:0; border-radius:0; border-left:none; border-right:none;">';
+        regions.forEach(reg => {
+            const safeId = 'prep-reg-' + reg.replace(/[^a-zA-Z0-9-_]/g, '_');
+            const count = byRegion[reg].length;
+            pillsHtml += `<button type="button" class="stage-pill" onclick="scrollToPrepRegion('${safeId}')">🏛️ ${reg} (${count})</button>`;
+        });
+        pillsHtml += '</div>';
+
+        let html = pillsHtml;
         regions.forEach(reg => {
             const group = byRegion[reg];
             group.sort((a, b) => {
@@ -2937,8 +2956,9 @@
                 if (!db) return -1;
                 return da.localeCompare(db); // crescente
             });
+            const safeId = 'prep-reg-' + reg.replace(/[^a-zA-Z0-9-_]/g, '_');
             html += `
-                <div style="border-bottom:1px solid var(--border);">
+                <div id="${safeId}" style="border-bottom:1px solid var(--border); scroll-margin-top: 12px;">
                     <div style="background:#eff6ff; padding:10px 16px; font-weight:700; color:#1e40af; display:flex; justify-content:space-between; align-items:center;">
                         <span>🏛️ ${reg}</span>
                         <span style="font-size:0.8rem; background:#2563eb; color:white; padding:2px 10px; border-radius:999px;">${group.length}</span>
@@ -2998,7 +3018,7 @@
                             <div class="edit-controls" style="margin-top:0;">
                                 <div class="edit-group">
                                     <label>🚩 Tappa:</label>
-                                    <input type="text" class="edit-input" value="" value="${(client.tappa || '').replace(/"/g, '&quot;')}" placeholder="Crea o assegna tappa..." list="tappeDatalist" autocomplete="off" onchange="updateStageInPrep('${client.id}', this.value)">
+                                    <input type="text" class="edit-input" value="${(client.tappa || '').replace(/"/g, '&quot;')}" placeholder="Crea o assegna tappa..." list="tappeDatalist" autocomplete="off" onchange="updateStageInPrep('${client.id}', this.value)">
                                 </div>
                                 <div class="edit-group">
                                     <label>📦 Spedizione:</label>
