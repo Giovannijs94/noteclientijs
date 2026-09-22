@@ -1659,10 +1659,12 @@
             return;
         }
 
-        // Se in attesa (pre-pianificazione), forza tappa/spedizione/data vuote
+        // Se in attesa (pre-pianificazione)
+        let inPrepFlag = false;
         if (inAttesa) {
             tappaVal = '';
             spedizioneVal = '';
+            inPrepFlag = true;
         }
         const dataFinale = inAttesa ? '' : dataVal;
 
@@ -1705,7 +1707,8 @@
             disponibilita: false,
             notaDisponibilita: '',
             installato: false,
-            standby: false
+            standby: false,
+            inPrep: inPrepFlag
         };
 
         clients.push(newClient);
@@ -1949,11 +1952,14 @@
     }
 
     window.updateStage = function(id, newStage) {
-        const client = clients.find(c => c.id === id);
+        const client = clients.find(c => String(c.id) === String(id));
         if (client) {
             const val = newStage.trim();
             client.tappa = val;
-            if (val) client.spedizione = ''; // solo una delle due
+            if (val) {
+                client.spedizione = ''; // solo una delle due
+                client.inPrep = false; // esce da pre-pianificazione
+            }
             saveToLocalStorage();
             render();
         }
@@ -1970,7 +1976,10 @@
                 fromClienteStesso = true;
             }
             client.spedizione = val;
-            if (val) client.tappa = ''; // solo una delle due
+            if (val) {
+                client.tappa = ''; // solo una delle due
+                client.inPrep = false;
+            }
             if (val && !fromClienteStesso) window.autoSaveNewSpedizione(val);
             saveToLocalStorage();
             render();
@@ -2285,6 +2294,22 @@
         reader.readAsText(file);
     }
 
+    function isInPrep(c) {
+        if (!c || c.installato || c.standby) return false;
+        if (c.inPrep === true || c.inPrep === 'true') return true;
+        // Compatibilità: senza tappa né spedizione = pre-pianificazione
+        return !(c.tappa || '').trim() && !(c.spedizione || '').trim();
+    }
+
+    window.moveToPrep = function(id) {
+        const client = clients.find(c => String(c.id) === String(id));
+        if (!client) return;
+        client.inPrep = true;
+        // mantiene tappa e spedizione
+        saveToLocalStorage();
+        render();
+    }
+
     function render() {
         // Normalizza campi di ogni cliente
         clients.forEach(c => {
@@ -2321,7 +2346,7 @@
         )).sort();
 
         // Conta clienti in attesa (per la pill)
-        const inAttesaCount = clients.filter(c => !c.installato && !c.standby && !(c.tappa || '').trim() && !(c.spedizione || '').trim()).length;
+        const inAttesaCount = clients.filter(c => isInPrep(c)).length;
         const installatiCount = clients.filter(c => c.installato).length;
 
         // Barra navigazione tappe (+ pill In attesa se ci sono)
@@ -2376,7 +2401,7 @@
             document.getElementById('navStandbyCount').textContent = clients.filter(c => c.standby && !c.installato).length;
         }
         if (document.getElementById('navPrepCount')) {
-            document.getElementById('navPrepCount').textContent = clients.filter(c => !c.installato && !c.standby && !(c.tappa || '').trim() && !(c.spedizione || '').trim()).length;
+            document.getElementById('navPrepCount').textContent = clients.filter(c => isInPrep(c)).length;
         }
         if (currentView === 'standby') renderStandbyPage();
         if (currentView === 'installati') renderInstallatiPage();
@@ -2585,6 +2610,7 @@
                             </div>
                         </td>
                         <td>
+                            <button class="btn" style="padding:4px 8px; font-size:0.7rem; background:#2563eb; color:white; border:none; margin-bottom:4px;" onclick="moveToPrep('${client.id}')" title="Pre-pianificazione">📋 Pre-pianif.</button>
                             <button class="btn" style="padding:4px 8px; font-size:0.7rem; background:#16a34a; color:white; border:none; margin-bottom:4px;" onclick="markInstallato('${client.id}')" title="Installazione eseguita">✅ Installato</button>
                             <button class="btn" style="padding:4px 8px; font-size:0.7rem; background:#d97706; color:white; border:none; margin-bottom:4px;" onclick="markStandby('${client.id}')" title="Stand-by">⏸️ Stand-by</button>
                             <button class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
@@ -2610,7 +2636,7 @@
         // 1. Gruppi Tappe (Pre-pianificazione è nel portale) (non installati, con tappa e senza spedizione)
         const groupedTappe = {};
         filteredClients.forEach(client => {
-            if (client.installato || client.standby) return;
+            if (client.installato || client.standby || isInPrep(client)) return;
             const hasSped = (client.spedizione || '').trim();
             const hasTappa = (client.tappa || '').trim();
             if (hasTappa && !hasSped) {
@@ -2625,7 +2651,7 @@
         // 3. Gruppi Spedizioni (non installati)
         const groupedSped = {};
         filteredClients.forEach(client => {
-            if (client.installato || client.standby) return;
+            if (client.installato || client.standby || isInPrep(client)) return;
             const hasSped = (client.spedizione || '').trim();
             if (hasSped) {
                 if (!groupedSped[hasSped]) groupedSped[hasSped] = [];
@@ -2644,7 +2670,7 @@
             document.getElementById('navStandbyCount').textContent = clients.filter(c => c.standby && !c.installato).length;
         }
         if (document.getElementById('navPrepCount')) {
-            document.getElementById('navPrepCount').textContent = clients.filter(c => !c.installato && !c.standby && !(c.tappa || '').trim() && !(c.spedizione || '').trim()).length;
+            document.getElementById('navPrepCount').textContent = clients.filter(c => isInPrep(c)).length;
         }
         if (currentView === 'standby') renderStandbyPage();
         if (currentView === 'installati') renderInstallatiPage();
@@ -2776,7 +2802,8 @@
                 scadenza: scadenzaVal,
                 inLavorazione: false,
                 installato: false,
-                standby: false
+                standby: false,
+                inPrep: true
             };
             clients.push(newClient);
             saveToLocalStorage();
@@ -2820,7 +2847,7 @@
         populatePrepDropdowns();
         const container = document.getElementById('prepTableContainer');
         const countEl = document.getElementById('navPrepCount');
-        const list = clients.filter(c => !c.installato && !c.standby && !(c.tappa || '').trim() && !(c.spedizione || '').trim());
+        const list = clients.filter(c => isInPrep(c));
         if (countEl) countEl.textContent = list.length;
         if (!container) return;
 
@@ -2891,6 +2918,8 @@
                                     In lavorazione
                                 </label>
                             </div>
+                            ${(client.tappa || '').trim() ? `<div style="margin-top:4px;"><span class="model-badge" style="background:#ecfdf5; color:#047857; border-color:#86efac;">🚩 ${(client.tappa || '').replace(/</g, '&lt;')}</span></div>` : ''}
+                            ${(client.spedizione || '').trim() ? `<div style="margin-top:4px;"><span class="model-badge" style="background:#f5f3ff; color:#5b21b6; border-color:#c4b5fd;">📦 ${(client.spedizione || '').replace(/</g, '&lt;')}</span></div>` : ''}
                             <div class="models-list" style="margin-top:6px;">${modelsText}</div>
                         </td>
                         <td>
