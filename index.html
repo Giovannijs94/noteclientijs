@@ -882,6 +882,20 @@
     </div>
 </div>
 
+<div id="editScadenzaPrepModal" class="modal-overlay confirm-modal">
+    <div class="modal">
+        <div class="confirm-icon" style="background:linear-gradient(135deg,#dbeafe,#bfdbfe);">📅</div>
+        <h3>Scadenza cliente</h3>
+        <p class="confirm-desc" style="margin-bottom:6px;">Cliente: <strong id="editScadenzaPrepClientName"></strong></p>
+        <input type="date" id="editScadenzaPrepInput" class="input-control" style="margin-bottom:10px; text-align:center;" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmEditScadenzaPrep();}">
+        <div class="confirm-actions">
+            <button type="button" class="btn" onclick="closeEditScadenzaPrep()">Annulla</button>
+            <button type="button" class="btn" style="color:#dc2626;" onclick="clearEditScadenzaPrep()">Rimuovi</button>
+            <button type="button" class="btn btn-primary" onclick="confirmEditScadenzaPrep()">Salva</button>
+        </div>
+    </div>
+</div>
+
 <div id="renameClientModelModal" class="modal-overlay confirm-modal">
     <div class="modal">
         <div class="confirm-icon" style="background:linear-gradient(135deg,#e0e7ff,#c7d2fe);">🧩</div>
@@ -2068,6 +2082,50 @@
         renderPrepPage();
     }
 
+    let pendingEditScadenzaPrepId = null;
+
+    window.editScadenzaPrep = function(id) {
+        const client = clients.find(c => String(c.id) === String(id));
+        if (!client) return;
+        pendingEditScadenzaPrepId = id;
+        document.getElementById('editScadenzaPrepClientName').textContent = client.nome || '';
+        document.getElementById('editScadenzaPrepInput').value = client.scadenza || '';
+        document.getElementById('editScadenzaPrepModal').style.display = 'flex';
+        setTimeout(() => {
+            const inp = document.getElementById('editScadenzaPrepInput');
+            if (inp) inp.focus();
+        }, 50);
+    }
+
+    window.closeEditScadenzaPrep = function() {
+        pendingEditScadenzaPrepId = null;
+        document.getElementById('editScadenzaPrepModal').style.display = 'none';
+    }
+
+    window.clearEditScadenzaPrep = function() {
+        if (!pendingEditScadenzaPrepId) return;
+        const client = clients.find(c => String(c.id) === String(pendingEditScadenzaPrepId));
+        if (client) {
+            client.scadenza = '';
+            saveToLocalStorage();
+        }
+        pendingEditScadenzaPrepId = null;
+        document.getElementById('editScadenzaPrepModal').style.display = 'none';
+        renderPrepPage();
+    }
+
+    window.confirmEditScadenzaPrep = function() {
+        if (!pendingEditScadenzaPrepId) return;
+        const client = clients.find(c => String(c.id) === String(pendingEditScadenzaPrepId));
+        if (client) {
+            client.scadenza = document.getElementById('editScadenzaPrepInput').value || '';
+            saveToLocalStorage();
+        }
+        pendingEditScadenzaPrepId = null;
+        document.getElementById('editScadenzaPrepModal').style.display = 'none';
+        renderPrepPage();
+    }
+
     window.updateNotaPrep = function(id, text) {
         const client = clients.find(c => String(c.id) === String(id));
         if (client) {
@@ -2879,13 +2937,17 @@
         });
     })();
 
-    function formatScadenzaBadge(scadenza) {
-        if (!scadenza) return '<span style="color:var(--text-muted);">—</span>';
+    function formatScadenzaBadge(scadenza, clientId) {
+        if (!scadenza) {
+            return `<span style="color:var(--text-muted); cursor:pointer; border-bottom:1px dashed #cbd5e1;" title="Doppio click per aggiungere scadenza" ondblclick="editScadenzaPrep('${clientId}')">—</span>`;
+        }
         const label = scadenza.split('-').reverse().join('/');
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const parts = String(scadenza).split('-');
-        if (parts.length !== 3) return `<span style="font-weight:600;">📅 ${label}</span>`;
+        if (parts.length !== 3) {
+            return `<span style="font-weight:600; cursor:pointer;" title="Doppio click per modificare scadenza" ondblclick="editScadenzaPrep('${clientId}')">📅 ${label}</span>`;
+        }
         const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
         d.setHours(0, 0, 0, 0);
         const diffDays = Math.round((d - today) / 86400000);
@@ -2906,7 +2968,7 @@
             bg = '#f0fdf4';
             border = '#bbf7d0';
         }
-        return `<span style="display:inline-block; font-weight:700; color:${color}; background:${bg}; border:1px solid ${border}; padding:5px 10px; border-radius:8px; font-size:0.85rem;">📅 ${label}</span>`;
+        return `<span style="display:inline-block; font-weight:700; color:${color}; background:${bg}; border:1px solid ${border}; padding:5px 10px; border-radius:8px; font-size:0.85rem; cursor:pointer;" title="Doppio click per modificare scadenza" ondblclick="editScadenzaPrep('${clientId}')">📅 ${label}</span>`;
     }
 
     function renderPrepPage() {
@@ -3008,7 +3070,7 @@
                             }
                         </td>
                         <td>
-                            ${formatScadenzaBadge(client.scadenza)}
+                            ${formatScadenzaBadge(client.scadenza, client.id)}
                         </td>
                         <td>
                             📍 ${client.localita || '-'}<br>
