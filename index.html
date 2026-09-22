@@ -855,6 +855,20 @@
 </div>
 
 
+
+<div id="editTappaPrepModal" class="modal-overlay confirm-modal">
+    <div class="modal">
+        <div class="confirm-icon" style="background:linear-gradient(135deg,#dcfce7,#bbf7d0);">🚩</div>
+        <h3>Tappa cliente</h3>
+        <p class="confirm-desc" style="margin-bottom:6px;">Cliente: <strong id="editTappaPrepClientName"></strong></p>
+        <input type="text" id="editTappaPrepInput" class="input-control" list="tappeDatalist" placeholder="Nome tappa (nuova o esistente)..." style="margin-bottom:10px; text-align:center;" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmEditTappaPrep();}">
+        <div class="confirm-actions">
+            <button type="button" class="btn" onclick="closeEditTappaPrep()">Annulla</button>
+            <button type="button" class="btn btn-primary" onclick="confirmEditTappaPrep()">Salva</button>
+        </div>
+    </div>
+</div>
+
 <div id="editNotaPrepModal" class="modal-overlay confirm-modal">
     <div class="modal">
         <div class="confirm-icon" style="background:linear-gradient(135deg,#fef3c7,#fde68a);">📝</div>
@@ -2310,6 +2324,48 @@
         render();
     }
 
+    window.updateStageInPrep = function(id, newStage) {
+        const client = clients.find(c => String(c.id) === String(id));
+        if (!client) return;
+        const val = (newStage || '').trim();
+        client.tappa = val;
+        if (val) client.spedizione = '';
+        client.inPrep = true; // resta in pre-pianificazione
+        saveToLocalStorage();
+        render();
+        if (currentView === 'prep') renderPrepPage();
+    }
+
+    let pendingEditTappaPrepId = null;
+
+    window.editTappaPrep = function(id) {
+        const client = clients.find(c => String(c.id) === String(id));
+        if (!client) return;
+        pendingEditTappaPrepId = id;
+        document.getElementById('editTappaPrepClientName').textContent = client.nome || '';
+        document.getElementById('editTappaPrepInput').value = client.tappa || '';
+        document.getElementById('editTappaPrepModal').style.display = 'flex';
+        setTimeout(() => {
+            const inp = document.getElementById('editTappaPrepInput');
+            inp.focus();
+            inp.select();
+        }, 50);
+    }
+
+    window.closeEditTappaPrep = function() {
+        pendingEditTappaPrepId = null;
+        document.getElementById('editTappaPrepModal').style.display = 'none';
+    }
+
+    window.confirmEditTappaPrep = function() {
+        if (!pendingEditTappaPrepId) return;
+        const val = document.getElementById('editTappaPrepInput').value.trim();
+        window.updateStageInPrep(pendingEditTappaPrepId, val);
+        pendingEditTappaPrepId = null;
+        document.getElementById('editTappaPrepModal').style.display = 'none';
+    }
+
+
     function render() {
         // Normalizza campi di ogni cliente
         clients.forEach(c => {
@@ -2918,7 +2974,10 @@
                                     In lavorazione
                                 </label>
                             </div>
-                            ${(client.tappa || '').trim() ? `<div style="margin-top:4px;"><span class="model-badge" style="background:#ecfdf5; color:#047857; border-color:#86efac;">🚩 ${(client.tappa || '').replace(/</g, '&lt;')}</span></div>` : ''}
+                            ${(client.tappa || '').trim()
+                                ? `<div style="margin-top:4px;"><span class="model-badge" style="background:#ecfdf5; color:#047857; border-color:#86efac; cursor:pointer;" title="Doppio click per modificare tappa" ondblclick="editTappaPrep('${client.id}')">🚩 ${(client.tappa || '').replace(/</g, '&lt;')}</span></div>`
+                                : `<div style="margin-top:4px;"><span style="font-size:0.8rem; color:var(--text-muted); cursor:pointer; border-bottom:1px dashed #cbd5e1;" title="Doppio click per creare tappa" ondblclick="editTappaPrep('${client.id}')">🚩 + tappa</span></div>`
+                            }
                             ${(client.spedizione || '').trim() ? `<div style="margin-top:4px;"><span class="model-badge" style="background:#f5f3ff; color:#5b21b6; border-color:#c4b5fd;">📦 ${(client.spedizione || '').replace(/</g, '&lt;')}</span></div>` : ''}
                             <div class="models-list" style="margin-top:6px;">${modelsText}</div>
                         </td>
@@ -2939,7 +2998,7 @@
                             <div class="edit-controls" style="margin-top:0;">
                                 <div class="edit-group">
                                     <label>🚩 Tappa:</label>
-                                    <input type="text" class="edit-input" value="" placeholder="Assegna tappa..." list="tappeDatalist" autocomplete="off" onchange="updateStage('${client.id}', this.value)">
+                                    <input type="text" class="edit-input" value="" value="${(client.tappa || '').replace(/"/g, '&quot;')}" placeholder="Crea o assegna tappa..." list="tappeDatalist" autocomplete="off" onchange="updateStageInPrep('${client.id}', this.value)">
                                 </div>
                                 <div class="edit-group">
                                     <label>📦 Spedizione:</label>
