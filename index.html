@@ -2,7 +2,10 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0f172a">
     <title>Gestione Note Clienti</title>
     <style>
         :root {
@@ -21,7 +24,17 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: var(--bg); color: var(--text); padding: 0; margin: 0; line-height: 1.5; }
+        html { -webkit-text-size-adjust: 100%; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            padding: 0;
+            margin: 0;
+            line-height: 1.5;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: rgba(37, 99, 235, 0.15);
+        }
         .container { width: 100%; max-width: 1560px; margin: 0 auto; }
         .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 16px; }
         .header-title-group h1 { font-size: 1.8rem; color: var(--primary); font-weight: 700; }
@@ -584,24 +597,402 @@
         .confirm-modal.confirm-standby .confirm-name {
             color: #d97706;
         }
+        .prep-suggestions-card {
+            border: 1px solid #bfdbfe;
+            background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+        }
+        .prep-suggestions-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .prep-sug-item {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 16px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .prep-sug-item:hover {
+            border-color: #93c5fd;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
+        }
+        .prep-sug-item.urgent {
+            border-color: #fecaca;
+            background: linear-gradient(90deg, #fef2f2 0%, #fff 40%);
+        }
+        .prep-sug-item.medium {
+            border-color: #fed7aa;
+            background: linear-gradient(90deg, #fff7ed 0%, #fff 40%);
+        }
+        .prep-sug-rank {
+            flex-shrink: 0;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 0.9rem;
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+        .prep-sug-item.urgent .prep-sug-rank {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+        .prep-sug-item.medium .prep-sug-rank {
+            background: #ffedd5;
+            color: #c2410c;
+        }
+        .prep-sug-body {
+            flex: 1;
+            min-width: 200px;
+        }
+        .prep-sug-title {
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 0.95rem;
+            margin-bottom: 4px;
+        }
+        .prep-sug-meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+        .prep-sug-clients {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .prep-sug-client {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 3px 9px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #334155;
+        }
+        .prep-sug-client .sug-scad {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 6px;
+            margin-left: 2px;
+        }
+        .prep-sug-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex-shrink: 0;
+            align-items: stretch;
+        }
+        .prep-sug-actions .btn {
+            white-space: nowrap;
+            font-size: 0.8rem;
+            padding: 7px 12px;
+            justify-content: center;
+        }
+        .prep-urgency-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        .prep-urgency-pill.u-urgent { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+        .prep-urgency-pill.u-medium { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+        .prep-urgency-pill.u-ok { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+        .prep-urgency-pill.u-none { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+        .prep-sug-empty {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 16px;
+            font-size: 0.9rem;
+        }
+        /* ===== Responsive: tablet ===== */
         @media (max-width: 900px) {
             .app-layout { flex-direction: column; }
             .portal-nav {
-                position: relative;
+                position: sticky;
+                top: 0;
+                z-index: 800;
                 width: 100%;
                 min-width: 100%;
                 max-height: none;
                 flex-direction: row;
                 flex-wrap: wrap;
                 align-items: center;
+                padding: 12px 10px;
+                padding-top: max(12px, env(safe-area-inset-top));
             }
             .portal-nav .portal-brand {
                 width: 100%;
                 border-bottom: none;
                 padding-bottom: 8px;
-                margin-bottom: 0;
+                margin-bottom: 4px;
             }
-            .portal-nav-btn { flex: 1; min-width: 140px; justify-content: center; }
+            .portal-nav-btn {
+                flex: 1;
+                min-width: 120px;
+                justify-content: center;
+                padding: 10px 8px;
+                font-size: 0.82rem;
+            }
+            .main-content {
+                padding: 14px 12px;
+                padding-bottom: max(24px, env(safe-area-inset-bottom));
+            }
+            .header-bar {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            .header-title-group h1 {
+                font-size: 1.35rem;
+            }
+            .form-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+            }
+            .card { padding: 14px; }
+            table { font-size: 0.85rem; }
+            th, td { padding: 10px 10px; }
+            .status-cell { width: 64px; }
+            th.status-col { width: 64px; font-size: 0.62rem; }
+            .btn-back-to-top {
+                bottom: max(20px, env(safe-area-inset-bottom));
+                right: max(16px, env(safe-area-inset-right));
+            }
+        }
+
+        /* ===== Responsive: iPhone / smartphone ===== */
+        @media (max-width: 600px) {
+            body {
+                -webkit-text-size-adjust: 100%;
+                text-size-adjust: 100%;
+            }
+            .main-content {
+                padding: 10px 8px;
+                padding-bottom: max(28px, env(safe-area-inset-bottom));
+            }
+            .portal-nav {
+                gap: 4px;
+                padding: 10px 6px;
+                padding-top: max(10px, env(safe-area-inset-top));
+            }
+            .portal-nav .portal-brand {
+                font-size: 0.88rem;
+                padding: 4px 8px 8px;
+            }
+            .portal-nav-btn {
+                flex: 1 1 calc(50% - 6px);
+                min-width: calc(50% - 6px);
+                padding: 11px 6px;
+                font-size: 0.78rem;
+                border-radius: 8px;
+                gap: 6px;
+            }
+            .portal-nav-btn .nav-badge {
+                margin-left: 0;
+                font-size: 0.65rem;
+                padding: 1px 6px;
+            }
+            .header-title-group h1 {
+                font-size: 1.2rem;
+            }
+            .header-actions {
+                width: 100%;
+            }
+            .header-actions .btn,
+            .settings-menu { width: 100%; }
+            .settings-menu > .btn { width: 100%; justify-content: center; }
+            .settings-menu-panel {
+                left: 0;
+                right: 0;
+                min-width: 0;
+                width: 100%;
+            }
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            .form-group[style*="grid-column"] {
+                grid-column: 1 / -1 !important;
+            }
+            .card { padding: 12px; margin-bottom: 12px; border-radius: 12px; }
+            .card-title { font-size: 1rem; margin-bottom: 12px; }
+            .search-card {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+                padding: 12px;
+            }
+            .search-input {
+                width: 100%;
+                font-size: 16px; /* evita zoom iOS al focus */
+                min-height: 44px;
+            }
+            .input-control, .select-control, .edit-input, .edit-select, .note-input {
+                font-size: 16px; /* evita zoom iOS */
+                min-height: 42px;
+            }
+            .btn {
+                min-height: 42px;
+                padding: 10px 14px;
+                font-size: 0.875rem;
+            }
+            .btn-icon {
+                min-width: 42px;
+                min-height: 42px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .stages-nav-bar {
+                gap: 6px;
+                margin-bottom: 12px;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .stages-nav-bar::-webkit-scrollbar { display: none; }
+            .stage-pill {
+                padding: 8px 14px;
+                font-size: 0.8rem;
+                flex-shrink: 0;
+            }
+            /* Tabelle: scroll orizzontale fluido */
+            .stage-group,
+            .installati-table-wrap {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                border-radius: 12px;
+            }
+            table {
+                min-width: 640px;
+                font-size: 0.8rem;
+            }
+            th, td {
+                padding: 10px 8px;
+            }
+            .status-cell { width: 56px; padding-left: 2px !important; padding-right: 2px !important; }
+            th.status-col { width: 56px; font-size: 0.58rem; letter-spacing: -0.02em; }
+            .checkbox-x {
+                width: 28px;
+                height: 28px;
+                font-size: 1rem;
+            }
+            .note-cell { min-width: 120px; max-width: 150px; }
+            .note-field { max-width: 140px; min-height: 32px; }
+            .client-info strong { font-size: 1rem; }
+            .edit-controls {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+            .edit-group {
+                flex-wrap: wrap;
+            }
+            .edit-group .edit-input,
+            .edit-group .edit-select {
+                flex: 1;
+                min-width: 0;
+            }
+            .stage-header {
+                padding: 12px 14px;
+                font-size: 0.95rem;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .stage-footer {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+                padding: 12px;
+            }
+            .stage-footer .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            .model-badge { font-size: 0.78rem; }
+            .models-list { gap: 4px; }
+            .modal {
+                width: 94%;
+                max-width: 94%;
+                padding: 18px 16px;
+                margin: 12px;
+                max-height: calc(100vh - 40px);
+                overflow-y: auto;
+            }
+            .modal-body { max-height: 50vh; }
+            .login-box {
+                padding: 28px 20px;
+                margin: 12px;
+            }
+            .login-box .input-control {
+                font-size: 16px;
+                min-height: 46px;
+            }
+            .prep-sug-item {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .prep-sug-actions {
+                width: 100%;
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+            .prep-sug-actions .input-control {
+                flex: 1;
+                min-width: 120px;
+            }
+            .prep-sug-actions .btn {
+                flex: 1;
+            }
+            .prep-urgency-pill {
+                font-size: 0.68rem;
+                padding: 3px 8px;
+            }
+            .btn-back-to-top {
+                width: 44px;
+                height: 44px;
+                bottom: max(18px, env(safe-area-inset-bottom));
+                right: max(14px, env(safe-area-inset-right));
+            }
+            /* Azioni cliente in colonna su mobile */
+            td:last-child {
+                white-space: normal !important;
+            }
+            td:last-child .btn {
+                display: block;
+                width: 100%;
+                margin-bottom: 4px;
+                text-align: center;
+                justify-content: center;
+            }
+        }
+
+        /* Schermi molto stretti (iPhone SE / mini) */
+        @media (max-width: 380px) {
+            .portal-nav-btn {
+                font-size: 0.72rem;
+                padding: 10px 4px;
+            }
+            .header-title-group h1 { font-size: 1.1rem; }
+            table { min-width: 580px; }
         }
     </style>
 </head>
@@ -812,6 +1203,19 @@
     <div class="search-card">
         <span style="font-weight: 700; color: var(--primary);">🔍 Cerca:</span>
         <input type="text" id="prepSearchInput" class="search-input" placeholder="Filtra per cliente, località, provincia, regione, modello, nota o tappa..." oninput="renderPrepPage()">
+    </div>
+
+    <!-- Consigli abbinamento intelligenti -->
+    <div id="prepSuggestionsCard" class="card prep-suggestions-card" style="display:none; margin-bottom:16px;">
+        <div class="card-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+            <span>💡 Consigli abbinamento</span>
+            <span id="prepUrgencyStats" style="display:flex; gap:8px; flex-wrap:wrap; font-size:0.78rem; font-weight:600;"></span>
+        </div>
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:14px; line-height:1.45;">
+            Suggerimenti automatici in base a <strong>scadenza</strong>, <strong>regione</strong> e <strong>località</strong>.
+            Puoi creare una tappa comune con un click.
+        </p>
+        <div id="prepSuggestionsList" class="prep-suggestions-list"></div>
     </div>
 
     <div class="installati-table-wrap">
@@ -3046,12 +3450,265 @@
         return `<span style="display:inline-block; font-weight:700; color:${color}; background:${bg}; border:1px solid ${border}; padding:5px 10px; border-radius:8px; font-size:0.85rem; cursor:pointer;" title="Doppio click per modificare scadenza" ondblclick="editScadenzaPrep('${clientId}')">📅 ${label}</span>`;
     }
 
+    function daysUntilScadenza(scadenza) {
+        if (!scadenza) return null;
+        const parts = String(scadenza).split('-');
+        if (parts.length !== 3) return null;
+        const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        d.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return Math.round((d - today) / 86400000);
+    }
+
+    function formatScadShort(scadenza) {
+        if (!scadenza) return '—';
+        const parts = String(scadenza).split('-');
+        if (parts.length !== 3) return scadenza;
+        return parts[2] + '/' + parts[1];
+    }
+
+    function buildPrepSuggestions(allPrep) {
+        const suggestions = [];
+        // Cluster by region
+        const byRegion = {};
+        allPrep.forEach(c => {
+            const reg = (c.regione || '').trim() || 'Senza regione';
+            if (!byRegion[reg]) byRegion[reg] = [];
+            byRegion[reg].push(c);
+        });
+
+        Object.keys(byRegion).forEach(reg => {
+            const group = byRegion[reg];
+            if (group.length < 2) return;
+
+            // Sub-cluster by provincia when possible
+            const byProv = {};
+            group.forEach(c => {
+                const p = (c.provincia || '').trim() || '_';
+                if (!byProv[p]) byProv[p] = [];
+                byProv[p].push(c);
+            });
+
+            Object.keys(byProv).forEach(prov => {
+                const members = byProv[prov];
+                if (members.length < 2) return;
+
+                // Sort by scadenza
+                const withScad = members.filter(c => c.scadenza).sort((a, b) => (a.scadenza || '').localeCompare(b.scadenza || ''));
+                const withoutScad = members.filter(c => !c.scadenza);
+
+                // Greedy window clustering: group clients whose scadenze are within 21 days
+                const used = new Set();
+                for (let i = 0; i < withScad.length; i++) {
+                    if (used.has(withScad[i].id)) continue;
+                    const cluster = [withScad[i]];
+                    used.add(withScad[i].id);
+                    const baseDays = daysUntilScadenza(withScad[i].scadenza);
+                    for (let j = i + 1; j < withScad.length; j++) {
+                        if (used.has(withScad[j].id)) continue;
+                        const d = daysUntilScadenza(withScad[j].scadenza);
+                        if (d !== null && baseDays !== null && Math.abs(d - baseDays) <= 21) {
+                            cluster.push(withScad[j]);
+                            used.add(withScad[j].id);
+                        }
+                    }
+                    // Attach nearby without-scadenza in same provincia (max 2)
+                    withoutScad.forEach(c => {
+                        if (cluster.length < 6 && !used.has(c.id)) {
+                            cluster.push(c);
+                            used.add(c.id);
+                        }
+                    });
+                    if (cluster.length >= 2) {
+                        const daysList = cluster.map(c => daysUntilScadenza(c.scadenza)).filter(d => d !== null);
+                        const minDays = daysList.length ? Math.min(...daysList) : 999;
+                        let level = 'ok';
+                        if (minDays <= 14) level = 'urgent';
+                        else if (minDays <= 30) level = 'medium';
+                        const localitaSet = [...new Set(cluster.map(c => (c.localita || '').trim()).filter(Boolean))];
+                        const tappaHint = prov !== '_'
+                            ? (reg + ' ' + prov)
+                            : reg;
+                        suggestions.push({
+                            region: reg,
+                            provincia: prov !== '_' ? prov : '',
+                            clients: cluster,
+                            level,
+                            minDays,
+                            localita: localitaSet,
+                            tappaHint: tappaHint.trim()
+                        });
+                    }
+                }
+
+                // If many without scadenza in same provincia, suggest them together
+                const leftover = withoutScad.filter(c => !used.has(c.id));
+                if (leftover.length >= 2) {
+                    suggestions.push({
+                        region: reg,
+                        provincia: prov !== '_' ? prov : '',
+                        clients: leftover.slice(0, 6),
+                        level: 'ok',
+                        minDays: 999,
+                        localita: [...new Set(leftover.map(c => (c.localita || '').trim()).filter(Boolean))],
+                        tappaHint: (prov !== '_' ? (reg + ' ' + prov) : reg).trim(),
+                        noScadenza: true
+                    });
+                }
+            });
+
+            // Cross-province same region if still unpaired singles with close scadenze
+            const singles = group.filter(c => {
+                // already in a suggestion?
+                return !suggestions.some(s => s.clients.some(x => x.id === c.id));
+            });
+            if (singles.length >= 2) {
+                const withScad = singles.filter(c => c.scadenza).sort((a, b) => (a.scadenza || '').localeCompare(b.scadenza || ''));
+                if (withScad.length >= 2) {
+                    const cluster = withScad.slice(0, 5);
+                    const daysList = cluster.map(c => daysUntilScadenza(c.scadenza)).filter(d => d !== null);
+                    const minDays = daysList.length ? Math.min(...daysList) : 999;
+                    let level = 'ok';
+                    if (minDays <= 14) level = 'urgent';
+                    else if (minDays <= 30) level = 'medium';
+                    suggestions.push({
+                        region: reg,
+                        provincia: '',
+                        clients: cluster,
+                        level,
+                        minDays,
+                        localita: [...new Set(cluster.map(c => (c.localita || '').trim()).filter(Boolean))],
+                        tappaHint: reg,
+                        crossProv: true
+                    });
+                }
+            }
+        });
+
+        // Sort: urgent first, then medium, then by minDays, then by size
+        suggestions.sort((a, b) => {
+            const order = { urgent: 0, medium: 1, ok: 2 };
+            if (order[a.level] !== order[b.level]) return order[a.level] - order[b.level];
+            if (a.minDays !== b.minDays) return a.minDays - b.minDays;
+            return b.clients.length - a.clients.length;
+        });
+
+        return suggestions.slice(0, 8);
+    }
+
+    window.applySuggestedTappa = function(idsCsv, tappaName) {
+        const ids = String(idsCsv || '').split(',').filter(Boolean);
+        const name = (tappaName || '').trim();
+        if (!ids.length || !name) return;
+        let applied = 0;
+        ids.forEach(id => {
+            const client = clients.find(c => String(c.id) === String(id));
+            if (client) {
+                client.tappa = name;
+                client.spedizione = '';
+                client.inPrep = true;
+                applied++;
+            }
+        });
+        if (applied) {
+            saveToLocalStorage();
+            render();
+            renderPrepPage();
+        }
+    };
+
+    window.scrollToPrepClient = function(clientId) {
+        // Soft highlight: open edit tappa for that client as focus aid
+        const client = clients.find(c => String(c.id) === String(clientId));
+        if (!client) return;
+        const reg = (client.regione || '').trim() || 'Senza regione';
+        const safeId = 'prep-reg-' + reg.replace(/[^a-zA-Z0-9-_]/g, '_');
+        const el = document.getElementById(safeId);
+        if (el) {
+            const y = el.getBoundingClientRect().top + window.pageYOffset - 12;
+            window.scrollTo(0, Math.max(0, y));
+        }
+    };
+
+    function renderPrepSuggestions(allPrep) {
+        const card = document.getElementById('prepSuggestionsCard');
+        const listEl = document.getElementById('prepSuggestionsList');
+        const statsEl = document.getElementById('prepUrgencyStats');
+        if (!card || !listEl) return;
+
+        if (!allPrep || allPrep.length === 0) {
+            card.style.display = 'none';
+            return;
+        }
+
+        // Urgency stats
+        let nUrgent = 0, nMedium = 0, nOk = 0, nNone = 0;
+        allPrep.forEach(c => {
+            const d = daysUntilScadenza(c.scadenza);
+            if (d === null) nNone++;
+            else if (d <= 14) nUrgent++;
+            else if (d <= 30) nMedium++;
+            else nOk++;
+        });
+        if (statsEl) {
+            statsEl.innerHTML = `
+                <span class="prep-urgency-pill u-urgent">🔴 ${nUrgent} urgenti</span>
+                <span class="prep-urgency-pill u-medium">🟠 ${nMedium} ≤30gg</span>
+                <span class="prep-urgency-pill u-ok">🟢 ${nOk} ok</span>
+                <span class="prep-urgency-pill u-none">⚪ ${nNone} senza scad.</span>
+            `;
+        }
+
+        const suggestions = buildPrepSuggestions(allPrep);
+        card.style.display = 'block';
+
+        if (suggestions.length === 0) {
+            listEl.innerHTML = `<div class="prep-sug-empty">Nessun abbinamento ovvio al momento.<br><span style="font-size:0.8rem;">Servono almeno 2 clienti nella stessa provincia/regione con scadenze vicine.</span></div>`;
+            return;
+        }
+
+        listEl.innerHTML = suggestions.map((s, idx) => {
+            const ids = s.clients.map(c => c.id).join(',');
+            const defaultTappa = s.tappaHint || s.region;
+            const levelLabel = s.level === 'urgent' ? 'Urgente' : (s.level === 'medium' ? 'Entro 30gg' : (s.noScadenza ? 'Senza scadenza' : 'Pianificabile'));
+            const areaLabel = s.provincia
+                ? `${s.region} · ${s.provincia}`
+                : (s.crossProv ? `${s.region} (più province)` : s.region);
+            const locPreview = s.localita.slice(0, 4).join(', ') + (s.localita.length > 4 ? '…' : '');
+            const clientsHtml = s.clients.map(c => {
+                const d = daysUntilScadenza(c.scadenza);
+                let scadStyle = 'background:#f1f5f9;color:#64748b;';
+                if (d !== null && d <= 14) scadStyle = 'background:#fee2e2;color:#b91c1c;';
+                else if (d !== null && d <= 30) scadStyle = 'background:#ffedd5;color:#c2410c;';
+                else if (d !== null) scadStyle = 'background:#dcfce7;color:#15803d;';
+                return `<span class="prep-sug-client" title="Vai alla regione" onclick="scrollToPrepClient('${c.id}')">${(c.nome || '').replace(/</g, '&lt;')}<span class="sug-scad" style="${scadStyle}">${formatScadShort(c.scadenza)}</span></span>`;
+            }).join('');
+            const inputId = 'sug-tappa-' + idx;
+            return `
+                <div class="prep-sug-item ${s.level}">
+                    <div class="prep-sug-rank">${idx + 1}</div>
+                    <div class="prep-sug-body">
+                        <div class="prep-sug-title">${levelLabel} · ${areaLabel} · ${s.clients.length} clienti</div>
+                        <div class="prep-sug-meta">📍 ${locPreview || '—'}${s.minDays < 999 ? ' · prima scadenza tra ' + s.minDays + ' gg' : ''}</div>
+                        <div class="prep-sug-clients">${clientsHtml}</div>
+                    </div>
+                    <div class="prep-sug-actions">
+                        <input type="text" id="${inputId}" class="input-control" style="padding:6px 10px; font-size:0.8rem; min-width:140px;" value="${defaultTappa.replace(/"/g, '&quot;')}" placeholder="Nome tappa...">
+                        <button type="button" class="btn btn-primary" onclick="applySuggestedTappa('${ids}', document.getElementById('${inputId}').value)">🚩 Crea tappa</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
     function renderPrepPage() {
         populatePrepDropdowns();
         const container = document.getElementById('prepTableContainer');
         const countEl = document.getElementById('navPrepCount');
         const allPrep = clients.filter(c => isInPrep(c));
         if (countEl) countEl.textContent = allPrep.length;
+        renderPrepSuggestions(allPrep);
         if (!container) return;
 
         const searchTerm = (document.getElementById('prepSearchInput')?.value || '').toLowerCase().trim();
