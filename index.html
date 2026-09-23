@@ -2383,6 +2383,8 @@
 
     function isInPrep(c) {
         if (!c || c.installato || c.standby) return false;
+        // Esplicitamente spostato in Note clienti
+        if (c.inPrep === false || c.inPrep === 'false') return false;
         if (c.inPrep === true || c.inPrep === 'true') return true;
         // Compatibilità: senza tappa né spedizione = pre-pianificazione
         return !(c.tappa || '').trim() && !(c.spedizione || '').trim();
@@ -2395,6 +2397,21 @@
         // mantiene tappa e spedizione
         saveToLocalStorage();
         render();
+    }
+
+    window.moveToNote = function(id) {
+        const client = clients.find(c => String(c.id) === String(id));
+        if (!client) return;
+        const hasTappa = !!(client.tappa || '').trim();
+        const hasSped = !!(client.spedizione || '').trim();
+        if (!hasTappa && !hasSped) {
+            alert('Assegna prima una Tappa o una Spedizione, poi potrai passarlo in Note clienti.');
+            return;
+        }
+        client.inPrep = false;
+        saveToLocalStorage();
+        render();
+        renderPrepPage();
     }
 
     window.updateStageInPrep = function(id, newStage) {
@@ -3070,7 +3087,7 @@
                                 <th>Scadenza</th>
                                 <th>Località</th>
                                 <th>Assegna</th>
-                                <th style="width: 60px;"></th>
+                                <th style="width: 130px;"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -3125,7 +3142,8 @@
                                 </div>
                             </div>
                         </td>
-                        <td>
+                        <td style="white-space:nowrap;">
+                            <button type="button" class="btn" style="padding:4px 8px; font-size:0.75rem; background:#2563eb; color:white; border:none; margin-bottom:4px;" onclick="moveToNote('${client.id}')" title="Passa in Note clienti">📝 Note clienti</button>
                             <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
                         </td>
                     </tr>
