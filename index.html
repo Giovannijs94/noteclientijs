@@ -597,6 +597,17 @@
         .confirm-modal.confirm-standby .confirm-name {
             color: #d97706;
         }
+        .confirm-modal.confirm-duplicate .confirm-icon {
+            background: linear-gradient(135deg, #ffedd5, #fed7aa);
+            font-size: 2rem;
+        }
+        .confirm-modal.confirm-duplicate .confirm-name {
+            color: #c2410c;
+            font-size: 1.15rem;
+        }
+        .confirm-modal.confirm-duplicate .modal {
+            border-top: 4px solid #f59e0b;
+        }
         .prep-suggestions-card {
             border: 1px solid #bfdbfe;
             background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
@@ -1402,6 +1413,24 @@
     </div>
 </div>
 
+<div id="duplicateClientModal" class="modal-overlay confirm-modal confirm-duplicate">
+    <div class="modal">
+        <div class="confirm-icon">👤</div>
+        <h3>Cliente già presente</h3>
+        <div class="confirm-name" id="duplicateClientName"></div>
+        <p class="confirm-desc">
+            Questo nome è già registrato in<br>
+            <strong id="duplicateClientSection" style="color:#b45309;"></strong>
+        </p>
+        <p class="confirm-desc" style="margin-top:-12px; margin-bottom:20px; font-size:0.85rem;">
+            Non è possibile creare doppioni.<br>Cerca il cliente esistente oppure usa un nome diverso.
+        </p>
+        <div class="confirm-actions">
+            <button type="button" class="btn btn-primary" onclick="closeDuplicateClient()" style="min-width:140px;">Ho capito</button>
+        </div>
+    </div>
+</div>
+
 <script>
     const ITALIAN_REGIONS = [
         "Abruzzo", "Basilicata", "Calabria", "Campania", "Emilia-Romagna", 
@@ -1705,6 +1734,33 @@
     function saveToLocalStorage() {
         localStorage.setItem('note_clienti_data', JSON.stringify(clients));
     }
+
+    /** Controlla se esiste già un cliente con lo stesso nome (ignora maiuscole/spazi). */
+    function findClientByName(nome) {
+        const key = (nome || '').trim().toLowerCase();
+        if (!key) return null;
+        return clients.find(c => (c.nome || '').trim().toLowerCase() === key) || null;
+    }
+
+    function describeClientLocation(client) {
+        if (!client) return '';
+        if (client.installato === true || client.installato === 'true') return 'Installazioni eseguite';
+        if (client.standby === true || client.standby === 'true') return 'Stand-by';
+        const inPrep = client.inPrep === true || client.inPrep === 'true'
+            || (!(client.tappa || '').trim() && !(client.spedizione || '').trim());
+        if (inPrep) return 'Pre-pianificazione';
+        return 'Note clienti';
+    }
+
+    window.showDuplicateClient = function(nome, section) {
+        document.getElementById('duplicateClientName').textContent = nome;
+        document.getElementById('duplicateClientSection').textContent = '«' + section + '»';
+        document.getElementById('duplicateClientModal').style.display = 'flex';
+    };
+
+    window.closeDuplicateClient = function() {
+        document.getElementById('duplicateClientModal').style.display = 'none';
+    };
 
     function init() {
         populateDropdowns();
@@ -2124,6 +2180,12 @@
 
         if (!nomeVal || !localitaVal || !provinciaVal || !regioneVal) {
             alert("Compila tutti i campi obbligatori (nome, località, provincia e regione).");
+            return;
+        }
+
+        const existingNote = findClientByName(nomeVal);
+        if (existingNote) {
+            showDuplicateClient(nomeVal, describeClientLocation(existingNote));
             return;
         }
 
@@ -3378,6 +3440,12 @@
 
             if (!nomeVal || !localitaVal || !provinciaVal || !regioneVal) {
                 alert('Compila nome, località, provincia e regione.');
+                return;
+            }
+
+            const existingPrep = findClientByName(nomeVal);
+            if (existingPrep) {
+                showDuplicateClient(nomeVal, describeClientLocation(existingPrep));
                 return;
             }
 
