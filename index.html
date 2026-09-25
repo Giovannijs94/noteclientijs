@@ -539,6 +539,13 @@
         .portal-nav-btn.active .nav-badge {
             background: rgba(255,255,255,0.25);
         }
+        .portal-nav-btn .nav-ico {
+            font-size: 1.15rem;
+            line-height: 1;
+        }
+        .portal-nav-btn .nav-txt {
+            line-height: 1.2;
+        }
         .main-content {
             flex: 1;
             min-width: 0;
@@ -797,220 +804,267 @@
             }
         }
 
-        /* ===== Responsive: iPhone / smartphone ===== */
+        /* ===== Responsive: iPhone / smartphone – UI stile app ===== */
         @media (max-width: 600px) {
             body {
                 -webkit-text-size-adjust: 100%;
                 text-size-adjust: 100%;
+                background: #f1f5f9;
             }
-            .main-content {
-                padding: 10px 8px;
-                padding-bottom: max(28px, env(safe-area-inset-bottom));
+            .app-layout {
+                flex-direction: column;
+                min-height: 100dvh;
             }
+            /* Tab bar iOS in basso */
             .portal-nav {
-                gap: 4px;
-                padding: 10px 6px;
-                padding-top: max(10px, env(safe-area-inset-top));
-            }
-            .portal-nav .portal-brand {
-                font-size: 0.88rem;
-                padding: 4px 8px 8px;
-            }
-            .portal-nav-btn {
-                flex: 1 1 calc(50% - 6px);
-                min-width: calc(50% - 6px);
-                padding: 11px 6px;
-                font-size: 0.78rem;
-                border-radius: 8px;
-                gap: 6px;
-            }
-            .portal-nav-btn .nav-badge {
-                margin-left: 0;
-                font-size: 0.65rem;
-                padding: 1px 6px;
-            }
-            .header-title-group h1 {
-                font-size: 1.2rem;
-            }
-            .header-actions {
-                width: 100%;
-            }
-            .header-actions .btn,
-            .settings-menu { width: 100%; }
-            .settings-menu > .btn { width: 100%; justify-content: center; }
-            .settings-menu-panel {
+                position: fixed;
                 left: 0;
                 right: 0;
-                min-width: 0;
+                bottom: 0;
+                top: auto;
+                z-index: 900;
                 width: 100%;
+                min-width: 100%;
+                max-height: none;
+                flex-direction: row;
+                flex-wrap: nowrap;
+                align-items: stretch;
+                justify-content: space-around;
+                gap: 0;
+                padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+                background: rgba(15, 23, 42, 0.92);
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
+                border-top: 1px solid rgba(255, 255, 255, 0.08);
+                box-shadow: 0 -8px 32px rgba(15, 23, 42, 0.18);
             }
-            .form-grid {
-                grid-template-columns: 1fr;
-                gap: 12px;
+            .portal-nav .portal-brand {
+                display: none;
             }
-            .form-group[style*="grid-column"] {
-                grid-column: 1 / -1 !important;
+            .portal-nav-btn {
+                position: relative;
+                flex: 1;
+                min-width: 0;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                gap: 2px;
+                padding: 8px 2px 6px;
+                font-size: 0.62rem;
+                font-weight: 600;
+                border-radius: 12px;
+                color: #94a3b8;
+                background: transparent;
+                line-height: 1.15;
+                text-align: center;
+                letter-spacing: -0.01em;
             }
-            .card { padding: 12px; margin-bottom: 12px; border-radius: 12px; }
-            .card-title { font-size: 1rem; margin-bottom: 12px; }
-            .search-card {
+            .portal-nav-btn:hover {
+                background: rgba(255, 255, 255, 0.06);
+                color: #e2e8f0;
+            }
+            .portal-nav-btn.active {
+                background: rgba(37, 99, 235, 0.25);
+                color: #93c5fd;
+            }
+            .portal-nav-btn .nav-badge {
+                position: absolute;
+                top: 2px;
+                right: 6%;
+                margin-left: 0;
+                font-size: 0.6rem;
+                padding: 1px 5px;
+                min-width: 16px;
+            }
+            .main-content {
+                padding: 12px 12px;
+                padding-top: max(12px, env(safe-area-inset-top));
+                padding-bottom: calc(88px + env(safe-area-inset-bottom));
+            }
+            .header-bar {
                 flex-direction: column;
                 align-items: stretch;
-                gap: 8px;
-                padding: 12px;
+                gap: 12px;
+                margin-bottom: 14px;
             }
+            .header-title-group h1 {
+                font-size: 1.45rem;
+                font-weight: 800;
+                letter-spacing: -0.03em;
+                color: #0f172a;
+            }
+            .header-actions { width: 100%; }
+            .header-actions .btn,
+            .settings-menu { width: 100%; }
+            .settings-menu > .btn {
+                width: 100%;
+                justify-content: center;
+                border-radius: 12px;
+                min-height: 44px;
+                background: #fff;
+                box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+            }
+            .settings-menu-panel {
+                left: 0; right: 0; min-width: 0; width: 100%;
+                border-radius: 16px;
+            }
+            .form-grid { grid-template-columns: 1fr; gap: 14px; }
+            .form-group[style*="grid-column"] { grid-column: 1 / -1 !important; }
+            .form-group label { font-size: 0.72rem; letter-spacing: 0.04em; }
+            .card {
+                padding: 16px;
+                margin-bottom: 14px;
+                border-radius: 16px;
+                border: none;
+                box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+            }
+            .card-title { font-size: 1.05rem; margin-bottom: 14px; font-weight: 800; }
+            .search-card {
+                flex-direction: row;
+                align-items: center;
+                gap: 10px;
+                padding: 10px 14px;
+                border-radius: 14px;
+                border: none;
+                box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+                background: #fff;
+            }
+            .search-card > span { display: none; }
             .search-input {
                 width: 100%;
-                font-size: 16px; /* evita zoom iOS al focus */
-                min-height: 44px;
-            }
-            .input-control, .select-control, .edit-input, .edit-select, .note-input {
-                font-size: 16px; /* evita zoom iOS */
-                min-height: 42px;
-            }
-            .btn {
-                min-height: 42px;
+                font-size: 16px;
+                min-height: 40px;
+                border: none;
+                background: #f1f5f9;
+                border-radius: 10px;
                 padding: 10px 14px;
-                font-size: 0.875rem;
             }
+            .search-input:focus { background: #e2e8f0; box-shadow: none; }
+            .input-control, .select-control, .edit-input, .edit-select, .note-input {
+                font-size: 16px;
+                min-height: 46px;
+                border-radius: 12px;
+                border-color: #e2e8f0;
+                background: #f8fafc;
+            }
+            .input-control:focus, .select-control:focus { background: #fff; }
+            .btn {
+                min-height: 46px;
+                padding: 12px 16px;
+                font-size: 0.9rem;
+                border-radius: 12px;
+            }
+            .btn-primary { box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35); }
             .btn-icon {
-                min-width: 42px;
-                min-height: 42px;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
+                min-width: 44px; min-height: 44px;
+                display: inline-flex; align-items: center; justify-content: center;
+                border-radius: 12px;
             }
             .stages-nav-bar {
-                gap: 6px;
-                margin-bottom: 12px;
-                -webkit-overflow-scrolling: touch;
-                scrollbar-width: none;
+                gap: 8px; margin-bottom: 14px; padding-bottom: 4px;
+                -webkit-overflow-scrolling: touch; scrollbar-width: none;
             }
             .stages-nav-bar::-webkit-scrollbar { display: none; }
             .stage-pill {
-                padding: 8px 14px;
-                font-size: 0.8rem;
-                flex-shrink: 0;
+                padding: 10px 16px; font-size: 0.82rem; flex-shrink: 0;
+                border-radius: 999px;
+                box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
             }
-            /* Tabelle: scroll orizzontale fluido */
-            .stage-group,
-            .installati-table-wrap {
+            .stage-group, .installati-table-wrap {
                 overflow-x: auto;
                 -webkit-overflow-scrolling: touch;
-                border-radius: 12px;
+                border-radius: 16px;
+                border: none;
+                box-shadow: 0 2px 14px rgba(15, 23, 42, 0.07);
+                margin-bottom: 16px;
             }
-            table {
-                min-width: 640px;
-                font-size: 0.8rem;
-            }
-            th, td {
-                padding: 10px 8px;
-            }
+            table { min-width: 620px; font-size: 0.82rem; }
+            th, td { padding: 12px 10px; }
+            th { font-size: 0.68rem; background: #f8fafc; }
             .status-cell { width: 56px; padding-left: 2px !important; padding-right: 2px !important; }
             th.status-col { width: 56px; font-size: 0.58rem; letter-spacing: -0.02em; }
-            .checkbox-x {
-                width: 28px;
-                height: 28px;
-                font-size: 1rem;
-            }
+            .checkbox-x { width: 30px; height: 30px; font-size: 1rem; border-radius: 10px; }
             .note-cell { min-width: 120px; max-width: 150px; }
-            .note-field { max-width: 140px; min-height: 32px; }
-            .client-info strong { font-size: 1rem; }
-            .edit-controls {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 8px;
-            }
-            .edit-group {
-                flex-wrap: wrap;
-            }
-            .edit-group .edit-input,
-            .edit-group .edit-select {
-                flex: 1;
-                min-width: 0;
-            }
+            .note-field { max-width: 140px; min-height: 34px; border-radius: 10px; }
+            .client-info strong { font-size: 1.05rem; font-weight: 800; }
+            .edit-controls { flex-direction: column; align-items: stretch; gap: 10px; }
+            .edit-group { flex-wrap: wrap; }
+            .edit-group .edit-input, .edit-group .edit-select { flex: 1; min-width: 0; }
             .stage-header {
-                padding: 12px 14px;
-                font-size: 0.95rem;
-                flex-wrap: wrap;
-                gap: 8px;
+                padding: 14px 16px; font-size: 1rem; font-weight: 800;
+                flex-wrap: wrap; gap: 8px;
             }
             .stage-footer {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 8px;
-                padding: 12px;
+                flex-direction: column; align-items: stretch; gap: 8px;
+                padding: 14px; background: #f8fafc;
             }
-            .stage-footer .btn {
-                width: 100%;
-                justify-content: center;
-            }
-            .model-badge { font-size: 0.78rem; }
-            .models-list { gap: 4px; }
+            .stage-footer .btn { width: 100%; justify-content: center; border-radius: 12px; }
+            .model-badge { font-size: 0.8rem; border-radius: 10px; padding: 5px 10px; }
+            .models-list { gap: 6px; }
+            .modal-overlay { padding: 12px; align-items: flex-end; }
             .modal {
-                width: 94%;
-                max-width: 94%;
-                padding: 18px 16px;
-                margin: 12px;
-                max-height: calc(100vh - 40px);
+                width: 100%; max-width: 100%;
+                padding: 22px 18px; margin: 0;
+                border-radius: 20px 20px 16px 16px;
+                max-height: calc(100dvh - 24px - env(safe-area-inset-bottom));
                 overflow-y: auto;
             }
-            .modal-body { max-height: 50vh; }
+            .modal-body { max-height: 45vh; }
+            .confirm-modal .modal {
+                text-align: center; border-radius: 24px; padding: 28px 22px 22px;
+            }
+            .login-overlay {
+                background: linear-gradient(165deg, #0f172a 0%, #1e3a5f 45%, #2563eb 120%);
+                padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
+            }
             .login-box {
-                padding: 28px 20px;
-                margin: 12px;
+                padding: 36px 24px 28px; margin: 0; border-radius: 24px;
+                box-shadow: 0 25px 50px rgba(0, 0, 0, 0.35); max-width: 360px;
             }
+            .login-box h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; }
+            .login-box p { font-size: 0.95rem; margin-bottom: 28px; }
             .login-box .input-control {
-                font-size: 16px;
-                min-height: 46px;
+                font-size: 16px; min-height: 50px; border-radius: 14px;
+                background: #f8fafc; margin-bottom: 16px;
             }
-            .prep-sug-item {
-                flex-direction: column;
-                gap: 10px;
+            .login-box .btn-primary {
+                min-height: 50px; border-radius: 14px; font-size: 1rem;
+                box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
             }
-            .prep-sug-actions {
-                width: 100%;
-                flex-direction: row;
-                flex-wrap: wrap;
+            .prep-suggestions-card {
+                border-radius: 16px; border: none;
+                box-shadow: 0 2px 14px rgba(37, 99, 235, 0.08);
             }
-            .prep-sug-actions .input-control {
-                flex: 1;
-                min-width: 120px;
-            }
-            .prep-sug-actions .btn {
-                flex: 1;
-            }
-            .prep-urgency-pill {
-                font-size: 0.68rem;
-                padding: 3px 8px;
-            }
+            .prep-sug-item { flex-direction: column; gap: 12px; border-radius: 14px; padding: 14px; }
+            .prep-sug-actions { width: 100%; flex-direction: column; }
+            .prep-sug-actions .input-control { width: 100%; min-width: 0; }
+            .prep-sug-actions .btn { width: 100%; }
+            .prep-urgency-pill { font-size: 0.68rem; padding: 4px 9px; }
             .btn-back-to-top {
-                width: 44px;
-                height: 44px;
-                bottom: max(18px, env(safe-area-inset-bottom));
+                width: 48px; height: 48px;
+                bottom: calc(78px + env(safe-area-inset-bottom));
                 right: max(14px, env(safe-area-inset-right));
+                box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
             }
-            /* Azioni cliente in colonna su mobile */
-            td:last-child {
-                white-space: normal !important;
-            }
+            td:last-child { white-space: normal !important; }
             td:last-child .btn {
-                display: block;
-                width: 100%;
-                margin-bottom: 4px;
-                text-align: center;
-                justify-content: center;
+                display: flex; width: 100%; margin-bottom: 6px;
+                text-align: center; justify-content: center; border-radius: 10px;
+            }
+            .installati-header {
+                border-radius: 0; padding: 16px 18px !important; font-size: 1.05rem !important;
+            }
+            .btn-add-subfield {
+                width: 100%; text-align: center; padding: 12px;
+                border-radius: 12px; margin-top: 8px;
             }
         }
 
-        /* Schermi molto stretti (iPhone SE / mini) */
         @media (max-width: 380px) {
-            .portal-nav-btn {
-                font-size: 0.72rem;
-                padding: 10px 4px;
-            }
-            .header-title-group h1 { font-size: 1.1rem; }
-            table { min-width: 580px; }
+            .portal-nav-btn { font-size: 0.55rem; padding: 6px 1px 4px; }
+            .header-title-group h1 { font-size: 1.25rem; }
+            table { min-width: 560px; }
+            .main-content { padding-left: 10px; padding-right: 10px; }
         }
     </style>
 </head>
@@ -1018,7 +1072,8 @@
 
 <div id="loginOverlay" class="login-overlay">
     <div class="login-box">
-        <h1>🔒 Accesso</h1>
+        <div style="width:64px;height:64px;margin:0 auto 16px;border-radius:18px;background:linear-gradient(135deg,#2563eb,#1e40af);display:flex;align-items:center;justify-content:center;font-size:1.8rem;box-shadow:0 8px 24px rgba(37,99,235,0.35);">📋</div>
+        <h1>Note Clienti</h1>
         <p>Inserisci la password per continuare</p>
         <form id="loginForm" onsubmit="return checkLogin(event)">
             <input type="password" id="loginPassword" class="input-control" placeholder="Password" autocomplete="current-password" autofocus>
@@ -1032,18 +1087,18 @@
 <nav class="portal-nav">
     <div class="portal-brand">📋 Portale Clienti</div>
     <button type="button" class="portal-nav-btn active" id="navNote" onclick="switchView('note')">
-        📝 Note clienti
+        <span class="nav-ico">📝</span><span class="nav-txt">Note</span>
     </button>
     <button type="button" class="portal-nav-btn" id="navPrep" onclick="switchView('prep')">
-        📋 Pre-pianificazione
+        <span class="nav-ico">📋</span><span class="nav-txt">Pre-pianif.</span>
         <span class="nav-badge badge-prep" id="navPrepCount">0</span>
     </button>
     <button type="button" class="portal-nav-btn" id="navInstallati" onclick="switchView('installati')">
-        ✅ Installazioni eseguite
+        <span class="nav-ico">✅</span><span class="nav-txt">Installati</span>
         <span class="nav-badge" id="navInstallatiCount">0</span>
     </button>
     <button type="button" class="portal-nav-btn" id="navStandby" onclick="switchView('standby')">
-        ⏸️ Stand-by
+        <span class="nav-ico">⏸️</span><span class="nav-txt">Stand-by</span>
         <span class="nav-badge badge-standby" id="navStandbyCount">0</span>
     </button>
 </nav>
