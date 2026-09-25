@@ -4,8 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Note Clienti">
+    <meta name="application-name" content="Note Clienti">
     <meta name="theme-color" content="#0f172a">
+    <meta name="description" content="Portale gestione note clienti, tappe, spedizioni e pre-pianificazione">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="apple-touch-icon" href="icon-180.png">
     <title>Gestione Note Clienti</title>
     <style>
         :root {
@@ -4078,6 +4085,17 @@
 
     checkAuthOnLoad();
     init();
+
+    // ===== PWA: registrazione Service Worker =====
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('./sw.js').then(function(reg) {
+                console.log('PWA pronta', reg.scope);
+            }).catch(function(err) {
+                console.warn('Service Worker non registrato (normale su file://)', err.message);
+            });
+        });
+    }
 </script>
 
 <button type="button" id="backToTopBtn" class="btn-back-to-top" onclick="scrollToTop()" title="Torna in alto">↑</button>
