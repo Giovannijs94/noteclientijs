@@ -349,6 +349,206 @@
         .row-in-lavorazione {
             background: #f0fdf4;
         }
+        /* ===== Info cards (Prep / Installati / Stand-by) ===== */
+        .cards-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 12px;
+        }
+        .info-section {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow);
+        }
+        .info-section-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 14px 16px;
+            flex-wrap: wrap;
+        }
+        .info-section-head-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+        .info-section-ico { font-size: 1.2rem; }
+        .info-section-title {
+            font-size: 1.05rem;
+            font-weight: 800;
+            margin: 0;
+            word-break: break-word;
+        }
+        .info-section-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 28px;
+            height: 28px;
+            padding: 0 10px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.25);
+            font-weight: 800;
+            font-size: 0.85rem;
+        }
+        .info-section-head-prep {
+            background: linear-gradient(135deg, #1e40af, #2563eb);
+            color: #fff;
+        }
+        .info-section-tappa .info-section-head {
+            background: linear-gradient(135deg, #047857, #16a34a);
+            color: #fff;
+        }
+        .info-section-sped .info-section-head {
+            background: linear-gradient(135deg, #5b21b6, #7c3aed);
+            color: #fff;
+        }
+        .info-card {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .info-card-standby {
+            border-left: 4px solid #d97706;
+        }
+        .info-card-installato {
+            border-left: 4px solid #16a34a;
+        }
+        .info-card-prep.is-lavorazione {
+            background: #f0fdf4;
+            border-color: #86efac;
+        }
+        .info-card-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .info-card-name {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.25;
+        }
+        .info-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .chip-standby { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+        .chip-ok { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+        .info-card-models {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .info-card-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .badge-tappa { background: #ecfdf5 !important; color: #047857 !important; border-color: #86efac !important; cursor: pointer; }
+        .badge-sped { background: #f5f3ff !important; color: #5b21b6 !important; border-color: #c4b5fd !important; }
+        .info-card-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 12px;
+        }
+        .info-card-grid-prep {
+            grid-template-columns: 1fr 1fr;
+        }
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 0;
+        }
+        .info-item-wide { grid-column: 1 / -1; }
+        .info-label {
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #64748b;
+        }
+        .info-value {
+            font-size: 0.92rem;
+            font-weight: 600;
+            color: #1e293b;
+            word-break: break-word;
+        }
+        .info-card-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            padding-top: 4px;
+            border-top: 1px solid #f1f5f9;
+        }
+        .info-card-actions .btn {
+            flex: 1;
+            justify-content: center;
+            min-height: 42px;
+            border-radius: 11px;
+        }
+        .info-card-actions .btn-icon {
+            flex-shrink: 0;
+            min-width: 42px;
+            min-height: 42px;
+            border-radius: 11px;
+        }
+        .btn-to-note {
+            background: #2563eb !important;
+            color: white !important;
+            border: none !important;
+        }
+        .info-card-assign {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .assign-field {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .assign-field label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #64748b;
+        }
+        .assign-field .edit-input {
+            width: 100%;
+            min-height: 40px;
+            border-radius: 10px;
+        }
+        .muted-dash {
+            color: #94a3b8;
+            font-size: 0.85rem;
+            font-style: italic;
+        }
+        .in-lav-toggle.on { color: #16a34a; }
+        .cards-list-standby {
+            padding: 4px 0 12px;
+        }
         .btn-route { background: #7c3aed; color: white; border: none; }
         .btn-route-alt { background: #0284c7; color: white; border: none; }
         table { width: 100%; border-collapse: collapse; text-align: left; }
@@ -1368,13 +1568,12 @@
                 margin: 0;
             }
 
-            /* --- Pre-pianificazione / Installati / Stand-by: card layout --- */
-            #viewPrep .prep-regions-nav,
-            #viewInstallati .stages-nav-bar {
+            /* --- Pre-pianificazione / Installati / Stand-by: polish mobile --- */
+            #viewPrep .prep-regions-nav {
                 position: sticky;
                 top: 0;
                 z-index: 40;
-                background: rgba(241, 245, 249, 0.94);
+                background: rgba(241, 245, 249, 0.95);
                 backdrop-filter: blur(14px);
                 -webkit-backdrop-filter: blur(14px);
                 margin-left: -12px;
@@ -1404,151 +1603,73 @@
             #viewStandby .installati-header {
                 display: none;
             }
-            .list-group-block {
-                overflow: visible;
-                border: none !important;
-                border-radius: 16px;
+            .info-section {
+                border: none;
+                border-radius: 18px;
                 box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
-                margin-bottom: 16px;
-                background: #fff;
+                margin-bottom: 18px;
             }
-            .list-group-header {
-                flex-wrap: wrap;
-                padding: 14px 16px;
-                border-radius: 16px 16px 0 0;
+            .info-section-head {
+                padding: 16px;
+                border-radius: 18px 18px 0 0;
             }
-            .list-group-header-prep {
-                background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%) !important;
-                color: #fff !important;
+            .info-section-title {
+                font-size: 1.15rem;
             }
-            .list-group-tappa .list-group-header {
-                background: linear-gradient(135deg, #047857 0%, #16a34a 100%) !important;
-                color: #fff !important;
+            .cards-list {
+                gap: 14px;
+                padding: 12px;
             }
-            .list-group-sped .list-group-header {
-                background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%) !important;
-                color: #fff !important;
-            }
-            .list-group-title {
-                font-size: 1.05rem;
-                color: inherit;
-            }
-            .simple-list-wrap {
-                background: transparent;
-            }
-            .mobile-card-table {
-                min-width: 0 !important;
-                width: 100%;
-                border-collapse: separate;
-                border-spacing: 0;
-            }
-            .mobile-card-table thead {
-                display: none;
-            }
-            .mobile-card-table tbody tr.client-row {
-                display: block;
-                margin: 12px;
-                padding: 14px;
-                background: #fff;
-                border: 1px solid #e2e8f0;
+            .info-card {
+                padding: 16px;
                 border-radius: 16px;
+                gap: 14px;
                 box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
             }
-            .list-group-block .mobile-card-table tbody tr.client-row {
-                background: #f8fafc;
+            .info-card-name {
+                font-size: 1.2rem;
             }
-            .mobile-card-table tbody td {
-                display: block;
-                width: 100% !important;
-                max-width: none !important;
-                padding: 8px 0 !important;
-                border: none;
-                text-align: left !important;
+            .info-card-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+                padding: 14px;
             }
-            .mobile-card-table tbody td[data-label]::before {
-                content: attr(data-label);
-                display: block;
-                font-size: 0.68rem;
-                font-weight: 700;
-                color: #64748b;
-                text-transform: uppercase;
-                letter-spacing: 0.04em;
-                margin-bottom: 4px;
+            .info-card-grid .info-item:nth-child(3) {
+                grid-column: 1 / -1;
             }
-            .mobile-card-table tbody td[data-label="Cliente"]::before {
-                display: none;
+            .info-card-grid-prep {
+                grid-template-columns: 1fr 1fr;
             }
-            .card-client-name {
-                font-size: 1.08rem;
-                font-weight: 800;
-                color: #0f172a;
+            .info-card-assign {
+                grid-template-columns: 1fr;
+                gap: 12px;
             }
-            .card-loc {
-                font-weight: 600;
-                color: #334155;
+            .assign-field .edit-input {
+                min-height: 46px;
+                font-size: 16px;
             }
-            .mobile-card-table tbody td.actions-cell {
-                padding-top: 12px !important;
-                border-top: 1px solid #f1f5f9;
-                margin-top: 4px;
+            .info-card-actions {
+                gap: 10px;
             }
-            .mobile-card-table tbody td.actions-cell::before {
-                display: none;
-            }
-            #viewPrep .client-actions-row,
-            #viewInstallati .client-actions-row,
-            #viewStandby .client-actions-row {
-                display: grid;
-                grid-template-columns: 1fr auto;
-                gap: 8px;
-            }
-            #viewPrep .client-actions-row .btn,
-            #viewInstallati .client-actions-row .btn,
-            #viewStandby .client-actions-row .btn {
-                width: 100%;
-                min-height: 44px;
-                border-radius: 12px;
-                justify-content: center;
-                margin: 0;
-            }
-            #viewPrep .client-actions-row .btn-icon,
-            #viewInstallati .client-actions-row .btn-icon,
-            #viewStandby .client-actions-row .btn-icon {
-                min-height: 44px;
-                min-width: 44px;
+            .info-card-actions .btn {
+                min-height: 48px;
+                font-size: 0.9rem;
                 border-radius: 12px;
             }
-            .prep-assign-controls {
-                flex-direction: column !important;
-                gap: 10px !important;
+            .info-card-actions .btn-icon {
+                min-width: 48px;
+                min-height: 48px;
+                border-radius: 12px;
             }
-            .prep-assign-controls .edit-group {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 4px;
+            .info-label {
+                font-size: 0.7rem;
             }
-            .prep-assign-controls .edit-input {
-                width: 100%;
-                min-height: 44px;
-            }
-            .prep-client-head {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 8px;
+            .info-value {
+                font-size: 0.95rem;
             }
             .in-lav-toggle {
                 font-size: 0.85rem;
-                padding: 6px 0;
-            }
-            .row-in-lavorazione {
-                background: #f0fdf4 !important;
-                border-color: #bbf7d0 !important;
-            }
-            #viewStandby .simple-list-wrap .mobile-card-table tbody tr.client-row {
-                border-left: 4px solid #d97706;
-            }
-            #viewInstallati .list-group-block {
-                scroll-margin-top: 12px;
+                padding: 4px 0;
             }
             #viewPrep .prep-suggestions-card {
                 margin-bottom: 14px;
@@ -3943,42 +4064,40 @@
 
         list.sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'it'));
 
-        let html = `
-            <div class="simple-list-wrap">
-            <table class="mobile-card-table">
-                <thead>
-                    <tr>
-                        <th>Cliente</th>
-                        <th>Modello/i</th>
-                        <th>Località</th>
-                        <th>Provincia</th>
-                        <th>Regione</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
+        let html = `<div class="cards-list cards-list-standby">`;
         list.forEach(client => {
             const modelsText = (client.modelli || []).map(m => {
                 return `<span class="model-badge">${m.nome}${m.qta ? ' <span class="model-qta-badge">' + m.qta + ' pz</span>' : ''}</span>`;
-            }).join(' ') || '-';
+            }).join('') || '<span class="muted-dash">Nessun modello</span>';
             html += `
-                <tr class="client-row">
-                    <td data-label="Cliente"><strong class="card-client-name">${client.nome}</strong></td>
-                    <td data-label="Modelli"><div class="models-list">${modelsText}</div></td>
-                    <td data-label="Località"><span class="card-loc">📍 ${client.localita || '-'}</span></td>
-                    <td data-label="Provincia">${client.provincia || '-'}</td>
-                    <td data-label="Regione">${client.regione || '-'}</td>
-                    <td data-label="Azioni" class="actions-cell">
-                        <div class="client-actions-row">
-                            <button type="button" class="btn btn-restore" onclick="unmarkStandby('${client.id}')">↩ Ripristina</button>
-                            <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
+                <article class="info-card info-card-standby">
+                    <div class="info-card-head">
+                        <h3 class="info-card-name">${client.nome}</h3>
+                        <span class="info-chip chip-standby">⏸️ Stand-by</span>
+                    </div>
+                    <div class="info-card-models">${modelsText}</div>
+                    <div class="info-card-grid">
+                        <div class="info-item">
+                            <span class="info-label">Località</span>
+                            <span class="info-value">📍 ${client.localita || '—'}</span>
                         </div>
-                    </td>
-                </tr>
+                        <div class="info-item">
+                            <span class="info-label">Provincia</span>
+                            <span class="info-value">${client.provincia || '—'}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Regione</span>
+                            <span class="info-value">${client.regione || '—'}</span>
+                        </div>
+                    </div>
+                    <div class="info-card-actions">
+                        <button type="button" class="btn btn-restore" onclick="unmarkStandby('${client.id}')">↩ Ripristina</button>
+                        <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
+                    </div>
+                </article>
             `;
         });
-        html += '</tbody></table></div>';
+        html += `</div>`;
         container.innerHTML = html;
     }
 
@@ -4429,87 +4548,84 @@
             });
             const safeId = 'prep-reg-' + reg.replace(/[^a-zA-Z0-9-_]/g, '_');
             html += `
-                <div id="${safeId}" class="list-group-block list-group-prep" style="scroll-margin-top: 70px;">
-                    <div class="list-group-header list-group-header-prep">
-                        <div class="list-group-header-left">
-                            <span class="list-group-ico">🏛️</span>
-                            <span class="list-group-title">${reg}</span>
+                <section id="${safeId}" class="info-section info-section-prep" style="scroll-margin-top: 70px;">
+                    <header class="info-section-head info-section-head-prep">
+                        <div class="info-section-head-left">
+                            <span class="info-section-ico">🏛️</span>
+                            <h2 class="info-section-title">${reg}</h2>
                         </div>
-                        <span class="stage-count-badge" style="background:#2563eb;color:#fff;">${group.length}</span>
-                    </div>
-                    <table class="mobile-card-table prep-card-table">
-                        <thead>
-                            <tr>
-                                <th>Cliente / Modelli</th>
-                                <th>Nota</th>
-                                <th>Scadenza</th>
-                                <th>Località</th>
-                                <th>Assegna</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
+                        <span class="info-section-count">${group.length}</span>
+                    </header>
+                    <div class="cards-list">
             `;
             group.forEach(client => {
                 const modelsText = (client.modelli || []).map(m => {
                     return `<span class="model-badge">${m.nome}${m.qta ? ' <span class="model-qta-badge">' + m.qta + ' pz</span>' : ''}</span>`;
-                }).join(' ') || '-';
+                }).join('') || '<span class="muted-dash">Nessun modello</span>';
                 const nota = (client.notaPrep || '').trim();
                 const inLav = client.inLavorazione === true;
+                const tappaHtml = (client.tappa || '').trim()
+                    ? `<span class="model-badge badge-tappa" title="Doppio click per modificare" ondblclick="editTappaPrep('${client.id}')">🚩 ${(client.tappa || '').replace(/</g, '&lt;')}</span>`
+                    : `<span class="prep-empty-tap" title="Doppio click per creare tappa" ondblclick="editTappaPrep('${client.id}')">🚩 + tappa</span>`;
+                const spedHtml = (client.spedizione || '').trim()
+                    ? `<span class="model-badge badge-sped">📦 ${(client.spedizione || '').replace(/</g, '&lt;')}</span>`
+                    : '';
                 html += `
-                    <tr class="client-row ${inLav ? 'row-in-lavorazione' : ''}">
-                        <td data-label="Cliente">
-                            <div class="prep-client-head">
-                                <strong class="card-client-name">${client.nome}</strong>
-                                <label class="in-lav-toggle" style="color:${inLav ? '#16a34a' : 'var(--text-muted)'};" title="In lavorazione">
-                                    <span class="status-cell ${inLav ? 'active' : ''}" onclick="toggleInLavorazione('${client.id}')" style="width:auto;">
-                                        <div class="checkbox-x">${inLav ? '✓' : ''}</div>
-                                    </span>
-                                    In lavorazione
-                                </label>
+                    <article class="info-card info-card-prep ${inLav ? 'is-lavorazione' : ''}">
+                        <div class="info-card-head">
+                            <h3 class="info-card-name">${client.nome}</h3>
+                            <label class="in-lav-toggle ${inLav ? 'on' : ''}" title="In lavorazione">
+                                <span class="status-cell ${inLav ? 'active' : ''}" onclick="toggleInLavorazione('${client.id}')" style="width:auto;">
+                                    <div class="checkbox-x">${inLav ? '✓' : ''}</div>
+                                </span>
+                                In lavorazione
+                            </label>
+                        </div>
+                        <div class="info-card-tags">
+                            ${tappaHtml}${spedHtml}
+                        </div>
+                        <div class="info-card-models">${modelsText}</div>
+                        <div class="info-card-grid info-card-grid-prep">
+                            <div class="info-item info-item-wide">
+                                <span class="info-label">Scadenza</span>
+                                <span class="info-value">${formatScadenzaBadge(client.scadenza, client.id)}</span>
                             </div>
-                            ${(client.tappa || '').trim()
-                                ? `<div style="margin-top:6px;"><span class="model-badge" style="background:#ecfdf5; color:#047857; border-color:#86efac; cursor:pointer;" title="Doppio click per modificare tappa" ondblclick="editTappaPrep('${client.id}')">🚩 ${(client.tappa || '').replace(/</g, '&lt;')}</span></div>`
-                                : `<div style="margin-top:6px;"><span style="font-size:0.8rem; color:var(--text-muted); cursor:pointer; border-bottom:1px dashed #cbd5e1;" title="Doppio click per creare tappa" ondblclick="editTappaPrep('${client.id}')">🚩 + tappa</span></div>`
-                            }
-                            ${(client.spedizione || '').trim() ? `<div style="margin-top:4px;"><span class="model-badge" style="background:#f5f3ff; color:#5b21b6; border-color:#c4b5fd;">📦 ${(client.spedizione || '').replace(/</g, '&lt;')}</span></div>` : ''}
-                            <div class="models-list" style="margin-top:8px;">${modelsText}</div>
-                        </td>
-                        <td data-label="Nota">
-                            ${nota
-                                ? `<span class="prep-nota-badge" title="Doppio click per modificare" ondblclick="editNotaPrep('${client.id}')">📝 ${nota.replace(/</g, '&lt;')}</span>`
-                                : `<span class="prep-empty-tap" title="Doppio click per aggiungere nota" ondblclick="editNotaPrep('${client.id}')">— aggiungi nota</span>`
-                            }
-                        </td>
-                        <td data-label="Scadenza">
-                            ${formatScadenzaBadge(client.scadenza, client.id)}
-                        </td>
-                        <td data-label="Località">
-                            <span class="card-loc">📍 ${client.localita || '-'}</span><br>
-                            <span class="card-meta">${client.provincia || ''}</span>
-                        </td>
-                        <td data-label="Assegna" class="prep-assign-cell">
-                            <div class="edit-controls prep-assign-controls" style="margin-top:0;">
-                                <div class="edit-group">
-                                    <label>🚩 Tappa</label>
-                                    <input type="text" class="edit-input" value="${(client.tappa || '').replace(/"/g, '&quot;')}" placeholder="Assegna tappa..." list="tappeDatalist" autocomplete="off" onchange="updateStageInPrep('${client.id}', this.value)">
-                                </div>
-                                <div class="edit-group">
-                                    <label>📦 Spedizione</label>
-                                    <input type="text" class="edit-input" value="" placeholder="Assegna spedizione..." list="spedizioniDatalist" autocomplete="off" onchange="updateSpedizione('${client.id}', this.value)">
-                                </div>
+                            <div class="info-item">
+                                <span class="info-label">Località</span>
+                                <span class="info-value">📍 ${client.localita || '—'}</span>
                             </div>
-                        </td>
-                        <td data-label="Azioni" class="actions-cell">
-                            <div class="client-actions-row">
-                                <button type="button" class="btn" style="background:#2563eb; color:white; border:none;" onclick="moveToNote('${client.id}')" title="Passa in Note clienti">📝 Note clienti</button>
-                                <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
+                            <div class="info-item">
+                                <span class="info-label">Provincia</span>
+                                <span class="info-value">${client.provincia || '—'}</span>
                             </div>
-                        </td>
-                    </tr>
+                            <div class="info-item info-item-wide">
+                                <span class="info-label">Nota</span>
+                                <span class="info-value">
+                                    ${nota
+                                        ? `<span class="prep-nota-badge" title="Doppio click" ondblclick="editNotaPrep('${client.id}')">📝 ${nota.replace(/</g, '&lt;')}</span>`
+                                        : `<span class="prep-empty-tap" title="Doppio click" ondblclick="editNotaPrep('${client.id}')">— aggiungi nota</span>`
+                                    }
+                                </span>
+                            </div>
+                        </div>
+                        <div class="info-card-assign">
+                            <div class="assign-field">
+                                <label>🚩 Assegna tappa</label>
+                                <input type="text" class="edit-input" value="${(client.tappa || '').replace(/"/g, '&quot;')}" placeholder="Nome tappa..." list="tappeDatalist" autocomplete="off" onchange="updateStageInPrep('${client.id}', this.value)">
+                            </div>
+                            <div class="assign-field">
+                                <label>📦 Assegna spedizione</label>
+                                <input type="text" class="edit-input" value="" placeholder="Nome spedizione..." list="spedizioniDatalist" autocomplete="off" onchange="updateSpedizione('${client.id}', this.value)">
+                            </div>
+                        </div>
+                        <div class="info-card-actions">
+                            <button type="button" class="btn btn-to-note" onclick="moveToNote('${client.id}')">📝 Note clienti</button>
+                            <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
+                        </div>
+                    </article>
                 `;
             });
-            html += `</tbody></table></div>`;
+            html += `</div></section>`;
         });
 
         container.innerHTML = html;
@@ -4568,48 +4684,49 @@
             const headerBg = isSped ? 'background:#f5f3ff; color:#5b21b6;' : 'background:#ecfdf5; color:#047857;';
             const badgeBg = isSped ? '#7c3aed' : '#16a34a';
             html += `
-                <div class="list-group-block ${isSped ? 'list-group-sped' : 'list-group-tappa'}">
-                    <div class="list-group-header" style="${headerBg}">
-                        <div class="list-group-header-left">
-                            <span class="list-group-ico">${icon}</span>
-                            <span class="list-group-title">${key}</span>
+                <section class="info-section ${isSped ? 'info-section-sped' : 'info-section-tappa'}">
+                    <header class="info-section-head">
+                        <div class="info-section-head-left">
+                            <span class="info-section-ico">${icon}</span>
+                            <h2 class="info-section-title">${key}</h2>
                         </div>
-                        <span class="stage-count-badge" style="background:${badgeBg};color:#fff;">${group.length}</span>
-                    </div>
-                    <table class="mobile-card-table">
-                        <thead>
-                            <tr>
-                                <th>Cliente</th>
-                                <th>Modello/i</th>
-                                <th>Località</th>
-                                <th>Provincia</th>
-                                <th>Regione</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
+                        <span class="info-section-count">${group.length}</span>
+                    </header>
+                    <div class="cards-list">
             `;
             group.forEach(client => {
                 const modelsText = (client.modelli || []).map(m => {
                     return `<span class="model-badge">${m.nome}${m.qta ? ' <span class="model-qta-badge">' + m.qta + ' pz</span>' : ''}</span>`;
-                }).join(' ') || '-';
+                }).join('') || '<span class="muted-dash">Nessun modello</span>';
                 html += `
-                    <tr class="client-row">
-                        <td data-label="Cliente"><strong class="card-client-name">${client.nome}</strong></td>
-                        <td data-label="Modelli"><div class="models-list">${modelsText}</div></td>
-                        <td data-label="Località"><span class="card-loc">📍 ${client.localita || '-'}</span></td>
-                        <td data-label="Provincia">${client.provincia || '-'}</td>
-                        <td data-label="Regione">${client.regione || '-'}</td>
-                        <td data-label="Azioni" class="actions-cell">
-                            <div class="client-actions-row">
-                                <button type="button" class="btn btn-restore" onclick="unmarkInstallato('${client.id}')">↩ Ripristina</button>
-                                <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
+                    <article class="info-card info-card-installato">
+                        <div class="info-card-head">
+                            <h3 class="info-card-name">${client.nome}</h3>
+                            <span class="info-chip chip-ok">✅ Installato</span>
+                        </div>
+                        <div class="info-card-models">${modelsText}</div>
+                        <div class="info-card-grid">
+                            <div class="info-item">
+                                <span class="info-label">Località</span>
+                                <span class="info-value">📍 ${client.localita || '—'}</span>
                             </div>
-                        </td>
-                    </tr>
+                            <div class="info-item">
+                                <span class="info-label">Provincia</span>
+                                <span class="info-value">${client.provincia || '—'}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Regione</span>
+                                <span class="info-value">${client.regione || '—'}</span>
+                            </div>
+                        </div>
+                        <div class="info-card-actions">
+                            <button type="button" class="btn btn-restore" onclick="unmarkInstallato('${client.id}')">↩ Ripristina</button>
+                            <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
+                        </div>
+                    </article>
                 `;
             });
-            html += `</tbody></table></div>`;
+            html += `</div></section>`;
         });
 
         container.innerHTML = html;
