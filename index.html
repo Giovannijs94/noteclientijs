@@ -279,6 +279,76 @@
             flex-direction: column;
             gap: 4px;
         }
+        .list-group-block {
+            border-bottom: 1px solid var(--border);
+            background: var(--card-bg);
+        }
+        .list-group-header {
+            padding: 12px 16px;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+        .list-group-header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+        .list-group-ico { font-size: 1.1rem; }
+        .list-group-title {
+            font-size: 0.95rem;
+            font-weight: 800;
+            word-break: break-word;
+        }
+        .list-group-header-prep {
+            background: #eff6ff;
+            color: #1e40af;
+        }
+        .btn-restore {
+            padding: 8px 12px;
+            font-size: 0.8rem;
+        }
+        .prep-client-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .in-lav-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            user-select: none;
+        }
+        .prep-nota-badge {
+            display: inline-block;
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+        .prep-empty-tap {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            cursor: pointer;
+            border-bottom: 1px dashed #cbd5e1;
+        }
+        .card-meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        .row-in-lavorazione {
+            background: #f0fdf4;
+        }
         .btn-route { background: #7c3aed; color: white; border: none; }
         .btn-route-alt { background: #0284c7; color: white; border: none; }
         table { width: 100%; border-collapse: collapse; text-align: left; }
@@ -1296,6 +1366,192 @@
             }
             #viewNote .status-cell .checkbox-x {
                 margin: 0;
+            }
+
+            /* --- Pre-pianificazione / Installati / Stand-by: card layout --- */
+            #viewPrep .prep-regions-nav,
+            #viewInstallati .stages-nav-bar {
+                position: sticky;
+                top: 0;
+                z-index: 40;
+                background: rgba(241, 245, 249, 0.94);
+                backdrop-filter: blur(14px);
+                -webkit-backdrop-filter: blur(14px);
+                margin-left: -12px;
+                margin-right: -12px;
+                padding: 10px 12px 12px;
+                border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+            }
+            #viewPrep .stage-pill-prep {
+                border-color: #bfdbfe;
+                background: linear-gradient(180deg, #eff6ff, #fff);
+                color: #1e40af;
+            }
+            #viewPrep .stage-pill-prep .pill-count {
+                background: #2563eb;
+                color: #fff;
+            }
+            #viewPrep .installati-table-wrap,
+            #viewInstallati .installati-table-wrap,
+            #viewStandby .installati-table-wrap {
+                overflow: visible;
+                border: none;
+                box-shadow: none;
+                background: transparent;
+            }
+            #viewPrep .installati-header,
+            #viewInstallati .installati-header,
+            #viewStandby .installati-header {
+                display: none;
+            }
+            .list-group-block {
+                overflow: visible;
+                border: none !important;
+                border-radius: 16px;
+                box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
+                margin-bottom: 16px;
+                background: #fff;
+            }
+            .list-group-header {
+                flex-wrap: wrap;
+                padding: 14px 16px;
+                border-radius: 16px 16px 0 0;
+            }
+            .list-group-header-prep {
+                background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%) !important;
+                color: #fff !important;
+            }
+            .list-group-tappa .list-group-header {
+                background: linear-gradient(135deg, #047857 0%, #16a34a 100%) !important;
+                color: #fff !important;
+            }
+            .list-group-sped .list-group-header {
+                background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%) !important;
+                color: #fff !important;
+            }
+            .list-group-title {
+                font-size: 1.05rem;
+                color: inherit;
+            }
+            .simple-list-wrap {
+                background: transparent;
+            }
+            .mobile-card-table {
+                min-width: 0 !important;
+                width: 100%;
+                border-collapse: separate;
+                border-spacing: 0;
+            }
+            .mobile-card-table thead {
+                display: none;
+            }
+            .mobile-card-table tbody tr.client-row {
+                display: block;
+                margin: 12px;
+                padding: 14px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 16px;
+                box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+            }
+            .list-group-block .mobile-card-table tbody tr.client-row {
+                background: #f8fafc;
+            }
+            .mobile-card-table tbody td {
+                display: block;
+                width: 100% !important;
+                max-width: none !important;
+                padding: 8px 0 !important;
+                border: none;
+                text-align: left !important;
+            }
+            .mobile-card-table tbody td[data-label]::before {
+                content: attr(data-label);
+                display: block;
+                font-size: 0.68rem;
+                font-weight: 700;
+                color: #64748b;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+                margin-bottom: 4px;
+            }
+            .mobile-card-table tbody td[data-label="Cliente"]::before {
+                display: none;
+            }
+            .card-client-name {
+                font-size: 1.08rem;
+                font-weight: 800;
+                color: #0f172a;
+            }
+            .card-loc {
+                font-weight: 600;
+                color: #334155;
+            }
+            .mobile-card-table tbody td.actions-cell {
+                padding-top: 12px !important;
+                border-top: 1px solid #f1f5f9;
+                margin-top: 4px;
+            }
+            .mobile-card-table tbody td.actions-cell::before {
+                display: none;
+            }
+            #viewPrep .client-actions-row,
+            #viewInstallati .client-actions-row,
+            #viewStandby .client-actions-row {
+                display: grid;
+                grid-template-columns: 1fr auto;
+                gap: 8px;
+            }
+            #viewPrep .client-actions-row .btn,
+            #viewInstallati .client-actions-row .btn,
+            #viewStandby .client-actions-row .btn {
+                width: 100%;
+                min-height: 44px;
+                border-radius: 12px;
+                justify-content: center;
+                margin: 0;
+            }
+            #viewPrep .client-actions-row .btn-icon,
+            #viewInstallati .client-actions-row .btn-icon,
+            #viewStandby .client-actions-row .btn-icon {
+                min-height: 44px;
+                min-width: 44px;
+                border-radius: 12px;
+            }
+            .prep-assign-controls {
+                flex-direction: column !important;
+                gap: 10px !important;
+            }
+            .prep-assign-controls .edit-group {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 4px;
+            }
+            .prep-assign-controls .edit-input {
+                width: 100%;
+                min-height: 44px;
+            }
+            .prep-client-head {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            .in-lav-toggle {
+                font-size: 0.85rem;
+                padding: 6px 0;
+            }
+            .row-in-lavorazione {
+                background: #f0fdf4 !important;
+                border-color: #bbf7d0 !important;
+            }
+            #viewStandby .simple-list-wrap .mobile-card-table tbody tr.client-row {
+                border-left: 4px solid #d97706;
+            }
+            #viewInstallati .list-group-block {
+                scroll-margin-top: 12px;
+            }
+            #viewPrep .prep-suggestions-card {
+                margin-bottom: 14px;
             }
         }
 
@@ -2546,6 +2802,8 @@
             calendarizzato: false,
             preavviso: false,
             disponibilita: false,
+            spedito: false,
+            consegnato: false,
             notaDisponibilita: '',
             installato: false,
             standby: false,
@@ -3271,6 +3529,8 @@
             c.calendarizzato = (c.calendarizzato === true || c.calendarizzato === 'true');
             c.preavviso = (c.preavviso === true || c.preavviso === 'true');
             c.disponibilita = (c.disponibilita === true || c.disponibilita === 'true');
+            c.spedito = (c.spedito === true || c.spedito === 'true');
+            c.consegnato = (c.consegnato === true || c.consegnato === 'true');
             c.installato = (c.installato === true || c.installato === 'true');
             c.standby = (c.standby === true || c.standby === 'true');
             if (c.tracking === undefined) c.tracking = '';
@@ -3469,7 +3729,9 @@
                             <th>Cliente / Modelli</th>
                             <th class="status-col">Calendarizzato</th>
                             <th class="status-col">Preavviso</th>
-                            <th class="status-col">Disponibilità</th>
+                            ${isSpedizione
+                                ? '<th class="status-col">Spedito</th><th class="status-col">Consegnato</th>'
+                                : '<th class="status-col">Disponibilità</th>'}
                             <th class="note-col">Note</th>
                             <th style="width: 40px;"></th>
                         </tr>
@@ -3576,9 +3838,18 @@
                         <td class="status-cell ${(client.preavviso === true) ? 'active' : ''}" data-label="Preavviso" data-toggle-id="${client.id}" data-toggle-field="preavviso">
                             <div class="checkbox-x">${(client.preavviso === true) ? '✓' : ''}</div>
                         </td>
+                        ${isSpedizione ? `
+                        <td class="status-cell ${(client.spedito === true) ? 'active' : ''}" data-label="Spedito" data-toggle-id="${client.id}" data-toggle-field="spedito">
+                            <div class="checkbox-x">${(client.spedito === true) ? '✓' : ''}</div>
+                        </td>
+                        <td class="status-cell ${(client.consegnato === true) ? 'active' : ''}" data-label="Consegnato" data-toggle-id="${client.id}" data-toggle-field="consegnato">
+                            <div class="checkbox-x">${(client.consegnato === true) ? '✓' : ''}</div>
+                        </td>
+                        ` : `
                         <td class="status-cell ${(client.disponibilita === true) ? 'active' : ''}" data-label="Disponibilità" data-toggle-id="${client.id}" data-toggle-field="disponibilita">
                             <div class="checkbox-x">${(client.disponibilita === true) ? '✓' : ''}</div>
                         </td>
+                        `}
                         <td class="note-cell" data-label="Note">
                             <div class="note-field">
                                 <span class="note-field-icon">📝</span>
@@ -3673,15 +3944,16 @@
         list.sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'it'));
 
         let html = `
-            <table>
+            <div class="simple-list-wrap">
+            <table class="mobile-card-table">
                 <thead>
                     <tr>
                         <th>Cliente</th>
                         <th>Modello/i</th>
-                        <th>Paese / Località</th>
+                        <th>Località</th>
                         <th>Provincia</th>
                         <th>Regione</th>
-                        <th style="width: 140px;"></th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -3691,20 +3963,22 @@
                 return `<span class="model-badge">${m.nome}${m.qta ? ' <span class="model-qta-badge">' + m.qta + ' pz</span>' : ''}</span>`;
             }).join(' ') || '-';
             html += `
-                <tr>
-                    <td><strong>${client.nome}</strong></td>
-                    <td><div class="models-list">${modelsText}</div></td>
-                    <td>📍 ${client.localita || '-'}</td>
-                    <td>${client.provincia || '-'}</td>
-                    <td>${client.regione || '-'}</td>
-                    <td style="white-space:nowrap;">
-                        <button type="button" class="btn" style="padding:4px 8px; font-size:0.75rem;" onclick="unmarkStandby('${client.id}')">↩ Ripristina</button>
-                        <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
+                <tr class="client-row">
+                    <td data-label="Cliente"><strong class="card-client-name">${client.nome}</strong></td>
+                    <td data-label="Modelli"><div class="models-list">${modelsText}</div></td>
+                    <td data-label="Località"><span class="card-loc">📍 ${client.localita || '-'}</span></td>
+                    <td data-label="Provincia">${client.provincia || '-'}</td>
+                    <td data-label="Regione">${client.regione || '-'}</td>
+                    <td data-label="Azioni" class="actions-cell">
+                        <div class="client-actions-row">
+                            <button type="button" class="btn btn-restore" onclick="unmarkStandby('${client.id}')">↩ Ripristina</button>
+                            <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
+                        </div>
                     </td>
                 </tr>
             `;
         });
-        html += '</tbody></table>';
+        html += '</tbody></table></div>';
         container.innerHTML = html;
     }
 
@@ -4134,11 +4408,11 @@
         });
 
         // Pills regioni per salto rapido
-        let pillsHtml = '<div class="stages-nav-bar" style="margin:0; border-radius:0; border-left:none; border-right:none;">';
+        let pillsHtml = '<div id="prepRegionsNavBar" class="stages-nav-bar prep-regions-nav">';
         regions.forEach(reg => {
             const safeId = 'prep-reg-' + reg.replace(/[^a-zA-Z0-9-_]/g, '_');
             const count = byRegion[reg].length;
-            pillsHtml += `<button type="button" class="stage-pill" onclick="scrollToPrepRegion('${safeId}')">🏛️ ${reg} (${count})</button>`;
+            pillsHtml += `<button type="button" class="stage-pill stage-pill-prep" onclick="scrollToPrepRegion('${safeId}')"><span class="pill-ico">🏛️</span><span class="pill-name">${reg}</span><span class="pill-count">${count}</span></button>`;
         });
         pillsHtml += '</div>';
 
@@ -4155,12 +4429,15 @@
             });
             const safeId = 'prep-reg-' + reg.replace(/[^a-zA-Z0-9-_]/g, '_');
             html += `
-                <div id="${safeId}" style="border-bottom:1px solid var(--border); scroll-margin-top: 12px;">
-                    <div style="background:#eff6ff; padding:10px 16px; font-weight:700; color:#1e40af; display:flex; justify-content:space-between; align-items:center;">
-                        <span>🏛️ ${reg}</span>
-                        <span style="font-size:0.8rem; background:#2563eb; color:white; padding:2px 10px; border-radius:999px;">${group.length}</span>
+                <div id="${safeId}" class="list-group-block list-group-prep" style="scroll-margin-top: 70px;">
+                    <div class="list-group-header list-group-header-prep">
+                        <div class="list-group-header-left">
+                            <span class="list-group-ico">🏛️</span>
+                            <span class="list-group-title">${reg}</span>
+                        </div>
+                        <span class="stage-count-badge" style="background:#2563eb;color:#fff;">${group.length}</span>
                     </div>
-                    <table>
+                    <table class="mobile-card-table prep-card-table">
                         <thead>
                             <tr>
                                 <th>Cliente / Modelli</th>
@@ -4168,7 +4445,7 @@
                                 <th>Scadenza</th>
                                 <th>Località</th>
                                 <th>Assegna</th>
-                                <th style="width: 130px;"></th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -4180,11 +4457,11 @@
                 const nota = (client.notaPrep || '').trim();
                 const inLav = client.inLavorazione === true;
                 html += `
-                    <tr style="${inLav ? 'background:#f0fdf4;' : ''}">
-                        <td>
-                            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                                <strong>${client.nome}</strong>
-                                <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:0.8rem; color:${inLav ? '#16a34a' : 'var(--text-muted)'}; font-weight:600; user-select:none;" title="In lavorazione">
+                    <tr class="client-row ${inLav ? 'row-in-lavorazione' : ''}">
+                        <td data-label="Cliente">
+                            <div class="prep-client-head">
+                                <strong class="card-client-name">${client.nome}</strong>
+                                <label class="in-lav-toggle" style="color:${inLav ? '#16a34a' : 'var(--text-muted)'};" title="In lavorazione">
                                     <span class="status-cell ${inLav ? 'active' : ''}" onclick="toggleInLavorazione('${client.id}')" style="width:auto;">
                                         <div class="checkbox-x">${inLav ? '✓' : ''}</div>
                                     </span>
@@ -4192,40 +4469,42 @@
                                 </label>
                             </div>
                             ${(client.tappa || '').trim()
-                                ? `<div style="margin-top:4px;"><span class="model-badge" style="background:#ecfdf5; color:#047857; border-color:#86efac; cursor:pointer;" title="Doppio click per modificare tappa" ondblclick="editTappaPrep('${client.id}')">🚩 ${(client.tappa || '').replace(/</g, '&lt;')}</span></div>`
-                                : `<div style="margin-top:4px;"><span style="font-size:0.8rem; color:var(--text-muted); cursor:pointer; border-bottom:1px dashed #cbd5e1;" title="Doppio click per creare tappa" ondblclick="editTappaPrep('${client.id}')">🚩 + tappa</span></div>`
+                                ? `<div style="margin-top:6px;"><span class="model-badge" style="background:#ecfdf5; color:#047857; border-color:#86efac; cursor:pointer;" title="Doppio click per modificare tappa" ondblclick="editTappaPrep('${client.id}')">🚩 ${(client.tappa || '').replace(/</g, '&lt;')}</span></div>`
+                                : `<div style="margin-top:6px;"><span style="font-size:0.8rem; color:var(--text-muted); cursor:pointer; border-bottom:1px dashed #cbd5e1;" title="Doppio click per creare tappa" ondblclick="editTappaPrep('${client.id}')">🚩 + tappa</span></div>`
                             }
                             ${(client.spedizione || '').trim() ? `<div style="margin-top:4px;"><span class="model-badge" style="background:#f5f3ff; color:#5b21b6; border-color:#c4b5fd;">📦 ${(client.spedizione || '').replace(/</g, '&lt;')}</span></div>` : ''}
-                            <div class="models-list" style="margin-top:6px;">${modelsText}</div>
+                            <div class="models-list" style="margin-top:8px;">${modelsText}</div>
                         </td>
-                        <td>
+                        <td data-label="Nota">
                             ${nota
-                                ? `<span style="display:inline-block; background:#fef3c7; color:#92400e; border:1px solid #fde68a; padding:6px 10px; border-radius:8px; font-size:0.85rem; cursor:pointer;" title="Doppio click per modificare" ondblclick="editNotaPrep('${client.id}')">📝 ${nota.replace(/</g, '&lt;')}</span>`
-                                : `<span style="color:var(--text-muted); font-size:0.85rem; cursor:pointer; border-bottom:1px dashed #cbd5e1;" title="Doppio click per aggiungere nota" ondblclick="editNotaPrep('${client.id}')">—</span>`
+                                ? `<span class="prep-nota-badge" title="Doppio click per modificare" ondblclick="editNotaPrep('${client.id}')">📝 ${nota.replace(/</g, '&lt;')}</span>`
+                                : `<span class="prep-empty-tap" title="Doppio click per aggiungere nota" ondblclick="editNotaPrep('${client.id}')">— aggiungi nota</span>`
                             }
                         </td>
-                        <td>
+                        <td data-label="Scadenza">
                             ${formatScadenzaBadge(client.scadenza, client.id)}
                         </td>
-                        <td>
-                            📍 ${client.localita || '-'}<br>
-                            <span style="font-size:0.8rem; color:var(--text-muted);">${client.provincia || ''}</span>
+                        <td data-label="Località">
+                            <span class="card-loc">📍 ${client.localita || '-'}</span><br>
+                            <span class="card-meta">${client.provincia || ''}</span>
                         </td>
-                        <td>
-                            <div class="edit-controls" style="margin-top:0;">
+                        <td data-label="Assegna" class="prep-assign-cell">
+                            <div class="edit-controls prep-assign-controls" style="margin-top:0;">
                                 <div class="edit-group">
-                                    <label>🚩 Tappa:</label>
-                                    <input type="text" class="edit-input" value="${(client.tappa || '').replace(/"/g, '&quot;')}" placeholder="Crea o assegna tappa..." list="tappeDatalist" autocomplete="off" onchange="updateStageInPrep('${client.id}', this.value)">
+                                    <label>🚩 Tappa</label>
+                                    <input type="text" class="edit-input" value="${(client.tappa || '').replace(/"/g, '&quot;')}" placeholder="Assegna tappa..." list="tappeDatalist" autocomplete="off" onchange="updateStageInPrep('${client.id}', this.value)">
                                 </div>
                                 <div class="edit-group">
-                                    <label>📦 Spedizione:</label>
+                                    <label>📦 Spedizione</label>
                                     <input type="text" class="edit-input" value="" placeholder="Assegna spedizione..." list="spedizioniDatalist" autocomplete="off" onchange="updateSpedizione('${client.id}', this.value)">
                                 </div>
                             </div>
                         </td>
-                        <td style="white-space:nowrap;">
-                            <button type="button" class="btn" style="padding:4px 8px; font-size:0.75rem; background:#2563eb; color:white; border:none; margin-bottom:4px;" onclick="moveToNote('${client.id}')" title="Passa in Note clienti">📝 Note clienti</button>
-                            <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
+                        <td data-label="Azioni" class="actions-cell">
+                            <div class="client-actions-row">
+                                <button type="button" class="btn" style="background:#2563eb; color:white; border:none;" onclick="moveToNote('${client.id}')" title="Passa in Note clienti">📝 Note clienti</button>
+                                <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
+                            </div>
                         </td>
                     </tr>
                 `;
@@ -4289,20 +4568,23 @@
             const headerBg = isSped ? 'background:#f5f3ff; color:#5b21b6;' : 'background:#ecfdf5; color:#047857;';
             const badgeBg = isSped ? '#7c3aed' : '#16a34a';
             html += `
-                <div style="border-bottom:1px solid var(--border);">
-                    <div style="${headerBg} padding:10px 16px; font-weight:700; display:flex; justify-content:space-between; align-items:center;">
-                        <span>${icon} ${key}</span>
-                        <span style="font-size:0.8rem; background:${badgeBg}; color:white; padding:2px 10px; border-radius:999px;">${group.length}</span>
+                <div class="list-group-block ${isSped ? 'list-group-sped' : 'list-group-tappa'}">
+                    <div class="list-group-header" style="${headerBg}">
+                        <div class="list-group-header-left">
+                            <span class="list-group-ico">${icon}</span>
+                            <span class="list-group-title">${key}</span>
+                        </div>
+                        <span class="stage-count-badge" style="background:${badgeBg};color:#fff;">${group.length}</span>
                     </div>
-                    <table>
+                    <table class="mobile-card-table">
                         <thead>
                             <tr>
                                 <th>Cliente</th>
                                 <th>Modello/i</th>
-                                <th>Paese / Località</th>
+                                <th>Località</th>
                                 <th>Provincia</th>
                                 <th>Regione</th>
-                                <th style="width: 140px;"></th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -4312,15 +4594,17 @@
                     return `<span class="model-badge">${m.nome}${m.qta ? ' <span class="model-qta-badge">' + m.qta + ' pz</span>' : ''}</span>`;
                 }).join(' ') || '-';
                 html += `
-                    <tr>
-                        <td><strong>${client.nome}</strong></td>
-                        <td><div class="models-list">${modelsText}</div></td>
-                        <td>📍 ${client.localita || '-'}</td>
-                        <td>${client.provincia || '-'}</td>
-                        <td>${client.regione || '-'}</td>
-                        <td style="white-space:nowrap;">
-                            <button type="button" class="btn" style="padding:4px 8px; font-size:0.75rem;" onclick="unmarkInstallato('${client.id}')">↩ Ripristina</button>
-                            <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
+                    <tr class="client-row">
+                        <td data-label="Cliente"><strong class="card-client-name">${client.nome}</strong></td>
+                        <td data-label="Modelli"><div class="models-list">${modelsText}</div></td>
+                        <td data-label="Località"><span class="card-loc">📍 ${client.localita || '-'}</span></td>
+                        <td data-label="Provincia">${client.provincia || '-'}</td>
+                        <td data-label="Regione">${client.regione || '-'}</td>
+                        <td data-label="Azioni" class="actions-cell">
+                            <div class="client-actions-row">
+                                <button type="button" class="btn btn-restore" onclick="unmarkInstallato('${client.id}')">↩ Ripristina</button>
+                                <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
+                            </div>
                         </td>
                     </tr>
                 `;
