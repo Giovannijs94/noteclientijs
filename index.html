@@ -580,6 +580,13 @@
             background: #fff;
             transition: border-color 0.15s, box-shadow 0.15s;
         }
+        .edit-input-date {
+            min-width: 158px;
+            width: 158px;
+            max-width: 100%;
+            font-variant-numeric: tabular-nums;
+            cursor: pointer;
+        }
         .edit-input:focus, .edit-select:focus {
             border-color: var(--accent);
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
@@ -3224,13 +3231,13 @@
         }
     }
 
-    window.updateDate = function(id, newDate) {
-        const client = clients.find(c => c.id === id);
-        if (client && newDate) {
-            client.data = newDate;
-            saveToLocalStorage();
-            render();
-        }
+    window.updateDate = function(id, newDate, doRender) {
+        const client = clients.find(c => String(c.id) === String(id));
+        if (!client) return;
+        client.data = newDate || '';
+        saveToLocalStorage();
+        // Evita render durante la digitazione/selezione dell'anno (interrompe il date picker)
+        if (doRender) render();
     }
 
     window.updateNote = function(id, text) {
@@ -3920,7 +3927,7 @@
                             <div class="edit-controls">
                                 <div class="edit-group">
                                     <label>📅 Data:</label>
-                                    <input type="date" class="edit-input" value="${client.data || ''}" onchange="updateDate('${client.id}', this.value)">
+                                    <input type="date" class="edit-input edit-input-date" value="${client.data || ''}" onchange="updateDate('${client.id}', this.value, false)" onblur="updateDate('${client.id}', this.value, true)">
                                 </div>
                                 <div class="edit-group">
                                     <label>🏷️ Prov:</label>
