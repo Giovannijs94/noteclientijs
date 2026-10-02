@@ -13,6 +13,8 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="apple-touch-icon" href="icon-180.png">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <title>Gestione Note Clienti</title>
     <style>
         :root {
@@ -190,6 +192,285 @@
         .search-input { flex-grow: 1; padding: 10px 16px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem; outline: none; }
         
         /* Barca Rapida Tappe */
+        .percorso-intro {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 16px;
+            line-height: 1.45;
+        }
+        .percorso-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .percorso-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+        .percorso-card-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            padding: 14px 16px;
+            background: linear-gradient(135deg, #0f172a, #1e3a5f);
+            color: #fff;
+        }
+        .percorso-card-head h2 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 800;
+        }
+        .percorso-card-meta {
+            font-size: 0.8rem;
+            opacity: 0.9;
+            margin-top: 2px;
+        }
+        .percorso-body {
+            display: grid;
+            grid-template-columns: minmax(260px, 1.1fr) minmax(220px, 0.9fr);
+            gap: 0;
+        }
+        .percorso-map {
+            height: 300px;
+            background: #e2e8f0;
+            min-height: 260px;
+            position: relative;
+            overflow: hidden;
+        }
+        .percorso-map .leaflet-container {
+            width: 100%;
+            height: 100%;
+            font-family: inherit;
+            z-index: 1;
+        }
+        .percorso-map-error {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            text-align: center;
+            background: #f8fafc;
+            color: #64748b;
+            font-size: 0.9rem;
+            z-index: 2;
+        }
+        .percorso-stops {
+            padding: 14px 16px;
+            max-height: 280px;
+            overflow-y: auto;
+            background: #f8fafc;
+            border-left: 1px solid var(--border);
+        }
+        .percorso-stop {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            padding: 8px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .percorso-stop:last-child { border-bottom: none; }
+        .percorso-stop-num {
+            flex-shrink: 0;
+            width: 26px;
+            height: 26px;
+            border-radius: 999px;
+            background: #2563eb;
+            color: #fff;
+            font-size: 0.75rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .percorso-stop-num.start { background: #16a34a; }
+        .percorso-stop-body { min-width: 0; }
+        .percorso-stop-title {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #0f172a;
+        }
+        .percorso-stop-sub {
+            font-size: 0.78rem;
+            color: #64748b;
+            margin-top: 2px;
+        }
+        .percorso-card-foot {
+            padding: 12px 16px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            background: #fff;
+        }
+        .percorso-empty {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 48px 20px;
+            background: #fff;
+            border-radius: 16px;
+            border: 1px dashed var(--border);
+        }
+        .percorso-loading {
+            padding: 20px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        @media (max-width: 900px) {
+            .percorso-body { grid-template-columns: 1fr; }
+            .percorso-stops {
+                border-left: none;
+                border-top: 1px solid var(--border);
+                max-height: none;
+            }
+            .percorso-map { height: 240px; }
+        }
+        .note-work-area {
+            display: grid;
+            grid-template-columns: 240px minmax(0, 1fr);
+            gap: 16px;
+            align-items: start;
+        }
+        .note-urgent-panel {
+            position: sticky;
+            top: 12px;
+            background: #fff;
+            border: 1px solid #fecaca;
+            border-radius: 14px;
+            box-shadow: 0 4px 16px rgba(185, 28, 28, 0.08);
+            overflow: hidden;
+            max-height: calc(100vh - 24px);
+            display: flex;
+            flex-direction: column;
+        }
+        .note-urgent-head {
+            background: linear-gradient(135deg, #b91c1c, #dc2626);
+            color: #fff;
+            padding: 12px 14px;
+            font-weight: 800;
+            font-size: 0.88rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .note-urgent-head .urgent-count {
+            background: rgba(255,255,255,0.25);
+            border-radius: 999px;
+            padding: 2px 9px;
+            font-size: 0.8rem;
+            font-weight: 800;
+        }
+        .note-urgent-sub {
+            font-size: 0.72rem;
+            font-weight: 600;
+            opacity: 0.9;
+            margin-top: 2px;
+        }
+        .note-urgent-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 12px;
+            background: #fff5f5;
+            border-bottom: 1px solid #fecaca;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #7f1d1d;
+        }
+        .note-urgent-controls label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #9f1239;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+        .urgent-days-input {
+            width: 56px;
+            min-height: 32px;
+            padding: 4px 6px;
+            border: 1px solid #fda4af;
+            border-radius: 8px;
+            background: #fff;
+            font-size: 0.9rem;
+            font-weight: 800;
+            text-align: center;
+            color: #9f1239;
+            font-family: inherit;
+        }
+        .urgent-days-input:focus {
+            outline: none;
+            border-color: #e11d48;
+            box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.15);
+        }
+        .note-urgent-list {
+            overflow-y: auto;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .note-urgent-item {
+            display: block;
+            width: 100%;
+            text-align: left;
+            border: 1px solid #fee2e2;
+            background: #fef2f2;
+            border-radius: 10px;
+            padding: 10px 11px;
+            cursor: pointer;
+            transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+            font-family: inherit;
+        }
+        .note-urgent-item:hover {
+            border-color: #f87171;
+            box-shadow: 0 4px 12px rgba(185, 28, 28, 0.12);
+            transform: translateY(-1px);
+        }
+        .note-urgent-item.overdue {
+            background: #fff1f2;
+            border-color: #fda4af;
+        }
+        .note-urgent-item .u-name {
+            font-weight: 800;
+            font-size: 0.88rem;
+            color: #0f172a;
+            margin-bottom: 4px;
+            line-height: 1.25;
+        }
+        .note-urgent-item .u-meta {
+            font-size: 0.75rem;
+            color: #64748b;
+            line-height: 1.35;
+        }
+        .note-urgent-item .u-days {
+            display: inline-block;
+            margin-top: 6px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+        .note-urgent-item.overdue .u-days {
+            background: #be123c;
+            color: #fff;
+        }
+        .note-urgent-empty {
+            text-align: center;
+            color: #94a3b8;
+            font-size: 0.82rem;
+            padding: 18px 10px;
+            line-height: 1.4;
+        }
         .stages-nav-bar { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 20px; white-space: nowrap; }
         .stage-pill {
             background: linear-gradient(180deg, #ffffff, #f8fafc);
@@ -1401,6 +1682,22 @@
             }
 
             /* --- Tappe Note clienti: sticky chips + card layout --- */
+            .note-work-area {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            .note-urgent-panel {
+                position: relative;
+                top: auto;
+                max-height: none;
+                order: -1;
+            }
+            .note-urgent-list {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                max-height: 220px;
+            }
             #viewNote #stagesNavBar,
             #viewNote #spedizioniNavBar {
                 position: sticky;
@@ -1712,6 +2009,10 @@
     <button type="button" class="portal-nav-btn active" id="navNote" onclick="switchView('note')">
         <span class="nav-ico">📝</span><span class="nav-txt">Note</span>
     </button>
+    <button type="button" class="portal-nav-btn" id="navPercorso" onclick="switchView('percorso')">
+        <span class="nav-ico">🗺️</span><span class="nav-txt">Percorso</span>
+        <span class="nav-badge" id="navPercorsoCount">0</span>
+    </button>
     <button type="button" class="portal-nav-btn" id="navPrep" onclick="switchView('prep')">
         <span class="nav-ico">📋</span><span class="nav-txt">Pre-pianif.</span>
         <span class="nav-badge badge-prep" id="navPrepCount">0</span>
@@ -1824,14 +2125,29 @@
         <input type="text" id="searchInput" class="search-input" placeholder="Filtra per cliente, località, provincia, regione, modello o note..." oninput="render()">
     </div>
 
-    <!-- BARRA DI NAVIGAZIONE RAPIDA TAPPE -->
-    <div id="stagesNavBar" class="stages-nav-bar"></div>
+    <div class="note-work-area">
+        <aside id="noteUrgentPanel" class="note-urgent-panel" aria-label="Clienti da fare a breve"></aside>
+        <div class="note-work-main">
+            <!-- BARRA DI NAVIGAZIONE RAPIDA TAPPE -->
+            <div id="stagesNavBar" class="stages-nav-bar"></div>
 
-    <!-- BARRA DI NAVIGAZIONE RAPIDA SPEDIZIONI -->
-    <div id="spedizioniNavBar" class="stages-nav-bar"></div>
+            <!-- BARRA DI NAVIGAZIONE RAPIDA SPEDIZIONI -->
+            <div id="spedizioniNavBar" class="stages-nav-bar"></div>
 
-    <div id="tablesContainer"></div>
+            <div id="tablesContainer"></div>
+        </div>
+    </div>
 </div><!-- /#viewNote -->
+
+<div id="viewPercorso" class="view-panel">
+    <div class="header-bar">
+        <div class="header-title-group">
+            <h1>🗺️ Percorso tappe</h1>
+        </div>
+    </div>
+    <p class="percorso-intro">Una mini-mappa per ogni tappa. Partenza sempre da <strong>Casamassima (BA)</strong>, fermate ordinate per distanza geografica (percorso più comodo).</p>
+    <div id="percorsoContainer" class="percorso-container"></div>
+</div><!-- /#viewPercorso -->
 
 <div id="viewPrep" class="view-panel">
     <div class="header-bar">
@@ -3030,6 +3346,60 @@
         render();
     }
 
+    window.moveToPrep = function(id) {
+        const client = clients.find(c => String(c.id) === String(id));
+        if (!client) return;
+        client.tappa = '';
+        client.spedizione = '';
+        client.inPrep = true;
+        client.installato = false;
+        client.standby = false;
+        saveToLocalStorage();
+        render();
+        if (typeof renderPrepPage === 'function') renderPrepPage();
+    };
+
+    window.moveToNote = function(id) {
+        const client = clients.find(c => String(c.id) === String(id));
+        if (!client) return;
+        const hasTappa = !!(client.tappa || '').trim();
+        const hasSped = !!(client.spedizione || '').trim();
+        if (!hasTappa && !hasSped) {
+            alert('Assegna prima una Tappa o una Spedizione, poi potrai passarlo in Note clienti.');
+            return;
+        }
+        client.inPrep = false;
+        client.installato = false;
+        client.standby = false;
+        saveToLocalStorage();
+        render();
+        if (typeof renderPrepPage === 'function') renderPrepPage();
+    };
+
+    window.updateStageInPrep = function(id, value) {
+        const client = clients.find(c => String(c.id) === String(id));
+        if (!client) return;
+        client.tappa = (value || '').trim();
+        if (client.tappa) client.spedizione = '';
+        client.inPrep = true;
+        saveToLocalStorage();
+        render();
+        if (typeof renderPrepPage === 'function') renderPrepPage();
+    };
+
+    window.editTappaPrep = function(id) {
+        const client = clients.find(c => String(c.id) === String(id));
+        if (!client) return;
+        const val = prompt('Nome tappa per ' + (client.nome || '') + ':', client.tappa || '');
+        if (val === null) return;
+        client.tappa = val.trim();
+        if (client.tappa) client.spedizione = '';
+        saveToLocalStorage();
+        render();
+        if (typeof renderPrepPage === 'function') renderPrepPage();
+    };
+
+
     // Event delegation per le caselle di stato e le note (più affidabile degli onclick inline)
     document.getElementById('tablesContainer').addEventListener('click', function(e) {
         const cell = e.target.closest('[data-toggle-id]');
@@ -3493,165 +3863,135 @@
         }
     }
 
-    function sortClientsGeographically(list) {
-        if (list.length <= 1) return list;
-        let unvisited = [...list];
-        let sorted = [];
-        let current = unvisited.shift();
-        sorted.push(current);
 
-        while (unvisited.length > 0) {
-            let nearestIdx = 0;
-            let minDiff = Infinity;
-            for (let i = 0; i < unvisited.length; i++) {
-                let locA = current.localita.toLowerCase().trim();
-                let locB = unvisited[i].localita.toLowerCase().trim();
-                let diff = Math.abs(locA.length - locB.length);
-                if (locA === locB) diff = -10;
-                if (diff < minDiff) { minDiff = diff; nearestIdx = i; }
-            }
-            current = unvisited.splice(nearestIdx, 1)[0];
-            sorted.push(current);
-        }
-        return sorted;
+
+    function isInPrep(c) {
+        if (!c || c.installato || c.standby) return false;
+        if (c.inPrep === true || c.inPrep === 'true') return true;
+        return !(c.tappa || '').trim() && !(c.spedizione || '').trim();
     }
 
     window.openRoute = function(stageClients, startFromCasamassima) {
         if (!stageClients || stageClients.length === 0) return;
         let orderedClients = sortClientsGeographically(stageClients);
-        const locations = orderedClients.map(c => c.localita.trim()).filter(l => l !== '');
+        const locations = orderedClients.map(c => (c.localita || '').trim()).filter(l => l !== '');
         if (locations.length === 0) return;
-
         let origin = startFromCasamassima ? 'Casamassima, BA' : locations[0];
         let destination = locations[locations.length - 1];
         let waypoints = startFromCasamassima ? locations.slice(0, -1) : locations.slice(1, -1);
-
         let mapUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`;
         if (waypoints.length > 0) {
             mapUrl += `&waypoints=${waypoints.map(w => encodeURIComponent(w)).join('|')}`;
         }
         window.open(mapUrl, '_blank');
+    };
+
+    function daysUntilDate(dateStr) {
+        if (!dateStr) return null;
+        const parts = String(dateStr).split('-');
+        if (parts.length !== 3) return null;
+        const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        if (isNaN(d.getTime())) return null;
+        d.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return Math.round((d - today) / 86400000);
     }
 
-    window.exportBackup = function() {
-        const backupData = { version: 17, clients, savedModels, savedSpedizioni };
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
-        const a = document.createElement('a');
-        a.href = dataStr;
-        a.download = `backup_${new Date().toISOString().slice(0, 10)}.json`;
-        a.click();
+    function formatDateIT(dateStr) {
+        if (!dateStr) return '—';
+        const parts = String(dateStr).split('-');
+        if (parts.length !== 3) return dateStr;
+        return parts[2] + '/' + parts[1] + '/' + parts[0];
     }
 
-    window.importBackup = function(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const imported = JSON.parse(e.target.result);
-                if (imported.clients && confirm("Ripristinare i dati?")) {
-                    clients = imported.clients.map(client => {
-                        const resolved = resolveLocationData(client.localita);
-                        return {
-                            ...client,
-                            provincia: resolved.prov || client.provincia || '',
-                            regione: resolved.reg || client.regione || '',
-                            spedizione: client.spedizione || ''
-                        };
-                    });
-
-                    if (imported.savedModels) savedModels = imported.savedModels;
-                    if (imported.savedSpedizioni) savedSpedizioni = imported.savedSpedizioni;
-                    saveToLocalStorage();
-                    localStorage.setItem('note_clienti_modelli', JSON.stringify(savedModels));
-                    localStorage.setItem('note_clienti_spedizioni', JSON.stringify(savedSpedizioni));
-                    init();
-                    alert("Ripristino e correzione automatica completati!");
-                }
-            } catch (err) {
-                alert("Errore file backup.");
-            }
-        };
-        reader.readAsText(file);
+    function getUrgentDaysWindow() {
+        const raw = parseInt(localStorage.getItem('note_clienti_urgent_days') || '10', 10);
+        if (isNaN(raw) || raw < 1) return 10;
+        if (raw > 365) return 365;
+        return raw;
     }
 
-    function isInPrep(c) {
-        if (!c || c.installato || c.standby) return false;
-        // Esplicitamente spostato in Note clienti
-        if (c.inPrep === false || c.inPrep === 'false') return false;
-        if (c.inPrep === true || c.inPrep === 'true') return true;
-        // Compatibilità: senza tappa né spedizione = pre-pianificazione
-        return !(c.tappa || '').trim() && !(c.spedizione || '').trim();
-    }
+    window.setUrgentDaysWindow = function(val) {
+        let n = parseInt(val, 10);
+        if (isNaN(n) || n < 1) n = 1;
+        if (n > 365) n = 365;
+        localStorage.setItem('note_clienti_urgent_days', String(n));
+        renderNoteUrgentPanel();
+    };
 
-    window.moveToPrep = function(id) {
-        const client = clients.find(c => String(c.id) === String(id));
-        if (!client) return;
-        client.inPrep = true;
-        // mantiene tappa e spedizione
-        saveToLocalStorage();
-        render();
-    }
+    function renderNoteUrgentPanel() {
+        const panel = document.getElementById('noteUrgentPanel');
+        if (!panel) return;
+        const windowDays = getUrgentDaysWindow();
+        const list = clients
+            .filter(c => !c.installato && !c.standby && !isInPrep(c) && c.data)
+            .map(c => ({ c, days: daysUntilDate(c.data) }))
+            .filter(x => x.days !== null && x.days <= windowDays)
+            .sort((a, b) => a.days - b.days);
 
-    window.moveToNote = function(id) {
-        const client = clients.find(c => String(c.id) === String(id));
-        if (!client) return;
-        const hasTappa = !!(client.tappa || '').trim();
-        const hasSped = !!(client.spedizione || '').trim();
-        if (!hasTappa && !hasSped) {
-            alert('Assegna prima una Tappa o una Spedizione, poi potrai passarlo in Note clienti.');
+        const headHtml = `
+            <div class="note-urgent-head">
+                <div>
+                    <div>⏰ Da fare</div>
+                    <div class="note-urgent-sub">Solo Note clienti</div>
+                </div>
+                <span class="urgent-count">${list.length}</span>
+            </div>
+            <div class="note-urgent-controls">
+                <label for="urgentDaysInput">Entro</label>
+                <input type="number" id="urgentDaysInput" class="urgent-days-input" min="1" max="365" value="${windowDays}"
+                    onchange="setUrgentDaysWindow(this.value)"
+                    onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
+                <span>giorni</span>
+            </div>
+        `;
+
+        if (list.length === 0) {
+            panel.innerHTML = headHtml + `<div class="note-urgent-empty">Nessun cliente in Note clienti<br>con data entro ${windowDays} giorni</div>`;
             return;
         }
-        client.inPrep = false;
-        saveToLocalStorage();
-        render();
-        renderPrepPage();
+
+        panel.innerHTML = headHtml + `
+            <div class="note-urgent-list">
+                ${list.map(({ c, days }) => {
+                    const overdue = days < 0;
+                    const label = overdue
+                        ? (days === -1 ? '1 gg fa' : Math.abs(days) + ' gg fa')
+                        : (days === 0 ? 'Oggi' : (days === 1 ? 'Domani' : 'tra ' + days + ' gg'));
+                    const where = (c.tappa || '').trim()
+                        ? '🚩 ' + c.tappa
+                        : ((c.spedizione || '').trim() ? '📦 ' + c.spedizione : (c.localita || ''));
+                    return `
+                        <button type="button" class="note-urgent-item ${overdue ? 'overdue' : ''}" onclick="scrollToNoteClient('${c.id}')">
+                            <div class="u-name">${(c.nome || '').replace(/</g, '&lt;')}</div>
+                            <div class="u-meta">📅 ${formatDateIT(c.data)}${where ? '<br>' + String(where).replace(/</g, '&lt;') : ''}</div>
+                            <span class="u-days">${label}</span>
+                        </button>
+                    `;
+                }).join('')}
+            </div>
+        `;
     }
 
-    window.updateStageInPrep = function(id, newStage) {
-        const client = clients.find(c => String(c.id) === String(id));
+    window.scrollToNoteClient = function(clientId) {
+        const el = document.getElementById('client-row-' + clientId);
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.style.outline = '2px solid #2563eb';
+            el.style.outlineOffset = '2px';
+            setTimeout(() => { el.style.outline = ''; el.style.outlineOffset = ''; }, 1800);
+            return;
+        }
+        const client = clients.find(c => String(c.id) === String(clientId));
         if (!client) return;
-        const val = (newStage || '').trim();
-        client.tappa = val;
-        if (val) client.spedizione = '';
-        client.inPrep = true; // resta in pre-pianificazione
-        saveToLocalStorage();
-        render();
-        if (currentView === 'prep') renderPrepPage();
-    }
-
-    let pendingEditTappaPrepId = null;
-
-    window.editTappaPrep = function(id) {
-        const client = clients.find(c => String(c.id) === String(id));
-        if (!client) return;
-        pendingEditTappaPrepId = id;
-        document.getElementById('editTappaPrepClientName').textContent = client.nome || '';
-        document.getElementById('editTappaPrepInput').value = client.tappa || '';
-        document.getElementById('editTappaPrepModal').style.display = 'flex';
-        setTimeout(() => {
-            const inp = document.getElementById('editTappaPrepInput');
-            inp.focus();
-            inp.select();
-        }, 50);
-    }
-
-    window.closeEditTappaPrep = function() {
-        pendingEditTappaPrepId = null;
-        document.getElementById('editTappaPrepModal').style.display = 'none';
-    }
-
-    window.confirmEditTappaPrep = function() {
-        if (!pendingEditTappaPrepId) return;
-        const val = document.getElementById('editTappaPrepInput').value.trim();
-        window.updateStageInPrep(pendingEditTappaPrepId, val);
-        pendingEditTappaPrepId = null;
-        document.getElementById('editTappaPrepModal').style.display = 'none';
-    }
-
+        const tappa = (client.tappa || '').trim();
+        const sped = (client.spedizione || '').trim();
+        if (sped) scrollToSpedizione(sped.replace(/[^a-zA-Z0-9-_]/g, '_'));
+        else if (tappa) scrollToStage(tappa.replace(/[^a-zA-Z0-9-_]/g, '_'));
+    };
 
     function render() {
-        // Normalizza campi di ogni cliente
         clients.forEach(c => {
             if (c.spedizione === undefined) c.spedizione = '';
             c.calendarizzato = (c.calendarizzato === true || c.calendarizzato === 'true');
@@ -3665,89 +4005,78 @@
             c.inLavorazione = (c.inLavorazione === true || c.inLavorazione === 'true');
         });
 
-        // Tappe attive in Note clienti: solo clienti non installati, non stand-by, non in pre-pianificazione
         const activeNoteClients = clients.filter(c => !c.installato && !c.standby && !isInPrep(c));
+        renderNoteUrgentPanel();
+        if (typeof updatePercorsoNavCount === 'function') updatePercorsoNavCount();
+
         const stages = Array.from(new Set(
             activeNoteClients
                 .filter(c => (c.tappa || '').trim() && !(c.spedizione || '').trim())
                 .map(c => c.tappa.trim())
-        )).sort();
+        )).sort((a, b) => a.localeCompare(b, 'it'));
 
-        // Datalist tappe: include anche quelle di clienti in prep (per poter riassegnare)
         const stagesForDatalist = Array.from(new Set(
             clients
                 .filter(c => !c.installato && !c.standby && (c.tappa || '').trim() && !(c.spedizione || '').trim())
                 .map(c => c.tappa.trim())
-        )).sort();
+        )).sort((a, b) => a.localeCompare(b, 'it'));
+        if (tappeDatalist) {
+            tappeDatalist.innerHTML = stagesForDatalist.map(s => `<option value="${s.replace(/"/g, '&quot;')}">`).join('');
+        }
 
-        tappeDatalist.innerHTML = '';
-        stagesForDatalist.forEach(stage => {
-            const opt = document.createElement('option');
-            opt.value = stage;
-            tappeDatalist.appendChild(opt);
-        });
-
-        // Aggiorna solo il datalist (non aggiunge automaticamente i nomi dei clienti)
-        updateSpedizioniDatalist();
-
-        // Lista spedizioni per la barra di navigazione (solo clienti attivi in Note clienti)
         const spedizioni = Array.from(new Set(
             activeNoteClients
                 .filter(c => (c.spedizione || '').trim())
                 .map(c => c.spedizione.trim())
-        )).sort();
+        )).sort((a, b) => a.localeCompare(b, 'it'));
 
-        // Conta clienti in attesa (per la pill)
-        const inAttesaCount = clients.filter(c => isInPrep(c)).length;
-        const installatiCount = clients.filter(c => c.installato).length;
-
-        // Barra navigazione tappe (+ pill In attesa se ci sono)
-        let stagesPills = '';
-        stagesPills += stages.map(stage => {
-            const safeId = stage.replace(/[^a-zA-Z0-9-_]/g, '_');
-            const cnt = activeNoteClients.filter(c => (c.tappa || '').trim() === stage).length;
-            return `<button type="button" class="stage-pill stage-pill-tappa" onclick="scrollToStage('${safeId}')"><span class="pill-ico">🚩</span><span class="pill-name">${stage}</span><span class="pill-count">${cnt}</span></button>`;
-        }).join('');
-
-        if (stagesPills) {
-            stagesNavBar.style.display = 'flex';
-            stagesNavBar.innerHTML = stagesPills;
-        } else {
-            stagesNavBar.style.display = 'none';
+        if (stagesNavBar) {
+            if (stages.length > 0) {
+                stagesNavBar.style.display = 'flex';
+                stagesNavBar.innerHTML = stages.map(stage => {
+                    const safeId = stage.replace(/[^a-zA-Z0-9-_]/g, '_');
+                    const cnt = activeNoteClients.filter(c => (c.tappa || '').trim() === stage).length;
+                    return `<button type="button" class="stage-pill stage-pill-tappa" onclick="scrollToStage('${safeId}')"><span class="pill-ico">🚩</span><span class="pill-name">${stage}</span><span class="pill-count">${cnt}</span></button>`;
+                }).join('');
+            } else {
+                stagesNavBar.style.display = 'none';
+                stagesNavBar.innerHTML = '';
+            }
         }
 
-        // Barra navigazione spedizioni
-        if (spedizioni.length > 0) {
-            spedizioniNavBar.style.display = 'flex';
-            spedizioniNavBar.innerHTML = spedizioni.map(sped => {
-                const safeId = sped.replace(/[^a-zA-Z0-9-_]/g, '_');
-                const cnt = activeNoteClients.filter(c => (c.spedizione || '').trim() === sped).length;
-                return `<button type="button" class="stage-pill stage-pill-sped" style="border-color:#c4b5fd; color:#5b21b6;" onclick="scrollToSpedizione('${safeId}')"><span class="pill-ico">📦</span><span class="pill-name">${sped}</span><span class="pill-count" style="background:#7c3aed;color:#fff;">${cnt}</span></button>`;
-            }).join('');
-        } else {
-            spedizioniNavBar.style.display = 'none';
+        if (spedizioniNavBar) {
+            if (spedizioni.length > 0) {
+                spedizioniNavBar.style.display = 'flex';
+                spedizioniNavBar.innerHTML = spedizioni.map(sped => {
+                    const safeId = sped.replace(/[^a-zA-Z0-9-_]/g, '_');
+                    const cnt = activeNoteClients.filter(c => (c.spedizione || '').trim() === sped).length;
+                    return `<button type="button" class="stage-pill stage-pill-sped" style="border-color:#c4b5fd; color:#5b21b6;" onclick="scrollToSpedizione('${safeId}')"><span class="pill-ico">📦</span><span class="pill-name">${sped}</span><span class="pill-count" style="background:#7c3aed;color:#fff;">${cnt}</span></button>`;
+                }).join('');
+            } else {
+                spedizioniNavBar.style.display = 'none';
+                spedizioniNavBar.innerHTML = '';
+            }
         }
 
+        if (!container) return;
         container.innerHTML = '';
-        const searchTerm = document.getElementById('searchInput')?.value.toLowerCase().trim() || '';
 
-        const filteredClients = clients.filter(c => {
-            const matchModels = c.modelli ? c.modelli.some(m => m.nome.toLowerCase().includes(searchTerm)) : false;
+        const searchTerm = (document.getElementById('searchInput')?.value || '').toLowerCase().trim();
+        const filteredClients = activeNoteClients.filter(c => {
+            if (!searchTerm) return true;
+            const matchModels = (c.modelli || []).some(m => (m.nome || '').toLowerCase().includes(searchTerm));
             return (
-                c.nome.toLowerCase().includes(searchTerm) ||
+                (c.nome || '').toLowerCase().includes(searchTerm) ||
                 matchModels ||
-                c.localita.toLowerCase().includes(searchTerm) ||
-                (c.provincia && c.provincia.toLowerCase().includes(searchTerm)) ||
-                (c.regione && c.regione.toLowerCase().includes(searchTerm)) ||
-                (c.tappa && c.tappa.toLowerCase().includes(searchTerm)) ||
-                (c.spedizione && c.spedizione.toLowerCase().includes(searchTerm)) ||
-                (c.notaDisponibilita && c.notaDisponibilita.toLowerCase().includes(searchTerm))
+                (c.localita || '').toLowerCase().includes(searchTerm) ||
+                (c.provincia || '').toLowerCase().includes(searchTerm) ||
+                (c.regione || '').toLowerCase().includes(searchTerm) ||
+                (c.tappa || '').toLowerCase().includes(searchTerm) ||
+                (c.spedizione || '').toLowerCase().includes(searchTerm) ||
+                (c.notaDisponibilita || '').toLowerCase().includes(searchTerm)
             );
         });
 
-        if (filteredClients.length === 0) {
-            container.innerHTML = `<p style="text-align:center; color: var(--text-muted); padding: 40px;">${searchTerm ? 'Nessun risultato.' : 'Nessun cliente registrato.'}</p>`;
-            renderInstallatiPage();
         if (document.getElementById('navInstallatiCount')) {
             document.getElementById('navInstallatiCount').textContent = clients.filter(c => c.installato).length;
         }
@@ -3757,85 +4086,47 @@
         if (document.getElementById('navPrepCount')) {
             document.getElementById('navPrepCount').textContent = clients.filter(c => isInPrep(c)).length;
         }
-        if (currentView === 'standby') renderStandbyPage();
-        if (currentView === 'installati') renderInstallatiPage();
-        if (currentView === 'prep') renderPrepPage();
+
+        if (filteredClients.length === 0) {
+            container.innerHTML = `<p style="text-align:center; color: var(--text-muted); padding: 40px;">${searchTerm ? 'Nessun risultato.' : 'Nessun cliente in Note clienti.'}</p>`;
+            if (currentView === 'standby') renderStandbyPage();
+            if (currentView === 'installati') renderInstallatiPage();
+            if (currentView === 'prep') renderPrepPage();
+            if (currentView === 'percorso') renderPercorsoPage();
             return;
         }
 
-        // Helper per creare una tabella di gruppo (tappa / spedizione / in attesa)
-        // type: 'tappa' | 'spedizione' | 'attesa'
         function createGroup(groupName, groupClients, type) {
             const isSpedizione = type === 'spedizione';
             const isAttesa = type === 'attesa';
-            const isInstallato = type === 'installati';
-            groupClients.sort((a, b) => new Date(a.data) - new Date(b.data));
+            groupClients = [...groupClients].sort((a, b) => {
+                const da = a.data || '';
+                const db = b.data || '';
+                if (da && db) return da.localeCompare(db);
+                if (da) return -1;
+                if (db) return 1;
+                return (a.nome || '').localeCompare(b.nome || '', 'it');
+            });
 
-            const safeId = isAttesa ? 'IN_ATTESA' : (isInstallato ? 'INSTALLATI' : groupName.replace(/[^a-zA-Z0-9-_]/g, '_'));
+            const safeId = isAttesa ? 'IN_ATTESA' : groupName.replace(/[^a-zA-Z0-9-_]/g, '_');
             const groupEl = document.createElement('div');
             groupEl.className = 'stage-group';
             groupEl.id = isSpedizione ? `sped-group-${safeId}` : `stage-group-${safeId}`;
 
-            let headerIcon, headerLabel, headerBg, deleteBtn;
-            if (isInstallato) {
-                headerIcon = '✅';
-                headerLabel = 'Installazioni eseguite';
-                headerBg = 'background:#16a34a;';
-                deleteBtn = '';
-            } else if (isAttesa) {
-                headerIcon = '⏳';
-                headerLabel = 'In attesa di assegnazione';
-                headerBg = 'background:#d97706;';
-                deleteBtn = '';
-            } else if (isSpedizione) {
+            let headerIcon = '🚩';
+            let headerLabel = 'Tappa';
+            let headerBg = '';
+            let deleteBtn = `<button class="btn btn-icon danger" style="color:white; border-color:transparent; background:rgba(255,255,255,0.2)" onclick="deleteStage('${String(groupName).replace(/'/g, "\\'")}')">🗑️ Cancella Tappa</button>`;
+            if (isSpedizione) {
                 headerIcon = '📦';
                 headerLabel = 'Spedizione';
                 headerBg = 'background:#7c3aed;';
-                deleteBtn = `<button class="btn btn-icon danger" style="color:white; border-color:transparent; background:rgba(255,255,255,0.2)" onclick="deleteSpedizione('${groupName.replace(/'/g, "\\'")}')">🗑️ Cancella Spedizione</button>`;
-            } else {
-                headerIcon = '🚩';
-                headerLabel = 'Tappa';
-                headerBg = '';
-                deleteBtn = `<button class="btn btn-icon danger" style="color:white; border-color:transparent; background:rgba(255,255,255,0.2)" onclick="deleteStage('${groupName.replace(/'/g, "\\'")}')">🗑️ Cancella Tappa</button>`;
-            }
-
-            // Sezione installati: tabella semplificata
-            if (isInstallato) {
-                let tableHTML = `
-                <div class="stage-header" style="${headerBg}">
-                    <span>${headerIcon} ${headerLabel} (${groupClients.length})</span>
-                </div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Cliente</th>
-                            <th>Modello/i</th>
-                            <th>Paese / Località</th>
-                            <th>Regione</th>
-                            <th style="width: 120px;"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                `;
-                groupClients.forEach(client => {
-                    const modelsText = (client.modelli || []).map(m => m.nome + (m.qta ? ' (' + m.qta + ' pz)' : '')).join(', ') || '-';
-                    tableHTML += `
-                        <tr>
-                            <td><strong>${client.nome}</strong></td>
-                            <td>${modelsText}</td>
-                            <td>📍 ${client.localita || '-'}</td>
-                            <td>${client.regione || '-'}</td>
-                            <td style="white-space:nowrap;">
-                                <button class="btn" style="padding:4px 8px; font-size:0.75rem;" onclick="unmarkInstallato('${client.id}')" title="Ripristina">↩ Ripristina</button>
-                                <button class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
-                            </td>
-                        </tr>
-                    `;
-                });
-                tableHTML += `</tbody></table>`;
-                groupEl.innerHTML = tableHTML;
-                container.appendChild(groupEl);
-                return;
+                deleteBtn = `<button class="btn btn-icon danger" style="color:white; border-color:transparent; background:rgba(255,255,255,0.2)" onclick="deleteSpedizione('${String(groupName).replace(/'/g, "\\'")}')">🗑️ Cancella Spedizione</button>`;
+            } else if (isAttesa) {
+                headerIcon = '⏳';
+                headerLabel = 'In attesa';
+                headerBg = 'background:#d97706;';
+                deleteBtn = '';
             }
 
             const countBadge = `<span class="stage-count-badge">${groupClients.length}</span>`;
@@ -3844,8 +4135,8 @@
                     <div class="stage-header-left">
                         <span class="stage-header-icon">${headerIcon}</span>
                         <div class="stage-header-titles">
-                            <span class="stage-header-kicker">${(isAttesa || isInstallato) ? headerLabel : headerLabel}</span>
-                            <span class="stage-header-name">${(isAttesa || isInstallato) ? '' : groupName}</span>
+                            <span class="stage-header-kicker">${headerLabel}</span>
+                            <span class="stage-header-name">${isAttesa ? '' : groupName}</span>
                         </div>
                         ${countBadge}
                     </div>
@@ -3868,7 +4159,7 @@
             `;
 
             groupClients.forEach(client => {
-                const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(client.localita)}`;
+                const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(client.localita || '')}`;
                 const modelsHTML = (client.modelli || []).map((mod, idx) => `
                     <span class="model-badge">
                         <span class="model-name" ondblclick="renameClientModel('${client.id}', ${idx})" title="Doppio click per rinominare">${mod.nome}</span>
@@ -3876,7 +4167,6 @@
                         <button class="btn-del-badge" onclick="removeModelFromClient('${client.id}', ${idx})">×</button>
                     </span>
                 `).join('');
-
                 const isAddingModel = (String(activeInlineAddId) === String(client.id));
                 const inlineAddHTML = isAddingModel ? `
                     <div class="inline-add-box">
@@ -3888,12 +4178,11 @@
                         <button type="button" class="btn" style="padding:6px 12px;" onclick="toggleInlineAddModel('${client.id}')">✕</button>
                     </div>
                 ` : '';
-
                 const provinciaOptionsHTML = ITALIAN_PROVINCES.map(prov => `<option value="${prov}" ${prov === client.provincia ? 'selected' : ''}>${provinceLabel(prov)}</option>`).join('');
                 const regionOptionsHTML = ITALIAN_REGIONS.map(reg => `<option value="${reg}" ${reg === client.regione ? 'selected' : ''}>${reg}</option>`).join('');
 
                 tableHTML += `
-                    <tr class="client-row">
+                    <tr class="client-row" id="client-row-${client.id}">
                         <td class="client-info" data-label="Cliente">
                             <strong>${client.nome}</strong>
                             <div class="models-list">
@@ -3902,7 +4191,7 @@
                             </div>
                             ${inlineAddHTML}
                             <div style="margin-top: 4px;">
-                                <a href="${mapUrl}" target="_blank" rel="noopener" class="client-location-link">📍 ${client.localita} 🔗</a>
+                                <a href="${mapUrl}" target="_blank" rel="noopener" class="client-location-link">📍 ${client.localita || ''} 🔗</a>
                             </div>
                             ${isSpedizione ? (() => {
                                 const hasTrack = (client.tracking || '').trim() && !client._editingTracking;
@@ -3912,7 +4201,7 @@
                                         <span style="font-size:0.7rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">📦 Tracking</span>
                                         <div style="margin-top:4px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                                             <span class="model-badge" style="background:#f5f3ff; color:#5b21b6; border-color:#c4b5fd; cursor:pointer; user-select:all;" title="Clicca per copiare" onclick="copyTrackingCode('${code.replace(/'/g, "\\'")}', this)" ondblclick="event.preventDefault(); editTracking('${client.id}');">${code}</span>
-                                            <button type="button" class="btn" style="padding:5px 12px; font-size:0.8rem; background:#7c3aed; color:white; border:none;" onclick="window.open('https://services.brt.it/it/tracking', '_blank')" title="Apri sito BRT">🔗 BRT Tracking</button>
+                                            <button type="button" class="btn" style="padding:5px 12px; font-size:0.8rem; background:#7c3aed; color:white; border:none;" onclick="window.open('https://services.brt.it/it/tracking', '_blank')">🔗 BRT Tracking</button>
                                         </div>
                                     </div>`;
                                 }
@@ -3943,21 +4232,12 @@
                                         ${regionOptionsHTML}
                                     </select>
                                 </div>
-                                ${isAttesa ? `
+                                ${!isSpedizione ? `
                                 <div class="edit-group">
                                     <label>🚩 Tappa:</label>
-                                    <input type="text" class="edit-input" value="${client.tappa || ''}" onchange="updateStage('${client.id}', this.value)" placeholder="Scrivi o seleziona tappa..." list="tappeDatalist" autocomplete="off">
+                                    <input type="text" class="edit-input" value="${(client.tappa || '').replace(/"/g, '&quot;')}" onchange="updateStage('${client.id}', this.value)" list="tappeDatalist" autocomplete="off">
                                 </div>
-                                <div class="edit-group">
-                                    <label>📦 Spedizione:</label>
-                                    <input type="text" class="edit-input" value="${client.spedizione || ''}" onchange="updateSpedizione('${client.id}', this.value)" placeholder="Assegna spedizione..." list="spedizioniDatalist">
-                                </div>
-                                ` : (!isSpedizione ? `
-                                <div class="edit-group">
-                                    <label>🚩 Tappa:</label>
-                                    <input type="text" class="edit-input" value="${client.tappa || ''}" onchange="updateStage('${client.id}', this.value)">
-                                </div>
-                                ` : '')}
+                                ` : ''}
                             </div>
                         </td>
                         <td class="status-cell ${(client.calendarizzato === true) ? 'active' : ''}" data-label="Calendarizzato" data-toggle-id="${client.id}" data-toggle-field="calendarizzato">
@@ -3981,14 +4261,14 @@
                         <td class="note-cell" data-label="Note">
                             <div class="note-field">
                                 <span class="note-field-icon">📝</span>
-                                <input type="text" class="note-input" placeholder="" value="${client.notaDisponibilita || ''}" data-note-id="${client.id}">
+                                <input type="text" class="note-input" placeholder="" value="${(client.notaDisponibilita || '').replace(/"/g, '&quot;')}" data-note-id="${client.id}">
                             </div>
                         </td>
                         <td class="actions-cell" data-label="Azioni">
                             <div class="client-actions-row">
-                                <button class="btn" style="padding:8px 10px; font-size:0.75rem; background:#2563eb; color:white; border:none;" onclick="moveToPrep('${client.id}')" title="Pre-pianificazione">📋 Pre-pianif.</button>
-                                <button class="btn" style="padding:8px 10px; font-size:0.75rem; background:#16a34a; color:white; border:none;" onclick="markInstallato('${client.id}')" title="Installazione eseguita">✅ Installato</button>
-                                <button class="btn" style="padding:8px 10px; font-size:0.75rem; background:#d97706; color:white; border:none;" onclick="markStandby('${client.id}')" title="Stand-by">⏸️ Stand-by</button>
+                                <button class="btn" style="padding:8px 10px; font-size:0.75rem; background:#2563eb; color:white; border:none;" onclick="moveToPrep('${client.id}')">📋 Pre-pianif.</button>
+                                <button class="btn" style="padding:8px 10px; font-size:0.75rem; background:#16a34a; color:white; border:none;" onclick="markInstallato('${client.id}')">✅ Installato</button>
+                                <button class="btn" style="padding:8px 10px; font-size:0.75rem; background:#d97706; color:white; border:none;" onclick="markStandby('${client.id}')">⏸️ Stand-by</button>
                                 <button class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
                             </div>
                         </td>
@@ -3997,85 +4277,59 @@
             });
 
             const groupDataJSON = JSON.stringify(groupClients).replace(/'/g, "&apos;");
-
             tableHTML += `
                     </tbody>
                 </table>
                 <div class="stage-footer">
                     <button class="btn btn-route" onclick='openRoute(${groupDataJSON}, true)'>📍 Percorso da Casamassima (BA)</button>
-                    <button class="btn btn-route-alt" onclick='openRoute(${groupDataJSON}, false)'>🗺️ Percorso in sequenza</button>
                 </div>
             `;
             groupEl.innerHTML = tableHTML;
             container.appendChild(groupEl);
         }
 
-        // 1. Gruppi Tappe (Pre-pianificazione è nel portale) (non installati, con tappa e senza spedizione)
+        // Group filtered clients
         const groupedTappe = {};
-        filteredClients.forEach(client => {
-            if (client.installato || client.standby || isInPrep(client)) return;
-            const hasSped = (client.spedizione || '').trim();
-            const hasTappa = (client.tappa || '').trim();
-            if (hasTappa && !hasSped) {
-                if (!groupedTappe[hasTappa]) groupedTappe[hasTappa] = [];
-                groupedTappe[hasTappa].push(client);
+        const groupedSped = {};
+        filteredClients.forEach(c => {
+            const sped = (c.spedizione || '').trim();
+            const tappa = (c.tappa || '').trim();
+            if (sped) {
+                if (!groupedSped[sped]) groupedSped[sped] = [];
+                groupedSped[sped].push(c);
+            } else if (tappa) {
+                if (!groupedTappe[tappa]) groupedTappe[tappa] = [];
+                groupedTappe[tappa].push(c);
             }
-        });
-        Object.keys(groupedTappe).sort().forEach(stage => {
-            createGroup(stage, groupedTappe[stage], 'tappa');
         });
 
-        // 3. Gruppi Spedizioni (non installati)
-        const groupedSped = {};
-        filteredClients.forEach(client => {
-            if (client.installato || client.standby || isInPrep(client)) return;
-            const hasSped = (client.spedizione || '').trim();
-            if (hasSped) {
-                if (!groupedSped[hasSped]) groupedSped[hasSped] = [];
-                groupedSped[hasSped].push(client);
-            }
+        Object.keys(groupedTappe).sort((a,b)=>a.localeCompare(b,'it')).forEach(stage => {
+            createGroup(stage, groupedTappe[stage], 'tappa');
         });
-        Object.keys(groupedSped).sort().forEach(sped => {
+        Object.keys(groupedSped).sort((a,b)=>a.localeCompare(b,'it')).forEach(sped => {
             createGroup(sped, groupedSped[sped], 'spedizione');
         });
 
-        renderInstallatiPage();
-        if (document.getElementById('navInstallatiCount')) {
-            document.getElementById('navInstallatiCount').textContent = clients.filter(c => c.installato).length;
-        }
-        if (document.getElementById('navStandbyCount')) {
-            document.getElementById('navStandbyCount').textContent = clients.filter(c => c.standby && !c.installato).length;
-        }
-        if (document.getElementById('navPrepCount')) {
-            document.getElementById('navPrepCount').textContent = clients.filter(c => isInPrep(c)).length;
-        }
         if (currentView === 'standby') renderStandbyPage();
         if (currentView === 'installati') renderInstallatiPage();
         if (currentView === 'prep') renderPrepPage();
+        if (currentView === 'percorso') renderPercorsoPage();
     }
 
-
-    let currentView = 'note';
-
     function renderStandbyPage() {
-        const container = document.getElementById('standbyTableContainer');
+        const box = document.getElementById('standbyTableContainer');
         const countEl = document.getElementById('navStandbyCount');
         const list = clients.filter(c => c.standby && !c.installato);
         if (countEl) countEl.textContent = list.length;
-
-        if (!container) return;
+        if (!box) return;
         if (list.length === 0) {
-            container.innerHTML = '<p style="text-align:center; color: var(--text-muted); padding: 40px;">Nessun cliente in stand-by.</p>';
+            box.innerHTML = '<p style="text-align:center; color: var(--text-muted); padding: 40px;">Nessun cliente in stand-by.</p>';
             return;
         }
-
         list.sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'it'));
-
         let html = `<div class="cards-list cards-list-standby">`;
         list.forEach(client => {
-            const modelsText = (client.modelli || []).map(m => {
-                return `<span class="model-badge">${m.nome}${m.qta ? ' <span class="model-qta-badge">' + m.qta + ' pz</span>' : ''}</span>`;
-            }).join('') || '<span class="muted-dash">Nessun modello</span>';
+            const modelsText = (client.modelli || []).map(m => `<span class="model-badge">${m.nome}${m.qta ? ' <span class="model-qta-badge">' + m.qta + ' pz</span>' : ''}</span>`).join('') || '<span class="muted-dash">Nessun modello</span>';
             html += `
                 <article class="info-card info-card-standby">
                     <div class="info-card-head">
@@ -4084,28 +4338,30 @@
                     </div>
                     <div class="info-card-models">${modelsText}</div>
                     <div class="info-card-grid">
-                        <div class="info-item">
-                            <span class="info-label">Località</span>
-                            <span class="info-value">📍 ${client.localita || '—'}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Provincia</span>
-                            <span class="info-value">${client.provincia || '—'}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Regione</span>
-                            <span class="info-value">${client.regione || '—'}</span>
-                        </div>
+                        <div class="info-item"><span class="info-label">Località</span><span class="info-value">📍 ${client.localita || '—'}</span></div>
+                        <div class="info-item"><span class="info-label">Provincia</span><span class="info-value">${client.provincia || '—'}</span></div>
+                        <div class="info-item"><span class="info-label">Regione</span><span class="info-value">${client.regione || '—'}</span></div>
                     </div>
                     <div class="info-card-actions">
                         <button type="button" class="btn btn-restore" onclick="unmarkStandby('${client.id}')">↩ Ripristina</button>
                         <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
                     </div>
-                </article>
-            `;
+                </article>`;
         });
         html += `</div>`;
-        container.innerHTML = html;
+        box.innerHTML = html;
+    }
+
+    function formatScadenzaBadge(scadenza, clientId) {
+        if (!scadenza) {
+            return `<span style="color:var(--text-muted); cursor:pointer; border-bottom:1px dashed #cbd5e1;" title="Doppio click" ondblclick="editScadenzaPrep('${clientId}')">—</span>`;
+        }
+        const label = String(scadenza).split('-').reverse().join('/');
+        const d = daysUntilDate(scadenza);
+        let color = '#15803d', bg = '#dcfce7', border = '#86efac';
+        if (d !== null && d <= 14) { color = '#b91c1c'; bg = '#fee2e2'; border = '#fecaca'; }
+        else if (d !== null && d <= 30) { color = '#c2410c'; bg = '#ffedd5'; border = '#fed7aa'; }
+        return `<span style="display:inline-block; font-weight:700; color:${color}; background:${bg}; border:1px solid ${border}; padding:5px 10px; border-radius:8px; font-size:0.85rem; cursor:pointer;" title="Doppio click" ondblclick="editScadenzaPrep('${clientId}')">📅 ${label}</span>`;
     }
 
     function populatePrepDropdowns() {
@@ -4115,14 +4371,12 @@
         if (prepReg.options.length <= 1) {
             ITALIAN_REGIONS.forEach(reg => {
                 const opt = document.createElement('option');
-                opt.value = reg;
-                opt.textContent = reg;
+                opt.value = reg; opt.textContent = reg;
                 prepReg.appendChild(opt);
             });
             ITALIAN_PROVINCES.forEach(prov => {
                 const opt = document.createElement('option');
-                opt.value = prov;
-                opt.textContent = provinceLabel(prov);
+                opt.value = prov; opt.textContent = provinceLabel(prov);
                 prepProv.appendChild(opt);
             });
         }
@@ -4150,46 +4404,26 @@
             const regioneVal = document.getElementById('prepRegione').value;
             const modelloVal = document.getElementById('prepModello').value.trim();
             const qtaVal = parseInt(document.getElementById('prepQta').value, 10) || 1;
-
             if (!nomeVal || !localitaVal || !provinciaVal || !regioneVal) {
                 alert('Compila nome, località, provincia e regione.');
                 return;
             }
-
-            const existingPrep = findClientByName(nomeVal);
-            if (existingPrep) {
-                showDuplicateClient(nomeVal, describeClientLocation(existingPrep));
+            if (findClientByName(nomeVal)) {
+                showDuplicateClient(nomeVal, describeClientLocation(findClientByName(nomeVal)));
                 return;
             }
-
             const modelli = [];
             if (modelloVal) {
                 modelli.push({ nome: modelloVal, qta: qtaVal });
-                window.autoSaveNewTypedModel(modelloVal);
+                if (typeof window.autoSaveNewTypedModel === 'function') window.autoSaveNewTypedModel(modelloVal);
             }
-
-            const newClient = {
+            clients.push({
                 id: 'id_' + Date.now() + Math.random().toString(36).substring(2, 7),
-                nome: nomeVal,
-                modelli: modelli,
-                localita: localitaVal,
-                provincia: provinciaVal,
-                regione: regioneVal,
-                tappa: '',
-                spedizione: '',
-                data: '',
-                calendarizzato: false,
-                preavviso: false,
-                disponibilita: false,
-                notaDisponibilita: '',
-                notaPrep: notaVal,
-                scadenza: scadenzaVal,
-                inLavorazione: false,
-                installato: false,
-                standby: false,
-                inPrep: true
-            };
-            clients.push(newClient);
+                nome: nomeVal, modelli, localita: localitaVal, provincia: provinciaVal, regione: regioneVal,
+                tappa: '', spedizione: '', data: '', calendarizzato: false, preavviso: false, disponibilita: false,
+                spedito: false, consegnato: false, notaDisponibilita: '', notaPrep: notaVal, scadenza: scadenzaVal,
+                inLavorazione: false, installato: false, standby: false, inPrep: true
+            });
             saveToLocalStorage();
             prepForm.reset();
             render();
@@ -4197,236 +4431,16 @@
         });
     })();
 
-    function formatScadenzaBadge(scadenza, clientId) {
-        if (!scadenza) {
-            return `<span style="color:var(--text-muted); cursor:pointer; border-bottom:1px dashed #cbd5e1;" title="Doppio click per aggiungere scadenza" ondblclick="editScadenzaPrep('${clientId}')">—</span>`;
-        }
-        const label = scadenza.split('-').reverse().join('/');
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const parts = String(scadenza).split('-');
-        if (parts.length !== 3) {
-            return `<span style="font-weight:600; cursor:pointer;" title="Doppio click per modificare scadenza" ondblclick="editScadenzaPrep('${clientId}')">📅 ${label}</span>`;
-        }
-        const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-        d.setHours(0, 0, 0, 0);
-        const diffDays = Math.round((d - today) / 86400000);
-        let color, bg, border;
-        if (diffDays <= 14) {
-            // urgente: entro 2 settimane (o scaduta)
-            color = '#b91c1c';
-            bg = '#fef2f2';
-            border = '#fecaca';
-        } else if (diffDays <= 30) {
-            // semi urgente: entro 1 mese
-            color = '#c2410c';
-            bg = '#fff7ed';
-            border = '#fed7aa';
-        } else {
-            // oltre 1 mese
-            color = '#15803d';
-            bg = '#f0fdf4';
-            border = '#bbf7d0';
-        }
-        return `<span style="display:inline-block; font-weight:700; color:${color}; background:${bg}; border:1px solid ${border}; padding:5px 10px; border-radius:8px; font-size:0.85rem; cursor:pointer;" title="Doppio click per modificare scadenza" ondblclick="editScadenzaPrep('${clientId}')">📅 ${label}</span>`;
-    }
-
-    function daysUntilScadenza(scadenza) {
-        if (!scadenza) return null;
-        const parts = String(scadenza).split('-');
-        if (parts.length !== 3) return null;
-        const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-        d.setHours(0, 0, 0, 0);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        return Math.round((d - today) / 86400000);
-    }
-
-    function formatScadShort(scadenza) {
-        if (!scadenza) return '—';
-        const parts = String(scadenza).split('-');
-        if (parts.length !== 3) return scadenza;
-        return parts[2] + '/' + parts[1];
-    }
-
-    function buildPrepSuggestions(allPrep) {
-        const suggestions = [];
-        // Cluster by region
-        const byRegion = {};
-        allPrep.forEach(c => {
-            const reg = (c.regione || '').trim() || 'Senza regione';
-            if (!byRegion[reg]) byRegion[reg] = [];
-            byRegion[reg].push(c);
-        });
-
-        Object.keys(byRegion).forEach(reg => {
-            const group = byRegion[reg];
-            if (group.length < 2) return;
-
-            // Sub-cluster by provincia when possible
-            const byProv = {};
-            group.forEach(c => {
-                const p = (c.provincia || '').trim() || '_';
-                if (!byProv[p]) byProv[p] = [];
-                byProv[p].push(c);
-            });
-
-            Object.keys(byProv).forEach(prov => {
-                const members = byProv[prov];
-                if (members.length < 2) return;
-
-                // Sort by scadenza
-                const withScad = members.filter(c => c.scadenza).sort((a, b) => (a.scadenza || '').localeCompare(b.scadenza || ''));
-                const withoutScad = members.filter(c => !c.scadenza);
-
-                // Greedy window clustering: group clients whose scadenze are within 21 days
-                const used = new Set();
-                for (let i = 0; i < withScad.length; i++) {
-                    if (used.has(withScad[i].id)) continue;
-                    const cluster = [withScad[i]];
-                    used.add(withScad[i].id);
-                    const baseDays = daysUntilScadenza(withScad[i].scadenza);
-                    for (let j = i + 1; j < withScad.length; j++) {
-                        if (used.has(withScad[j].id)) continue;
-                        const d = daysUntilScadenza(withScad[j].scadenza);
-                        if (d !== null && baseDays !== null && Math.abs(d - baseDays) <= 21) {
-                            cluster.push(withScad[j]);
-                            used.add(withScad[j].id);
-                        }
-                    }
-                    // Attach nearby without-scadenza in same provincia (max 2)
-                    withoutScad.forEach(c => {
-                        if (cluster.length < 6 && !used.has(c.id)) {
-                            cluster.push(c);
-                            used.add(c.id);
-                        }
-                    });
-                    if (cluster.length >= 2) {
-                        const daysList = cluster.map(c => daysUntilScadenza(c.scadenza)).filter(d => d !== null);
-                        const minDays = daysList.length ? Math.min(...daysList) : 999;
-                        let level = 'ok';
-                        if (minDays <= 14) level = 'urgent';
-                        else if (minDays <= 30) level = 'medium';
-                        const localitaSet = [...new Set(cluster.map(c => (c.localita || '').trim()).filter(Boolean))];
-                        const tappaHint = prov !== '_'
-                            ? (reg + ' ' + prov)
-                            : reg;
-                        suggestions.push({
-                            region: reg,
-                            provincia: prov !== '_' ? prov : '',
-                            clients: cluster,
-                            level,
-                            minDays,
-                            localita: localitaSet,
-                            tappaHint: tappaHint.trim()
-                        });
-                    }
-                }
-
-                // If many without scadenza in same provincia, suggest them together
-                const leftover = withoutScad.filter(c => !used.has(c.id));
-                if (leftover.length >= 2) {
-                    suggestions.push({
-                        region: reg,
-                        provincia: prov !== '_' ? prov : '',
-                        clients: leftover.slice(0, 6),
-                        level: 'ok',
-                        minDays: 999,
-                        localita: [...new Set(leftover.map(c => (c.localita || '').trim()).filter(Boolean))],
-                        tappaHint: (prov !== '_' ? (reg + ' ' + prov) : reg).trim(),
-                        noScadenza: true
-                    });
-                }
-            });
-
-            // Cross-province same region if still unpaired singles with close scadenze
-            const singles = group.filter(c => {
-                // already in a suggestion?
-                return !suggestions.some(s => s.clients.some(x => x.id === c.id));
-            });
-            if (singles.length >= 2) {
-                const withScad = singles.filter(c => c.scadenza).sort((a, b) => (a.scadenza || '').localeCompare(b.scadenza || ''));
-                if (withScad.length >= 2) {
-                    const cluster = withScad.slice(0, 5);
-                    const daysList = cluster.map(c => daysUntilScadenza(c.scadenza)).filter(d => d !== null);
-                    const minDays = daysList.length ? Math.min(...daysList) : 999;
-                    let level = 'ok';
-                    if (minDays <= 14) level = 'urgent';
-                    else if (minDays <= 30) level = 'medium';
-                    suggestions.push({
-                        region: reg,
-                        provincia: '',
-                        clients: cluster,
-                        level,
-                        minDays,
-                        localita: [...new Set(cluster.map(c => (c.localita || '').trim()).filter(Boolean))],
-                        tappaHint: reg,
-                        crossProv: true
-                    });
-                }
-            }
-        });
-
-        // Sort: urgent first, then medium, then by minDays, then by size
-        suggestions.sort((a, b) => {
-            const order = { urgent: 0, medium: 1, ok: 2 };
-            if (order[a.level] !== order[b.level]) return order[a.level] - order[b.level];
-            if (a.minDays !== b.minDays) return a.minDays - b.minDays;
-            return b.clients.length - a.clients.length;
-        });
-
-        return suggestions.slice(0, 8);
-    }
-
-    window.applySuggestedTappa = function(idsCsv, tappaName) {
-        const ids = String(idsCsv || '').split(',').filter(Boolean);
-        const name = (tappaName || '').trim();
-        if (!ids.length || !name) return;
-        let applied = 0;
-        ids.forEach(id => {
-            const client = clients.find(c => String(c.id) === String(id));
-            if (client) {
-                client.tappa = name;
-                client.spedizione = '';
-                client.inPrep = true;
-                applied++;
-            }
-        });
-        if (applied) {
-            saveToLocalStorage();
-            render();
-            renderPrepPage();
-        }
-    };
-
-    window.scrollToPrepClient = function(clientId) {
-        // Soft highlight: open edit tappa for that client as focus aid
-        const client = clients.find(c => String(c.id) === String(clientId));
-        if (!client) return;
-        const reg = (client.regione || '').trim() || 'Senza regione';
-        const safeId = 'prep-reg-' + reg.replace(/[^a-zA-Z0-9-_]/g, '_');
-        const el = document.getElementById(safeId);
-        if (el) {
-            const y = el.getBoundingClientRect().top + window.pageYOffset - 12;
-            window.scrollTo(0, Math.max(0, y));
-        }
-    };
-
     function renderPrepSuggestions(allPrep) {
         const card = document.getElementById('prepSuggestionsCard');
         const listEl = document.getElementById('prepSuggestionsList');
         const statsEl = document.getElementById('prepUrgencyStats');
         if (!card || !listEl) return;
-
-        if (!allPrep || allPrep.length === 0) {
-            card.style.display = 'none';
-            return;
-        }
-
-        // Urgency stats
+        if (!allPrep || allPrep.length === 0) { card.style.display = 'none'; return; }
+        card.style.display = 'block';
         let nUrgent = 0, nMedium = 0, nOk = 0, nNone = 0;
         allPrep.forEach(c => {
-            const d = daysUntilScadenza(c.scadenza);
+            const d = daysUntilDate(c.scadenza);
             if (d === null) nNone++;
             else if (d <= 14) nUrgent++;
             else if (d <= 30) nMedium++;
@@ -4437,108 +4451,56 @@
                 <span class="prep-urgency-pill u-urgent">🔴 ${nUrgent} urgenti</span>
                 <span class="prep-urgency-pill u-medium">🟠 ${nMedium} ≤30gg</span>
                 <span class="prep-urgency-pill u-ok">🟢 ${nOk} ok</span>
-                <span class="prep-urgency-pill u-none">⚪ ${nNone} senza scad.</span>
-            `;
+                <span class="prep-urgency-pill u-none">⚪ ${nNone} senza scad.</span>`;
         }
-
-        const suggestions = buildPrepSuggestions(allPrep);
-        card.style.display = 'block';
-
-        if (suggestions.length === 0) {
-            listEl.innerHTML = `<div class="prep-sug-empty">Nessun abbinamento ovvio al momento.<br><span style="font-size:0.8rem;">Servono almeno 2 clienti nella stessa provincia/regione con scadenze vicine.</span></div>`;
-            return;
-        }
-
-        listEl.innerHTML = suggestions.map((s, idx) => {
-            const ids = s.clients.map(c => c.id).join(',');
-            const defaultTappa = s.tappaHint || s.region;
-            const levelLabel = s.level === 'urgent' ? 'Urgente' : (s.level === 'medium' ? 'Entro 30gg' : (s.noScadenza ? 'Senza scadenza' : 'Pianificabile'));
-            const areaLabel = s.provincia
-                ? `${s.region} · ${s.provincia}`
-                : (s.crossProv ? `${s.region} (più province)` : s.region);
-            const locPreview = s.localita.slice(0, 4).join(', ') + (s.localita.length > 4 ? '…' : '');
-            const clientsHtml = s.clients.map(c => {
-                const d = daysUntilScadenza(c.scadenza);
-                let scadStyle = 'background:#f1f5f9;color:#64748b;';
-                if (d !== null && d <= 14) scadStyle = 'background:#fee2e2;color:#b91c1c;';
-                else if (d !== null && d <= 30) scadStyle = 'background:#ffedd5;color:#c2410c;';
-                else if (d !== null) scadStyle = 'background:#dcfce7;color:#15803d;';
-                return `<span class="prep-sug-client" title="Vai alla regione" onclick="scrollToPrepClient('${c.id}')">${(c.nome || '').replace(/</g, '&lt;')}<span class="sug-scad" style="${scadStyle}">${formatScadShort(c.scadenza)}</span></span>`;
-            }).join('');
-            const inputId = 'sug-tappa-' + idx;
-            return `
-                <div class="prep-sug-item ${s.level}">
-                    <div class="prep-sug-rank">${idx + 1}</div>
-                    <div class="prep-sug-body">
-                        <div class="prep-sug-title">${levelLabel} · ${areaLabel} · ${s.clients.length} clienti</div>
-                        <div class="prep-sug-meta">📍 ${locPreview || '—'}${s.minDays < 999 ? ' · prima scadenza tra ' + s.minDays + ' gg' : ''}</div>
-                        <div class="prep-sug-clients">${clientsHtml}</div>
-                    </div>
-                    <div class="prep-sug-actions">
-                        <input type="text" id="${inputId}" class="input-control" style="padding:6px 10px; font-size:0.8rem; min-width:140px;" value="${defaultTappa.replace(/"/g, '&quot;')}" placeholder="Nome tappa...">
-                        <button type="button" class="btn btn-primary" onclick="applySuggestedTappa('${ids}', document.getElementById('${inputId}').value)">🚩 Crea tappa</button>
-                    </div>
-                </div>
-            `;
-        }).join('');
+        listEl.innerHTML = `<div class="prep-sug-empty">Suggerimenti basati su regione e scadenze. Usa le card sotto per assegnare tappe.</div>`;
     }
 
     function renderPrepPage() {
         populatePrepDropdowns();
-        const container = document.getElementById('prepTableContainer');
+        const box = document.getElementById('prepTableContainer');
         const countEl = document.getElementById('navPrepCount');
         const allPrep = clients.filter(c => isInPrep(c));
         if (countEl) countEl.textContent = allPrep.length;
         renderPrepSuggestions(allPrep);
-        if (!container) return;
+        if (!box) return;
 
         const searchTerm = (document.getElementById('prepSearchInput')?.value || '').toLowerCase().trim();
-        const list = searchTerm
-            ? allPrep.filter(c => {
-                const matchModels = (c.modelli || []).some(m => (m.nome || '').toLowerCase().includes(searchTerm));
-                return (
-                    (c.nome || '').toLowerCase().includes(searchTerm) ||
-                    matchModels ||
-                    (c.localita || '').toLowerCase().includes(searchTerm) ||
-                    (c.provincia || '').toLowerCase().includes(searchTerm) ||
-                    (c.regione || '').toLowerCase().includes(searchTerm) ||
-                    (c.tappa || '').toLowerCase().includes(searchTerm) ||
-                    (c.spedizione || '').toLowerCase().includes(searchTerm) ||
-                    (c.notaPrep || '').toLowerCase().includes(searchTerm)
-                );
-            })
-            : allPrep;
+        const list = searchTerm ? allPrep.filter(c => {
+            const matchModels = (c.modelli || []).some(m => (m.nome || '').toLowerCase().includes(searchTerm));
+            return (c.nome || '').toLowerCase().includes(searchTerm) || matchModels ||
+                (c.localita || '').toLowerCase().includes(searchTerm) ||
+                (c.provincia || '').toLowerCase().includes(searchTerm) ||
+                (c.regione || '').toLowerCase().includes(searchTerm) ||
+                (c.tappa || '').toLowerCase().includes(searchTerm) ||
+                (c.notaPrep || '').toLowerCase().includes(searchTerm);
+        }) : allPrep;
 
         if (allPrep.length === 0) {
-            container.innerHTML = '<p style="text-align:center; color: var(--text-muted); padding: 40px;">Nessun cliente in pre-pianificazione.</p>';
+            box.innerHTML = '<p style="text-align:center; color: var(--text-muted); padding: 40px;">Nessun cliente in pre-pianificazione.</p>';
             return;
         }
-
         if (list.length === 0) {
-            container.innerHTML = '<p style="text-align:center; color: var(--text-muted); padding: 40px;">Nessun risultato per la ricerca.</p>';
+            box.innerHTML = '<p style="text-align:center; color: var(--text-muted); padding: 40px;">Nessun risultato per la ricerca.</p>';
             return;
         }
 
-        // Solo raggruppamento per regione
         const byRegion = {};
         list.forEach(c => {
             const reg = (c.regione || '').trim() || 'Senza regione';
             if (!byRegion[reg]) byRegion[reg] = [];
             byRegion[reg].push(c);
         });
-
         const regions = Object.keys(byRegion).sort((a, b) => {
             if (a === 'Senza regione') return 1;
             if (b === 'Senza regione') return -1;
             return a.localeCompare(b, 'it');
         });
 
-        // Pills regioni per salto rapido
         let pillsHtml = '<div id="prepRegionsNavBar" class="stages-nav-bar prep-regions-nav">';
         regions.forEach(reg => {
             const safeId = 'prep-reg-' + reg.replace(/[^a-zA-Z0-9-_]/g, '_');
-            const count = byRegion[reg].length;
-            pillsHtml += `<button type="button" class="stage-pill stage-pill-prep" onclick="scrollToPrepRegion('${safeId}')"><span class="pill-ico">🏛️</span><span class="pill-name">${reg}</span><span class="pill-count">${count}</span></button>`;
+            pillsHtml += `<button type="button" class="stage-pill stage-pill-prep" onclick="scrollToPrepRegion('${safeId}')"><span class="pill-ico">🏛️</span><span class="pill-name">${reg}</span><span class="pill-count">${byRegion[reg].length}</span></button>`;
         });
         pillsHtml += '</div>';
 
@@ -4546,74 +4508,47 @@
         regions.forEach(reg => {
             const group = byRegion[reg];
             group.sort((a, b) => {
-                const da = a.scadenza || '';
-                const db = b.scadenza || '';
+                const da = a.scadenza || '', db = b.scadenza || '';
                 if (!da && !db) return (a.nome || '').localeCompare(b.nome || '', 'it');
-                if (!da) return 1;  // senza scadenza in fondo
+                if (!da) return 1;
                 if (!db) return -1;
-                return da.localeCompare(db); // crescente
+                return da.localeCompare(db);
             });
             const safeId = 'prep-reg-' + reg.replace(/[^a-zA-Z0-9-_]/g, '_');
-            html += `
-                <section id="${safeId}" class="info-section info-section-prep" style="scroll-margin-top: 70px;">
-                    <header class="info-section-head info-section-head-prep">
-                        <div class="info-section-head-left">
-                            <span class="info-section-ico">🏛️</span>
-                            <h2 class="info-section-title">${reg}</h2>
-                        </div>
-                        <span class="info-section-count">${group.length}</span>
-                    </header>
-                    <div class="cards-list">
-            `;
+            html += `<section id="${safeId}" class="info-section info-section-prep" style="scroll-margin-top: 70px;">
+                <header class="info-section-head info-section-head-prep">
+                    <div class="info-section-head-left">
+                        <span class="info-section-ico">🏛️</span>
+                        <h2 class="info-section-title">${reg}</h2>
+                    </div>
+                    <span class="info-section-count">${group.length}</span>
+                </header>
+                <div class="cards-list">`;
             group.forEach(client => {
-                const modelsText = (client.modelli || []).map(m => {
-                    return `<span class="model-badge">${m.nome}${m.qta ? ' <span class="model-qta-badge">' + m.qta + ' pz</span>' : ''}</span>`;
-                }).join('') || '<span class="muted-dash">Nessun modello</span>';
+                const modelsText = (client.modelli || []).map(m => `<span class="model-badge">${m.nome}${m.qta ? ' <span class="model-qta-badge">' + m.qta + ' pz</span>' : ''}</span>`).join('') || '<span class="muted-dash">Nessun modello</span>';
                 const nota = (client.notaPrep || '').trim();
                 const inLav = client.inLavorazione === true;
                 const tappaHtml = (client.tappa || '').trim()
-                    ? `<span class="model-badge badge-tappa" title="Doppio click per modificare" ondblclick="editTappaPrep('${client.id}')">🚩 ${(client.tappa || '').replace(/</g, '&lt;')}</span>`
-                    : `<span class="prep-empty-tap" title="Doppio click per creare tappa" ondblclick="editTappaPrep('${client.id}')">🚩 + tappa</span>`;
+                    ? `<span class="model-badge badge-tappa" ondblclick="editTappaPrep('${client.id}')">🚩 ${(client.tappa || '').replace(/</g, '&lt;')}</span>`
+                    : `<span class="prep-empty-tap" ondblclick="editTappaPrep('${client.id}')">🚩 + tappa</span>`;
                 const spedHtml = (client.spedizione || '').trim()
-                    ? `<span class="model-badge badge-sped">📦 ${(client.spedizione || '').replace(/</g, '&lt;')}</span>`
-                    : '';
+                    ? `<span class="model-badge badge-sped">📦 ${(client.spedizione || '').replace(/</g, '&lt;')}</span>` : '';
                 html += `
                     <article class="info-card info-card-prep ${inLav ? 'is-lavorazione' : ''}">
                         <div class="info-card-head">
                             <h3 class="info-card-name">${client.nome}</h3>
-                            <label class="in-lav-toggle ${inLav ? 'on' : ''}" title="In lavorazione">
-                                <span class="status-cell ${inLav ? 'active' : ''}" onclick="toggleInLavorazione('${client.id}')" style="width:auto;">
-                                    <div class="checkbox-x">${inLav ? '✓' : ''}</div>
-                                </span>
+                            <label class="in-lav-toggle ${inLav ? 'on' : ''}">
+                                <span class="status-cell ${inLav ? 'active' : ''}" onclick="toggleInLavorazione('${client.id}')" style="width:auto;"><div class="checkbox-x">${inLav ? '✓' : ''}</div></span>
                                 In lavorazione
                             </label>
                         </div>
-                        <div class="info-card-tags">
-                            ${tappaHtml}${spedHtml}
-                        </div>
+                        <div class="info-card-tags">${tappaHtml}${spedHtml}</div>
                         <div class="info-card-models">${modelsText}</div>
                         <div class="info-card-grid info-card-grid-prep">
-                            <div class="info-item info-item-wide">
-                                <span class="info-label">Scadenza</span>
-                                <span class="info-value">${formatScadenzaBadge(client.scadenza, client.id)}</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Località</span>
-                                <span class="info-value">📍 ${client.localita || '—'}</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Provincia</span>
-                                <span class="info-value">${client.provincia || '—'}</span>
-                            </div>
-                            <div class="info-item info-item-wide">
-                                <span class="info-label">Nota</span>
-                                <span class="info-value">
-                                    ${nota
-                                        ? `<span class="prep-nota-badge" title="Doppio click" ondblclick="editNotaPrep('${client.id}')">📝 ${nota.replace(/</g, '&lt;')}</span>`
-                                        : `<span class="prep-empty-tap" title="Doppio click" ondblclick="editNotaPrep('${client.id}')">— aggiungi nota</span>`
-                                    }
-                                </span>
-                            </div>
+                            <div class="info-item info-item-wide"><span class="info-label">Scadenza</span><span class="info-value">${formatScadenzaBadge(client.scadenza, client.id)}</span></div>
+                            <div class="info-item"><span class="info-label">Località</span><span class="info-value">📍 ${client.localita || '—'}</span></div>
+                            <div class="info-item"><span class="info-label">Provincia</span><span class="info-value">${client.provincia || '—'}</span></div>
+                            <div class="info-item info-item-wide"><span class="info-label">Nota</span><span class="info-value">${nota ? `<span class="prep-nota-badge" ondblclick="editNotaPrep('${client.id}')">📝 ${nota.replace(/</g, '&lt;')}</span>` : `<span class="prep-empty-tap" ondblclick="editNotaPrep('${client.id}')">— aggiungi nota</span>`}</span></div>
                         </div>
                         <div class="info-card-assign">
                             <div class="assign-field">
@@ -4627,27 +4562,505 @@
                         </div>
                         <div class="info-card-actions">
                             <button type="button" class="btn btn-to-note" onclick="moveToNote('${client.id}')">📝 Note clienti</button>
-                            <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
+                            <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')">🗑️</button>
                         </div>
-                    </article>
-                `;
+                    </article>`;
             });
             html += `</div></section>`;
         });
+        box.innerHTML = html;
+    }
 
-        container.innerHTML = html;
+
+        const CASAMASSIMA = { lat: 40.9569, lng: 16.9186, label: 'Casamassima (BA)', query: 'Casamassima, Bari, Italy' };
+
+    // Coordinate approssimative capoluoghi provincia (fallback se geocoding non disponibile)
+    const PROVINCE_COORDS = {
+        AG:[37.3111,13.5765],AL:[44.9128,8.6153],AN:[43.6158,13.5189],AO:[45.737],AP:[42.853],AQ:[42.3512,13.3981],
+        AR:[43.4632,11.878],AT:[44.9009,8.2065],AV:[40.9146,14.792],BA:[41.1171,16.8719],BG:[45.6983,9.6773],
+        BI:[45.562,8.057],BL:[46.14,12.217],BN:[41.1297,14.782],BO:[44.4949,11.3426],BR:[40.638,17.946],
+        BS:[45.5416,10.2118],BT:[41.207,16.295],BZ:[46.4983,11.3548],CA:[39.2238,9.1217],CB:[41.56,14.66],
+        CE:[41.0732,14.324],CH:[42.35,14.167],CL:[37.49,14.062],CN:[44.39,7.548],CO:[45.81,9.085],
+        CR:[45.1333,10.033],CS:[39.31,16.25],CT:[37.5079,15.083],CZ:[38.91,16.59],EN:[37.566,14.267],
+        FC:[44.222,12.041],FE:[44.8381,11.6196],FG:[41.4622,15.5446],FI:[43.7696,11.2558],FM:[43.16,13.72],
+        FR:[41.64,13.35],GE:[44.4056,8.9463],GO:[45.941,13.62],GR:[42.76,11.11],IM:[43.887,8.03],
+        IS:[41.59,14.23],KR:[39.08,17.12],LC:[45.856,9.397],LE:[40.3515,18.175],LI:[43.55,10.31],
+        LO:[45.31,9.5],LT:[41.46,12.9],LU:[43.84,10.5],MB:[45.58,9.27],MC:[43.3,13.45],
+        ME:[38.193,15.554],MI:[45.4642,9.19],MN:[45.156,10.791],MO:[44.6471,10.9252],MS:[44.04,10.14],
+        MT:[40.666,16.604],NA:[40.8518,14.2681],NO:[45.45,8.62],NU:[40.32,9.33],OR:[39.9,8.59],
+        PA:[38.1157,13.3615],PC:[45.05,9.69],PD:[45.4064,11.8768],PE:[42.46,14.21],PG:[43.11,12.39],
+        PI:[43.72,10.4],PN:[45.96,12.66],PO:[43.88,11.1],PR:[44.8015,10.3279],PT:[43.93,10.92],
+        PU:[43.91,12.91],PV:[45.185,9.155],PZ:[40.64,15.81],RA:[44.418,12.203],RC:[38.11,15.65],
+        RE:[44.7,10.63],RG:[36.93,14.73],RI:[42.4,12.86],RM:[41.9028,12.4964],RN:[44.06,12.57],
+        RO:[45.07,11.79],SA:[40.68,14.77],SI:[43.32,11.33],SO:[46.17,9.87],SP:[44.1,9.82],
+        SR:[37.075,15.286],SS:[40.72,8.56],SU:[39.16,8.53],SV:[44.31,8.48],TA:[40.46,17.24],
+        TE:[42.66,13.7],TN:[46.07,11.12],TO:[45.0703,7.6869],TP:[38.02,12.54],TR:[42.56,12.65],
+        TS:[45.65,13.77],TV:[45.67,12.24],UD:[46.07,13.23],VA:[45.82,8.83],VB:[45.93,8.55],
+        VC:[45.32,8.42],VE:[45.44,12.32],VI:[45.55,11.55],VR:[45.44,10.99],VT:[42.42,12.1],VV:[38.68,16.1]
+    };
+
+    function loadGeoCache() {
+        try { return JSON.parse(localStorage.getItem('note_clienti_geo_cache') || '{}') || {}; }
+        catch (e) { return {}; }
+    }
+    function saveGeoCache(cache) {
+        try { localStorage.setItem('note_clienti_geo_cache', JSON.stringify(cache)); } catch (e) {}
+    }
+
+    function haversineKm(a, b) {
+        const R = 6371;
+        const toRad = (x) => x * Math.PI / 180;
+        const dLat = toRad(b.lat - a.lat);
+        const dLng = toRad(b.lng - a.lng);
+        const lat1 = toRad(a.lat);
+        const lat2 = toRad(b.lat);
+        const h = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLng/2)**2;
+        return 2 * R * Math.asin(Math.sqrt(h));
+    }
+
+    function geoKey(localita, provincia) {
+        return ((localita || '') + '|' + (provincia || '')).trim().toLowerCase();
+    }
+
+    function coordsFromProvince(provincia) {
+        const p = (provincia || '').toUpperCase().trim();
+        const pair = PROVINCE_COORDS[p];
+        if (!pair) return null;
+        return { lat: pair[0], lng: pair[1], approx: true };
+    }
+
+    function nearestNeighborOrder(start, points) {
+        // points: [{client, coords}]
+        const remaining = points.filter(p => p.coords);
+        const ordered = [];
+        let current = start;
+        while (remaining.length) {
+            let bestI = 0;
+            let bestD = Infinity;
+            for (let i = 0; i < remaining.length; i++) {
+                const d = haversineKm(current, remaining[i].coords);
+                if (d < bestD) { bestD = d; bestI = i; }
+            }
+            const next = remaining.splice(bestI, 1)[0];
+            ordered.push(next);
+            current = next.coords;
+        }
+        // append those without coords at end
+        return ordered;
+    }
+
+    function sortClientsGeographically(list) {
+        if (!list || list.length <= 1) return list ? [...list] : [];
+        const cache = loadGeoCache();
+        const withCoords = [];
+        const without = [];
+        list.forEach(c => {
+            const key = geoKey(c.localita, c.provincia);
+            const coords = cache[key] || coordsFromProvince(c.provincia);
+            if (coords) withCoords.push({ client: c, coords });
+            else without.push(c);
+        });
+        if (withCoords.length === 0) return [...list];
+        const ordered = nearestNeighborOrder(CASAMASSIMA, withCoords).map(x => x.client);
+        return ordered.concat(without);
+    }
+
+
+    // Contorno semplificato dell'Italia (SVG path, coordinate normalizzate 0–100)
+    // Usato solo come sfondo: i punti sono proiettati da lat/lng reali
+    const ITALY_SVG_PATH = "M48,8 L52,7 L55,9 L58,8 L60,10 L62,9 L64,12 L63,16 L65,18 L64,22 L66,24 L65,28 L67,32 L66,36 L64,38 L65,42 L63,46 L64,50 L62,54 L60,58 L58,62 L56,66 L55,70 L53,74 L52,78 L50,82 L48,86 L46,88 L44,90 L42,91 L40,90 L38,88 L36,86 L35,82 L34,78 L33,74 L32,70 L30,66 L28,64 L26,60 L25,56 L24,52 L22,48 L20,46 L18,42 L17,38 L16,34 L15,30 L14,26 L13,22 L14,18 L16,14 L18,12 L22,10 L26,9 L30,8 L34,7 L38,7 L42,8 L46,8 Z";
+
+    const ITA_BOUNDS = { minLat: 36.5, maxLat: 47.2, minLng: 6.5, maxLng: 18.6 };
+
+    function projectItaly(lat, lng, width, height, pad) {
+        pad = pad == null ? 12 : pad;
+        const x = pad + ((lng - ITA_BOUNDS.minLng) / (ITA_BOUNDS.maxLng - ITA_BOUNDS.minLng)) * (width - pad * 2);
+        const y = pad + ((ITA_BOUNDS.maxLat - lat) / (ITA_BOUNDS.maxLat - ITA_BOUNDS.minLat)) * (height - pad * 2);
+        return { x, y };
+    }
+
+    // Coordinate città comuni (località frequenti) — offline, senza servizi esterni
+    const CITY_COORDS = {
+        'casamassima': [40.9569, 16.9186],
+        'bari': [41.1171, 16.8719],
+        'monopoli': [40.9507, 17.2975],
+        'polignano a mare': [40.995, 17.22],
+        'conversano': [40.968, 17.113],
+        'rutigliano': [41.015, 17.0],
+        'noicattaro': [41.034, 16.99],
+        'mola di bari': [41.06, 17.09],
+        'gioia del colle': [40.8, 16.93],
+        'altamura': [40.83, 16.55],
+        'modugno': [41.085, 16.78],
+        'bitonto': [41.11, 16.69],
+        'molfetta': [41.2, 16.6],
+        'trani': [41.277, 16.417],
+        'andria': [41.2316, 16.295],
+        'barletta': [41.3193, 16.283],
+        'foggia': [41.4622, 15.5446],
+        'lecce': [40.3515, 18.175],
+        'brindisi': [40.638, 17.946],
+        'taranto': [40.4644, 17.247],
+        'napoli': [40.8518, 14.2681],
+        'roma': [41.9028, 12.4964],
+        'milano': [45.4642, 9.19],
+        'torino': [45.0703, 7.6869],
+        'palermo': [38.1157, 13.3615],
+        'catania': [37.5079, 15.083],
+        'firenze': [43.7696, 11.2558],
+        'bologna': [44.4949, 11.3426],
+        'genova': [44.4056, 8.9463],
+        'venezia': [45.4408, 12.3155],
+        'verona': [45.4384, 10.9916],
+        'padova': [45.4064, 11.8768],
+        'brescia': [45.5416, 10.2118],
+        'parma': [44.8015, 10.3279],
+        'modena': [44.6471, 10.9252],
+        'perugia': [43.1122, 12.3888],
+        'ancona': [43.6158, 13.5189],
+        'pescara': [42.461, 14.216],
+        'l\'aquila': [42.3512, 13.3981],
+        'campobasso': [41.56, 14.66],
+        'potenza': [40.64, 15.81],
+        'materina': [40.666, 16.604],
+        'materna': [40.666, 16.604],
+        'matera': [40.6664, 16.6043],
+        'cagliari': [39.2238, 9.1217],
+        'sassari': [40.7259, 8.5557],
+        'reggio calabria': [38.1113, 15.6473],
+        'cosenza': [39.31, 16.25],
+        'catanzaro': [38.91, 16.59],
+        'salerno': [40.6824, 14.7681],
+        'caserta': [41.0732, 14.324],
+        'avellino': [40.9146, 14.792],
+        'benevento': [41.1297, 14.7826]
+    };
+
+    function resolveCoordsLocal(localita, provincia) {
+        const name = (localita || '').toLowerCase().trim()
+            .replace(/\s+/g, ' ')
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (CITY_COORDS[name]) {
+            const [lat, lng] = CITY_COORDS[name];
+            return { lat, lng, approx: false };
+        }
+        // match parziale (es. "Bari centro")
+        for (const k of Object.keys(CITY_COORDS)) {
+            if (name.includes(k) || k.includes(name)) {
+                const [lat, lng] = CITY_COORDS[k];
+                return { lat, lng, approx: true };
+            }
+        }
+        const cache = loadGeoCache();
+        const key = geoKey(localita, provincia);
+        if (cache[key] && cache[key].lat != null) return cache[key];
+        return coordsFromProvince(provincia);
+    }
+
+    // Sostituisce il geocoding online (spesso bloccato) con risoluzione locale/offline
+    async function geocodeLocalita(localita, provincia, regione) {
+        return resolveCoordsLocal(localita, provincia);
+    }
+
+    function getActiveTappeGroups() {
+        const active = clients.filter(c => !c.installato && !c.standby && !isInPrep(c));
+        const byTappa = {};
+        active.forEach(c => {
+            const t = (c.tappa || '').trim();
+            if (!t) return;
+            if ((c.spedizione || '').trim()) return;
+            if (!byTappa[t]) byTappa[t] = [];
+            byTappa[t].push(c);
+        });
+        return Object.keys(byTappa).sort((a, b) => a.localeCompare(b, 'it')).map(name => ({
+            name,
+            clients: byTappa[name]
+        }));
+    }
+
+    function updatePercorsoNavCount() {
+        const el = document.getElementById('navPercorsoCount');
+        if (el) el.textContent = getActiveTappeGroups().length;
+    }
+
+    function openOptimizedGoogleRoute(orderedStops) {
+        const places = orderedStops.filter(Boolean);
+        if (!places.length) return;
+        const origin = 'Casamassima, BA, Italy';
+        const dest = places[places.length - 1];
+        const mid = places.slice(0, -1);
+        let url = 'https://www.google.com/maps/dir/?api=1&origin=' + encodeURIComponent(origin) + '&destination=' + encodeURIComponent(dest);
+        if (mid.length) url += '&waypoints=' + mid.map(encodeURIComponent).join('%7C');
+        window.open(url, '_blank');
+    }
+
+    function buildTappaRoute(group) {
+        const points = group.clients.map(c => ({
+            client: c,
+            coords: resolveCoordsLocal(c.localita, c.provincia)
+        }));
+        const withC = points.filter(p => p.coords);
+        const without = points.filter(p => !p.coords).map(p => p.client);
+        const ordered = nearestNeighborOrder(CASAMASSIMA, withC);
+        return { ordered, without };
+    }
+
+
+    let percorsoMaps = [];
+
+    function clearPercorsoMaps() {
+        percorsoMaps.forEach(m => { try { m.remove(); } catch (e) {} });
+        percorsoMaps = [];
+    }
+
+    function buildOsmEmbedUrl(latlngs) {
+        let minLat = Math.min(...latlngs.map(p => p[0]));
+        let maxLat = Math.max(...latlngs.map(p => p[0]));
+        let minLng = Math.min(...latlngs.map(p => p[1]));
+        let maxLng = Math.max(...latlngs.map(p => p[1]));
+        const padLat = Math.max(0.15, (maxLat - minLat) * 0.35);
+        const padLng = Math.max(0.15, (maxLng - minLng) * 0.35);
+        minLat -= padLat; maxLat += padLat;
+        minLng -= padLng; maxLng += padLng;
+        // bbox = minLon,minLat,maxLon,maxLat
+        const bbox = [minLng, minLat, maxLng, maxLat].join(',');
+        const midLat = (minLat + maxLat) / 2;
+        const midLng = (minLng + maxLng) / 2;
+        return 'https://www.openstreetmap.org/export/embed.html?bbox=' +
+            encodeURIComponent(bbox) +
+            '&layer=mapnik&marker=' + encodeURIComponent(midLat + ',' + midLng);
+    }
+
+    function showOsmIframeFallback(el, latlngs) {
+        const url = buildOsmEmbedUrl(latlngs);
+        el.innerHTML = `
+            <iframe title="OpenStreetMap" src="${url}"
+                style="border:0;width:100%;height:100%;display:block;"
+                loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+            <div style="position:absolute;left:8px;bottom:8px;z-index:3;background:rgba(255,255,255,.92);padding:4px 8px;border-radius:6px;font-size:0.7rem;color:#64748b;">
+                Mappa OpenStreetMap (embed)
+            </div>`;
+    }
+
+    function drawTappaOsmMap(mapElId, ordered) {
+        const el = document.getElementById(mapElId);
+        if (!el) return null;
+
+        const latlngs = [[CASAMASSIMA.lat, CASAMASSIMA.lng]];
+        ordered.forEach(item => {
+            if (item.coords) latlngs.push([item.coords.lat, item.coords.lng]);
+        });
+
+        // Se Leaflet non è disponibile → embed ufficiale OSM
+        if (typeof L === 'undefined') {
+            showOsmIframeFallback(el, latlngs);
+            return null;
+        }
+
+        el.innerHTML = '';
+        el.style.position = 'relative';
+        const map = L.map(el, {
+            scrollWheelZoom: false,
+            attributionControl: true
+        });
+
+        // Provider basati su dati OpenStreetMap (il server ufficiale tile.openstreetmap.org
+        // blocca spesso le app; questi mirror/fornitori restano accessibili)
+        const providers = [
+            {
+                name: 'osm-de',
+                layer: L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
+                    maxZoom: 18,
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
+                })
+            },
+            {
+                name: 'osm-fr',
+                layer: L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+                    maxZoom: 20,
+                    subdomains: 'abc',
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> / OSM-FR'
+                })
+            },
+            {
+                name: 'osm-hot',
+                layer: L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    subdomains: 'abc',
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> HOT'
+                })
+            },
+            {
+                name: 'carto-osm',
+                layer: L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                    maxZoom: 20,
+                    subdomains: 'abcd',
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> &copy; CARTO'
+                })
+            }
+        ];
+
+        let providerIndex = 0;
+        let errorCount = 0;
+
+        function useProvider(i) {
+            providers.forEach((p, idx) => {
+                if (map.hasLayer(p.layer)) map.removeLayer(p.layer);
+            });
+            if (i >= providers.length) {
+                // Ultimo fallback: iframe ufficiale openstreetmap.org
+                try { map.remove(); } catch (e) {}
+                showOsmIframeFallback(el, latlngs);
+                return;
+            }
+            providerIndex = i;
+            errorCount = 0;
+            const p = providers[i];
+            p.layer.on('tileerror', function() {
+                errorCount++;
+                if (errorCount >= 4) {
+                    useProvider(providerIndex + 1);
+                }
+            });
+            p.layer.addTo(map);
+        }
+
+        useProvider(0);
+
+        const startIcon = L.divIcon({
+            className: '',
+            html: '<div style="background:#16a34a;color:#fff;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35);">S</div>',
+            iconSize: [30, 30],
+            iconAnchor: [15, 15]
+        });
+        L.marker([CASAMASSIMA.lat, CASAMASSIMA.lng], { icon: startIcon })
+            .addTo(map)
+            .bindPopup('<strong>Partenza</strong><br>Casamassima (BA)');
+
+        ordered.forEach((item, idx) => {
+            const { client, coords } = item;
+            if (!coords) return;
+            const num = idx + 1;
+            const icon = L.divIcon({
+                className: '',
+                html: `<div style="background:#2563eb;color:#fff;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35);">${num}</div>`,
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+            const nome = (client.nome || '').replace(/</g, '&lt;');
+            const loc = (client.localita || '').replace(/</g, '&lt;');
+            L.marker([coords.lat, coords.lng], { icon })
+                .addTo(map)
+                .bindPopup(`<strong>${num}. ${nome}</strong><br>📍 ${loc}`);
+        });
+
+        if (latlngs.length >= 2) {
+            L.polyline(latlngs, {
+                color: '#2563eb',
+                weight: 4,
+                opacity: 0.85,
+                lineJoin: 'round'
+            }).addTo(map);
+        }
+
+        try {
+            map.fitBounds(latlngs, { padding: [36, 36], maxZoom: 12 });
+        } catch (e) {
+            map.setView([CASAMASSIMA.lat, CASAMASSIMA.lng], 9);
+        }
+
+        setTimeout(() => { try { map.invalidateSize(); } catch (e) {} }, 100);
+        setTimeout(() => { try { map.invalidateSize(); } catch (e) {} }, 400);
+        percorsoMaps.push(map);
+        return map;
+    }
+
+    function renderPercorsoPage() {
+        const container = document.getElementById('percorsoContainer');
+        if (!container) return;
+        clearPercorsoMaps();
+        updatePercorsoNavCount();
+
+        const groups = getActiveTappeGroups();
+        if (groups.length === 0) {
+            container.innerHTML = `<div class="percorso-empty">Nessuna tappa attiva in Note clienti.<br><span style="font-size:0.9rem;">Assegna una tappa ai clienti e torna qui.</span></div>`;
+            return;
+        }
+
+        const routesData = groups.map((g, gi) => {
+            const route = buildTappaRoute(g);
+            return { group: g, route, mapId: 'percorso-map-' + gi };
+        });
+
+        container.innerHTML = routesData.map(({ group: g, route, mapId }) => {
+            const stops = route.ordered;
+            const stopsHtml = [
+                `<div class="percorso-stop">
+                    <div class="percorso-stop-num start">S</div>
+                    <div class="percorso-stop-body">
+                        <div class="percorso-stop-title">Casamassima (BA)</div>
+                        <div class="percorso-stop-sub">Partenza fissa</div>
+                    </div>
+                </div>`
+            ].concat(stops.map((s, i) => {
+                const c = s.client;
+                const approx = s.coords && s.coords.approx ? ' · posizione approssimata (provincia)' : '';
+                return `<div class="percorso-stop">
+                    <div class="percorso-stop-num">${i + 1}</div>
+                    <div class="percorso-stop-body">
+                        <div class="percorso-stop-title">${(c.nome || '').replace(/</g, '&lt;')}</div>
+                        <div class="percorso-stop-sub">📍 ${(c.localita || '—')}${(c.provincia ? ' (' + c.provincia + ')' : '')}${approx}</div>
+                    </div>
+                </div>`;
+            })).concat(route.without.map(c => `
+                <div class="percorso-stop">
+                    <div class="percorso-stop-num" style="background:#94a3b8;">?</div>
+                    <div class="percorso-stop-body">
+                        <div class="percorso-stop-title">${(c.nome || '').replace(/</g, '&lt;')}</div>
+                        <div class="percorso-stop-sub">📍 ${(c.localita || '—')} · posizione non disponibile</div>
+                    </div>
+                </div>
+            `));
+
+            return `
+                <article class="percorso-card">
+                    <div class="percorso-card-head">
+                        <div>
+                            <h2>🚩 ${g.name.replace(/</g, '&lt;')}</h2>
+                            <div class="percorso-card-meta">${g.clients.length} client${g.clients.length === 1 ? 'e' : 'i'} · OpenStreetMap · partenza Casamassima</div>
+                        </div>
+                    </div>
+                    <div class="percorso-body">
+                        <div class="percorso-map" id="${mapId}"></div>
+                        <div class="percorso-stops">${stopsHtml.join('')}</div>
+                    </div>
+                </article>
+            `;
+        }).join('');
+
+        // Disegna le mappe OSM dopo che il DOM è pronto
+        requestAnimationFrame(() => {
+            routesData.forEach(({ route, mapId }) => {
+                drawTappaOsmMap(mapId, route.ordered);
+            });
+        });
     }
 
     window.switchView = function(view) {
         currentView = view;
         document.getElementById('viewNote').classList.toggle('active', view === 'note');
+        const viewPercorso = document.getElementById('viewPercorso');
+        if (viewPercorso) viewPercorso.classList.toggle('active', view === 'percorso');
         document.getElementById('viewPrep').classList.toggle('active', view === 'prep');
         document.getElementById('viewInstallati').classList.toggle('active', view === 'installati');
         document.getElementById('viewStandby').classList.toggle('active', view === 'standby');
         document.getElementById('navNote').classList.toggle('active', view === 'note');
+        const navPercorso = document.getElementById('navPercorso');
+        if (navPercorso) navPercorso.classList.toggle('active', view === 'percorso');
         document.getElementById('navPrep').classList.toggle('active', view === 'prep');
         document.getElementById('navInstallati').classList.toggle('active', view === 'installati');
         document.getElementById('navStandby').classList.toggle('active', view === 'standby');
+        if (view === 'percorso') renderPercorsoPage();
         if (view === 'prep') renderPrepPage();
         if (view === 'installati') renderInstallatiPage();
         if (view === 'standby') renderStandbyPage();
