@@ -274,8 +274,47 @@
             align-items: flex-start;
             padding: 8px 0;
             border-bottom: 1px solid #e2e8f0;
+            transition: background 0.15s, box-shadow 0.15s, opacity 0.15s;
         }
         .percorso-stop:last-child { border-bottom: none; }
+        .percorso-stop.draggable-stop {
+            cursor: grab;
+            user-select: none;
+            -webkit-user-select: none;
+            border-radius: 10px;
+            padding: 8px 6px;
+            margin: 0 -6px;
+        }
+        .percorso-stop.draggable-stop:active { cursor: grabbing; }
+        .percorso-stop.dragging {
+            opacity: 0.45;
+            background: #eff6ff;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.2);
+        }
+        .percorso-stop.drag-over {
+            border-top: 3px solid #2563eb;
+            background: #f8fafc;
+        }
+        .percorso-drag-handle {
+            flex-shrink: 0;
+            width: 22px;
+            color: #94a3b8;
+            font-size: 1rem;
+            line-height: 1.4;
+            cursor: grab;
+            text-align: center;
+            padding-top: 2px;
+        }
+        .percorso-stops-hint {
+            font-size: 0.72rem;
+            color: #64748b;
+            padding: 0 0 8px;
+            font-weight: 600;
+        }
+        .percorso-stop.fixed-start {
+            opacity: 0.95;
+            cursor: default;
+        }
         .percorso-stop-num {
             flex-shrink: 0;
             width: 26px;
@@ -4794,6 +4833,27 @@
         window.open(url, '_blank');
     }
 
+    function loadPercorsoOrderMap() {
+        try { return JSON.parse(localStorage.getItem('note_clienti_percorso_order') || '{}') || {}; }
+        catch (e) { return {}; }
+    }
+
+    function savePercorsoOrderMap(map) {
+        try { localStorage.setItem('note_clienti_percorso_order', JSON.stringify(map)); } catch (e) {}
+    }
+
+    function getSavedOrderIds(tappaName) {
+        const map = loadPercorsoOrderMap();
+        const arr = map[tappaName];
+        return Array.isArray(arr) ? arr.map(String) : null;
+    }
+
+    function setSavedOrderIds(tappaName, ids) {
+        const map = loadPercorsoOrderMap();
+        map[tappaName] = ids.map(String);
+        savePercorsoOrderMap(map);
+    }
+
     function buildTappaRoute(group) {
         const points = group.clients.map(c => ({
             client: c,
@@ -4801,8 +4861,122 @@
         }));
         const withC = points.filter(p => p.coords);
         const without = points.filter(p => !p.coords).map(p => p.client);
-        const ordered = nearestNeighborOrder(CASAMASSIMA, withC);
+
+        const savedIds = getSavedOrderIds(group.name);
+        let ordered;
+        if (savedIds && savedIds.length) {
+            const byId = {};
+            withC.forEach(p => { byId[String(p.client.id)] = p; });
+            ordered = [];
+            savedIds.forEach(id => {
+                if (byId[id]) {
+                    ordered.push(byId[id]);
+                    delete byId[id];
+                }
+            });
+            // nuovi clienti non in ordine salvato → aggiunti con nearest neighbor alla fine
+            const remaining = Object.values(byId);
+            if (remaining.length) {
+                const start = ordered.length ? ordered[ordered.length - 1].coords : CASAMASSIMA;
+                ordered = ordered.concat(nearestNeighborOrder(start, remaining));
+            }
+        } else {
+            ordered = nearestNeighborOrder(CASAMASSIMA, withC);
+        }
         return { ordered, without };
+    }
+
+    window.resetPercorsoOrder = function(tappaName) {
+        const map = loadPercorsoOrderMap();
+        delete map[tappaName];
+        savePercorsoOrderMap(map);
+        renderPercorsoPage();
+    };
+
+    function bindPercorsoStopDrag(container) {
+        let dragEl = null;
+
+        container.querySelectorAll('.percorso-stops').forEach(list => {
+            const tappaName = list.getAttribute('data-tappa');
+            const mapId = list.getAttribute('data-map-id');
+
+            list.querySelectorAll('.draggable-stop').forEach(item => {
+                item.setAttribute('draggable', 'true');
+
+                item.addEventListener('dragstart', function(e) {
+                    dragEl = item;
+                    item.classList.add('dragging');
+                    try {
+                        e.dataTransfer.effectAllowed = 'move';
+                        e.dataTransfer.setData('text/plain', item.getAttribute('data-client-id') || '');
+                    } catch (err) {}
+                });
+
+                item.addEventListener('dragend', function() {
+                    item.classList.remove('dragging');
+                    list.querySelectorAll('.drag-over').forEach(n => n.classList.remove('drag-over'));
+                    dragEl = null;
+                });
+
+                item.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    if (!dragEl || dragEl === item) return;
+                    item.classList.add('drag-over');
+                    try { e.dataTransfer.dropEffect = 'move'; } catch (err) {}
+                });
+
+                item.addEventListener('dragleave', function() {
+                    item.classList.remove('drag-over');
+                });
+
+                item.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    item.classList.remove('drag-over');
+                    if (!dragEl || dragEl === item) return;
+
+                    const nodes = Array.from(list.querySelectorAll('.draggable-stop'));
+                    const from = nodes.indexOf(dragEl);
+                    const to = nodes.indexOf(item);
+                    if (from < 0 || to < 0) return;
+
+                    if (from < to) {
+                        item.after(dragEl);
+                    } else {
+                        item.before(dragEl);
+                    }
+
+                    // Rinumera e salva ordine
+                    const newIds = Array.from(list.querySelectorAll('.draggable-stop')).map(n => n.getAttribute('data-client-id'));
+                    setSavedOrderIds(tappaName, newIds);
+
+                    Array.from(list.querySelectorAll('.draggable-stop')).forEach((n, i) => {
+                        const num = n.querySelector('.percorso-stop-num');
+                        if (num) num.textContent = String(i + 1);
+                    });
+
+                    // Ridisegna mappa con nuovo ordine
+                    const ordered = newIds.map(id => {
+                        const c = clients.find(x => String(x.id) === String(id));
+                        if (!c) return null;
+                        return { client: c, coords: resolveCoordsLocal(c.localita, c.provincia) };
+                    }).filter(p => p && p.coords);
+
+                    // rimuovi solo la mappa di questa card
+                    const mapEl = document.getElementById(mapId);
+                    if (mapEl) {
+                        // destroy previous leaflet instance if tracked
+                        const idx = percorsoMaps.findIndex(m => {
+                            try { return m.getContainer && m.getContainer() === mapEl; } catch (e) { return false; }
+                        });
+                        if (idx >= 0) {
+                            try { percorsoMaps[idx].remove(); } catch (e) {}
+                            percorsoMaps.splice(idx, 1);
+                        }
+                        drawTappaOsmMap(mapId, ordered);
+                    }
+                });
+            });
+        });
     }
 
 
@@ -4995,7 +5169,7 @@
         container.innerHTML = routesData.map(({ group: g, route, mapId }) => {
             const stops = route.ordered;
             const stopsHtml = [
-                `<div class="percorso-stop">
+                `<div class="percorso-stop fixed-start">
                     <div class="percorso-stop-num start">S</div>
                     <div class="percorso-stop-body">
                         <div class="percorso-stop-title">Casamassima (BA)</div>
@@ -5005,7 +5179,8 @@
             ].concat(stops.map((s, i) => {
                 const c = s.client;
                 const approx = s.coords && s.coords.approx ? ' · posizione approssimata (provincia)' : '';
-                return `<div class="percorso-stop">
+                return `<div class="percorso-stop draggable-stop" draggable="true" data-client-id="${c.id}">
+                    <span class="percorso-drag-handle" title="Trascina per riordinare">⠿</span>
                     <div class="percorso-stop-num">${i + 1}</div>
                     <div class="percorso-stop-body">
                         <div class="percorso-stop-title">${(c.nome || '').replace(/</g, '&lt;')}</div>
@@ -5022,17 +5197,23 @@
                 </div>
             `));
 
+            const tappaEsc = String(g.name).replace(/"/g, '&quot;').replace(/</g, '&lt;');
+            const tappaAttr = String(g.name).replace(/"/g, '&quot;');
             return `
-                <article class="percorso-card">
+                <article class="percorso-card" data-tappa-name="${tappaAttr}">
                     <div class="percorso-card-head">
                         <div>
-                            <h2>🚩 ${g.name.replace(/</g, '&lt;')}</h2>
-                            <div class="percorso-card-meta">${g.clients.length} client${g.clients.length === 1 ? 'e' : 'i'} · OpenStreetMap · partenza Casamassima</div>
+                            <h2>🚩 ${tappaEsc}</h2>
+                            <div class="percorso-card-meta">${g.clients.length} client${g.clients.length === 1 ? 'e' : 'i'} · partenza Casamassima · trascina per riordinare</div>
                         </div>
+                        <button type="button" class="btn" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.25);font-size:0.78rem;" onclick="resetPercorsoOrder('${String(g.name).replace(/'/g, "\'")}')" title="Ripristina ordine geografico automatico">↺ Auto</button>
                     </div>
                     <div class="percorso-body">
                         <div class="percorso-map" id="${mapId}"></div>
-                        <div class="percorso-stops">${stopsHtml.join('')}</div>
+                        <div class="percorso-stops" data-tappa="${tappaAttr}" data-map-id="${mapId}">
+                            <div class="percorso-stops-hint">⠿ Tieni premuto e trascina i clienti per cambiare l'itinerario</div>
+                            ${stopsHtml.join('')}
+                        </div>
                     </div>
                 </article>
             `;
@@ -5043,6 +5224,7 @@
             routesData.forEach(({ route, mapId }) => {
                 drawTappaOsmMap(mapId, route.ordered);
             });
+            bindPercorsoStopDrag(container);
         });
     }
 
