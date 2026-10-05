@@ -4617,7 +4617,7 @@
 
     // Coordinate approssimative capoluoghi provincia (fallback se geocoding non disponibile)
     const PROVINCE_COORDS = {
-        AG:[37.3111,13.5765],AL:[44.9128,8.6153],AN:[43.6158,13.5189],AO:[45.737],AP:[42.853],AQ:[42.3512,13.3981],
+        AG:[37.3111,13.5765],AL:[44.9128,8.6153],AN:[43.6158,13.5189],AO:[45.737,7.3206],AP:[42.853,13.5765],AQ:[42.3512,13.3981],
         AR:[43.4632,11.878],AT:[44.9009,8.2065],AV:[40.9146,14.792],BA:[41.1171,16.8719],BG:[45.6983,9.6773],
         BI:[45.562,8.057],BL:[46.14,12.217],BN:[41.1297,14.782],BO:[44.4949,11.3426],BR:[40.638,17.946],
         BS:[45.5416,10.2118],BT:[41.207,16.295],BZ:[46.4983,11.3548],CA:[39.2238,9.1217],CB:[41.56,14.66],
@@ -4666,8 +4666,8 @@
     function coordsFromProvince(provincia) {
         const p = (provincia || '').toUpperCase().trim();
         const pair = PROVINCE_COORDS[p];
-        if (!pair) return null;
-        return { lat: pair[0], lng: pair[1], approx: true };
+        if (!pair || pair.length < 2 || pair[0] == null || pair[1] == null) return null;
+        return { lat: Number(pair[0]), lng: Number(pair[1]), approx: true };
     }
 
     function nearestNeighborOrder(start, points) {
@@ -4781,21 +4781,28 @@
         const name = (localita || '').toLowerCase().trim()
             .replace(/\s+/g, ' ')
             .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        if (CITY_COORDS[name]) {
+        if (name && CITY_COORDS[name]) {
             const [lat, lng] = CITY_COORDS[name];
             return { lat, lng, approx: false };
         }
         // match parziale (es. "Bari centro")
-        for (const k of Object.keys(CITY_COORDS)) {
-            if (name.includes(k) || k.includes(name)) {
-                const [lat, lng] = CITY_COORDS[k];
-                return { lat, lng, approx: true };
+        if (name) {
+            for (const k of Object.keys(CITY_COORDS)) {
+                if (name.includes(k) || (k.length > 3 && k.includes(name))) {
+                    const [lat, lng] = CITY_COORDS[k];
+                    return { lat, lng, approx: true };
+                }
             }
         }
         const cache = loadGeoCache();
         const key = geoKey(localita, provincia);
-        if (cache[key] && cache[key].lat != null) return cache[key];
-        return coordsFromProvince(provincia);
+        if (cache[key] && cache[key].lat != null && cache[key].lng != null) {
+            return { lat: Number(cache[key].lat), lng: Number(cache[key].lng), approx: !!cache[key].approx };
+        }
+        const fromProv = coordsFromProvince(provincia);
+        if (fromProv) return fromProv;
+        // Ultimo fallback: vicino a Casamassima (così appare sempre in mappa)
+        return { lat: CASAMASSIMA.lat, lng: CASAMASSIMA.lng, approx: true, fallback: true };
     }
 
     // Sostituisce il geocoding online (spesso bloccato) con risoluzione locale/offline
@@ -4857,18 +4864,26 @@
     }
 
     function buildTappaRoute(group) {
-        const points = group.clients.map(c => ({
-            client: c,
-            coords: resolveCoordsLocal(c.localita, c.provincia)
-        }));
-        const withC = points.filter(p => p.coords);
-        const without = points.filter(p => !p.coords).map(p => p.client);
+        // Tutti i clienti della tappa, sempre con coordinate (anche approssimate)
+        const points = group.clients.map((c, i) => {
+            let coords = resolveCoordsLocal(c.localita, c.provincia);
+            if (!coords) {
+                // offset leggero così marker multipli non si sovrappongono al 100%
+                coords = {
+                    lat: CASAMASSIMA.lat + (i * 0.01),
+                    lng: CASAMASSIMA.lng + (i * 0.01),
+                    approx: true,
+                    fallback: true
+                };
+            }
+            return { client: c, coords };
+        });
 
         const savedIds = getSavedOrderIds(group.name);
         let ordered;
         if (savedIds && savedIds.length) {
             const byId = {};
-            withC.forEach(p => { byId[String(p.client.id)] = p; });
+            points.forEach(p => { byId[String(p.client.id)] = p; });
             ordered = [];
             savedIds.forEach(id => {
                 if (byId[id]) {
@@ -4876,16 +4891,30 @@
                     delete byId[id];
                 }
             });
-            // nuovi clienti non in ordine salvato → aggiunti con nearest neighbor alla fine
+            // clienti nuovi (non nell'ordine salvato) → in coda, ottimizzati geograficamente
             const remaining = Object.values(byId);
             if (remaining.length) {
                 const start = ordered.length ? ordered[ordered.length - 1].coords : CASAMASSIMA;
                 ordered = ordered.concat(nearestNeighborOrder(start, remaining));
             }
+            // sicurezza: se qualcuno manca ancora, aggiungilo
+            if (ordered.length < points.length) {
+                const inOrd = new Set(ordered.map(p => String(p.client.id)));
+                points.forEach(p => {
+                    if (!inOrd.has(String(p.client.id))) ordered.push(p);
+                });
+            }
         } else {
-            ordered = nearestNeighborOrder(CASAMASSIMA, withC);
+            ordered = nearestNeighborOrder(CASAMASSIMA, points);
+            // nearestNeighbor potrebbe filtrare senza coords — forza tutti
+            if (ordered.length < points.length) {
+                const inOrd = new Set(ordered.map(p => String(p.client.id)));
+                points.forEach(p => {
+                    if (!inOrd.has(String(p.client.id))) ordered.push(p);
+                });
+            }
         }
-        return { ordered, without };
+        return { ordered, without: [] };
     }
 
     window.resetPercorsoOrder = function(tappaName) {
@@ -5115,7 +5144,7 @@
 
         ordered.forEach((item, idx) => {
             const { client, coords } = item;
-            if (!coords) return;
+            if (!coords || coords.lat == null || coords.lng == null) return;
             const num = idx + 1;
             const icon = L.divIcon({
                 className: '',
