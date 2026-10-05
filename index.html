@@ -3963,8 +3963,10 @@
         const panel = document.getElementById('noteUrgentPanel');
         if (!panel) return;
         const windowDays = getUrgentDaysWindow();
+        // Solo tappe (niente spedizioni) in Note clienti
         const list = clients
-            .filter(c => !c.installato && !c.standby && !isInPrep(c) && c.data)
+            .filter(c => !c.installato && !c.standby && !isInPrep(c) && c.data
+                && !(c.spedizione || '').trim())
             .map(c => ({ c, days: daysUntilDate(c.data) }))
             .filter(x => x.days !== null && x.days <= windowDays)
             .sort((a, b) => a.days - b.days);
@@ -3973,7 +3975,7 @@
             <div class="note-urgent-head">
                 <div>
                     <div>⏰ Da fare</div>
-                    <div class="note-urgent-sub">Solo Note clienti</div>
+                    <div class="note-urgent-sub">Solo tappe · no spedizioni</div>
                 </div>
                 <span class="urgent-count">${list.length}</span>
             </div>
@@ -4000,7 +4002,7 @@
                         : (days === 0 ? 'Oggi' : (days === 1 ? 'Domani' : 'tra ' + days + ' gg'));
                     const where = (c.tappa || '').trim()
                         ? '🚩 ' + c.tappa
-                        : ((c.spedizione || '').trim() ? '📦 ' + c.spedizione : (c.localita || ''));
+                        : (c.localita || '');
                     return `
                         <button type="button" class="note-urgent-item ${overdue ? 'overdue' : ''}" onclick="scrollToNoteClient('${c.id}')">
                             <div class="u-name">${(c.nome || '').replace(/</g, '&lt;')}</div>
