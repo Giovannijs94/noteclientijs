@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <title>Gestione Note Clienti</title>
+    <meta name="note-clienti-build" content="2026-10-05-percorso-all">
     <style>
         :root {
             --primary: #1e293b;
@@ -4811,12 +4812,12 @@
     }
 
     function getActiveTappeGroups() {
+        // Tutti i clienti attivi con una tappa (anche se hanno anche spedizione)
         const active = clients.filter(c => !c.installato && !c.standby && !isInPrep(c));
         const byTappa = {};
         active.forEach(c => {
             const t = (c.tappa || '').trim();
             if (!t) return;
-            if ((c.spedizione || '').trim()) return;
             if (!byTappa[t]) byTappa[t] = [];
             byTappa[t].push(c);
         });
@@ -4863,21 +4864,48 @@
         savePercorsoOrderMap(map);
     }
 
+    function spreadOverlappingCoords(points) {
+        // Se più clienti hanno le stesse coordinate, li scosta a spirale così si vedono tutti
+        const groups = {};
+        points.forEach((p, idx) => {
+            if (!p.coords) return;
+            const key = p.coords.lat.toFixed(4) + ',' + p.coords.lng.toFixed(4);
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(idx);
+        });
+        Object.keys(groups).forEach(key => {
+            const idxs = groups[key];
+            if (idxs.length < 2) return;
+            idxs.forEach((pi, n) => {
+                if (n === 0) return;
+                const angle = (n * 2.2);
+                const dist = 0.012 * n; // ~1.3 km per step
+                points[pi].coords = {
+                    lat: points[pi].coords.lat + Math.cos(angle) * dist,
+                    lng: points[pi].coords.lng + Math.sin(angle) * dist,
+                    approx: true,
+                    spread: true
+                };
+            });
+        });
+        return points;
+    }
+
     function buildTappaRoute(group) {
         // Tutti i clienti della tappa, sempre con coordinate (anche approssimate)
-        const points = group.clients.map((c, i) => {
+        let points = group.clients.map((c, i) => {
             let coords = resolveCoordsLocal(c.localita, c.provincia);
-            if (!coords) {
-                // offset leggero così marker multipli non si sovrappongono al 100%
+            if (!coords || coords.lat == null || coords.lng == null) {
                 coords = {
-                    lat: CASAMASSIMA.lat + (i * 0.01),
-                    lng: CASAMASSIMA.lng + (i * 0.01),
+                    lat: CASAMASSIMA.lat + (i * 0.015),
+                    lng: CASAMASSIMA.lng + (i * 0.015),
                     approx: true,
                     fallback: true
                 };
             }
-            return { client: c, coords };
+            return { client: c, coords: { lat: Number(coords.lat), lng: Number(coords.lng), approx: !!coords.approx, fallback: !!coords.fallback } };
         });
+        points = spreadOverlappingCoords(points);
 
         const savedIds = getSavedOrderIds(group.name);
         let ordered;
@@ -4986,11 +5014,15 @@
                     });
 
                     // Ridisegna mappa con nuovo ordine
-                    const ordered = newIds.map(id => {
+                    const ordered = newIds.map((id, idx) => {
                         const c = clients.find(x => String(x.id) === String(id));
                         if (!c) return null;
-                        return { client: c, coords: resolveCoordsLocal(c.localita, c.provincia) };
-                    }).filter(p => p && p.coords);
+                        let coords = resolveCoordsLocal(c.localita, c.provincia);
+                        if (!coords) {
+                            coords = { lat: CASAMASSIMA.lat + (idx + 1) * 0.02, lng: CASAMASSIMA.lng + (idx + 1) * 0.02, approx: true };
+                        }
+                        return { client: c, coords };
+                    }).filter(Boolean);
 
                     // rimuovi solo la mappa di questa card
                     const mapEl = document.getElementById(mapId);
@@ -5047,120 +5079,160 @@
             </div>`;
     }
 
+
+    /** Se più clienti hanno le stesse coordinate, li allarga a cerchio così si vedono tutti */
+    function spreadCoords(items) {
+        // items: [{client, coords}]
+        const groups = {};
+        items.forEach((item, idx) => {
+            const c = item.coords || {};
+            const key = (Number(c.lat).toFixed(5) + ',' + Number(c.lng).toFixed(5));
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(idx);
+        });
+        const result = items.map(item => ({
+            client: item.client,
+            coords: {
+                lat: Number(item.coords.lat),
+                lng: Number(item.coords.lng),
+                approx: item.coords.approx,
+                fallback: item.coords.fallback
+            }
+        }));
+        Object.keys(groups).forEach(key => {
+            const idxs = groups[key];
+            if (idxs.length < 2) return;
+            const base = result[idxs[0]].coords;
+            const radius = 0.012; // ~1.3 km
+            idxs.forEach((idx, i) => {
+                const angle = (2 * Math.PI * i) / idxs.length - Math.PI / 2;
+                result[idx].coords = {
+                    lat: base.lat + radius * Math.cos(angle),
+                    lng: base.lng + radius * Math.sin(angle),
+                    approx: true
+                };
+            });
+        });
+        return result;
+    }
+
     function drawTappaOsmMap(mapElId, ordered) {
         const el = document.getElementById(mapElId);
         if (!el) return null;
 
-        const latlngs = [[CASAMASSIMA.lat, CASAMASSIMA.lng]];
-        ordered.forEach(item => {
-            if (item.coords) latlngs.push([item.coords.lat, item.coords.lng]);
+        // Garantisce un array completo
+        const rawItems = (ordered || []).map((item, idx) => {
+            const client = item.client || item;
+            let coords = item.coords;
+            if (!coords || coords.lat == null || coords.lng == null) {
+                coords = resolveCoordsLocal(client.localita, client.provincia);
+            }
+            if (!coords || coords.lat == null || coords.lng == null) {
+                coords = {
+                    lat: CASAMASSIMA.lat + (idx + 1) * 0.02,
+                    lng: CASAMASSIMA.lng + (idx + 1) * 0.02,
+                    approx: true,
+                    fallback: true
+                };
+            }
+            return { client, coords };
         });
 
-        // Se Leaflet non è disponibile → embed ufficiale OSM
+        const items = spreadCoords(rawItems);
+        const clientLatLngs = items.map(it => [Number(it.coords.lat), Number(it.coords.lng)]);
+        const allLatLngs = [[CASAMASSIMA.lat, CASAMASSIMA.lng]].concat(clientLatLngs);
+
         if (typeof L === 'undefined') {
-            showOsmIframeFallback(el, latlngs);
+            // Senza Leaflet: mostra elenco numerato + mappa embed di sfondo
+            el.innerHTML = `
+                <div style="position:absolute;inset:0;display:flex;flex-direction:column;background:#e2e8f0;">
+                    <iframe title="OpenStreetMap" src="${buildOsmEmbedUrl(allLatLngs)}"
+                        style="border:0;width:100%;flex:1;min-height:140px;" loading="lazy"></iframe>
+                    <div style="max-height:45%;overflow:auto;background:#fff;padding:8px 10px;font-size:0.8rem;border-top:1px solid #e2e8f0;">
+                        <strong style="display:block;margin-bottom:6px;">${items.length} clienti sul percorso</strong>
+                        <div>S · Casamassima (partenza)</div>
+                        ${items.map((it, i) => `<div>${i + 1} · ${(it.client.nome || '').replace(/</g, '&lt;')} — ${(it.client.localita || '')}</div>`).join('')}
+                    </div>
+                </div>`;
             return null;
         }
 
         el.innerHTML = '';
         el.style.position = 'relative';
         const map = L.map(el, {
-            scrollWheelZoom: false,
+            scrollWheelZoom: true,
             attributionControl: true
         });
 
-        // Provider basati su dati OpenStreetMap (il server ufficiale tile.openstreetmap.org
-        // blocca spesso le app; questi mirror/fornitori restano accessibili)
+        // Solo tile OpenStreetMap gratuiti (niente API key)
         const providers = [
-            {
-                name: 'osm-de',
-                layer: L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
-                    maxZoom: 18,
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
-                })
-            },
-            {
-                name: 'osm-fr',
-                layer: L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
-                    maxZoom: 20,
-                    subdomains: 'abc',
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> / OSM-FR'
-                })
-            },
-            {
-                name: 'osm-hot',
-                layer: L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
-                    maxZoom: 19,
-                    subdomains: 'abc',
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> HOT'
-                })
-            },
-            {
-                name: 'carto-osm',
-                layer: L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                    maxZoom: 20,
-                    subdomains: 'abcd',
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> &copy; CARTO'
-                })
-            }
+            L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
+                maxZoom: 18,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
+            }),
+            L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+                maxZoom: 20,
+                subdomains: 'abc',
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> / OSM-FR'
+            }),
+            L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                subdomains: 'abc',
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> HOT'
+            }),
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                subdomains: 'abc',
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
+            })
         ];
 
-        let providerIndex = 0;
-        let errorCount = 0;
-
-        function useProvider(i) {
-            providers.forEach((p, idx) => {
-                if (map.hasLayer(p.layer)) map.removeLayer(p.layer);
+        let pi = 0;
+        let errs = 0;
+        function addLayer(i) {
+            providers.forEach((ly) => { if (map.hasLayer(ly)) map.removeLayer(ly); });
+            if (i >= providers.length) return;
+            pi = i;
+            errs = 0;
+            const ly = providers[i];
+            ly.on('tileerror', function() {
+                errs++;
+                if (errs >= 5) addLayer(pi + 1);
             });
-            if (i >= providers.length) {
-                // Ultimo fallback: iframe ufficiale openstreetmap.org
-                try { map.remove(); } catch (e) {}
-                showOsmIframeFallback(el, latlngs);
-                return;
-            }
-            providerIndex = i;
-            errorCount = 0;
-            const p = providers[i];
-            p.layer.on('tileerror', function() {
-                errorCount++;
-                if (errorCount >= 4) {
-                    useProvider(providerIndex + 1);
-                }
-            });
-            p.layer.addTo(map);
+            ly.addTo(map);
         }
-
-        useProvider(0);
+        addLayer(0);
 
         const startIcon = L.divIcon({
-            className: '',
-            html: '<div style="background:#16a34a;color:#fff;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35);">S</div>',
-            iconSize: [30, 30],
-            iconAnchor: [15, 15]
+            className: 'percorso-marker',
+            html: '<div style="background:#16a34a;color:#fff;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35);">S</div>',
+            iconSize: [32, 32],
+            iconAnchor: [16, 16]
         });
-        L.marker([CASAMASSIMA.lat, CASAMASSIMA.lng], { icon: startIcon })
+        L.marker([CASAMASSIMA.lat, CASAMASSIMA.lng], { icon: startIcon, zIndexOffset: 1000 })
             .addTo(map)
             .bindPopup('<strong>Partenza</strong><br>Casamassima (BA)');
 
-        ordered.forEach((item, idx) => {
-            const { client, coords } = item;
-            if (!coords || coords.lat == null || coords.lng == null) return;
+        items.forEach((item, idx) => {
             const num = idx + 1;
+            const lat = Number(item.coords.lat);
+            const lng = Number(item.coords.lng);
             const icon = L.divIcon({
-                className: '',
-                html: `<div style="background:#2563eb;color:#fff;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35);">${num}</div>`,
-                iconSize: [30, 30],
-                iconAnchor: [15, 15]
+                className: 'percorso-marker',
+                html: `<div style="background:#2563eb;color:#fff;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35);">${num}</div>`,
+                iconSize: [32, 32],
+                iconAnchor: [16, 16]
             });
-            const nome = (client.nome || '').replace(/</g, '&lt;');
-            const loc = (client.localita || '').replace(/</g, '&lt;');
-            L.marker([coords.lat, coords.lng], { icon })
+            const nome = (item.client.nome || '').replace(/</g, '&lt;');
+            const loc = (item.client.localita || '').replace(/</g, '&lt;');
+            const approx = item.coords.approx ? '<br><em style="color:#64748b">posizione approssimata</em>' : '';
+            L.marker([lat, lng], { icon, zIndexOffset: 100 + num })
                 .addTo(map)
-                .bindPopup(`<strong>${num}. ${nome}</strong><br>📍 ${loc}`);
+                .bindPopup(`<strong>${num}. ${nome}</strong><br>📍 ${loc}${approx}`);
         });
 
-        if (latlngs.length >= 2) {
-            L.polyline(latlngs, {
+        if (allLatLngs.length >= 2) {
+            L.polyline(allLatLngs, {
                 color: '#2563eb',
                 weight: 4,
                 opacity: 0.85,
@@ -5168,14 +5240,23 @@
             }).addTo(map);
         }
 
+        const countCtrl = L.control({ position: 'topright' });
+        countCtrl.onAdd = function() {
+            const d = L.DomUtil.create('div');
+            d.innerHTML = items.length + ' / ' + items.length + ' clienti';
+            d.style.cssText = 'background:#0f172a;color:#fff;padding:6px 10px;border-radius:8px;font-weight:800;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,.25);';
+            return d;
+        };
+        countCtrl.addTo(map);
+
         try {
-            map.fitBounds(latlngs, { padding: [36, 36], maxZoom: 12 });
+            map.fitBounds(allLatLngs, { padding: [40, 40], maxZoom: 11 });
         } catch (e) {
-            map.setView([CASAMASSIMA.lat, CASAMASSIMA.lng], 9);
+            map.setView([CASAMASSIMA.lat, CASAMASSIMA.lng], 8);
         }
 
-        setTimeout(() => { try { map.invalidateSize(); } catch (e) {} }, 100);
-        setTimeout(() => { try { map.invalidateSize(); } catch (e) {} }, 400);
+        setTimeout(() => { try { map.invalidateSize(); } catch (e) {} }, 80);
+        setTimeout(() => { try { map.invalidateSize(); map.fitBounds(allLatLngs, { padding: [40, 40], maxZoom: 11 }); } catch (e) {} }, 350);
         percorsoMaps.push(map);
         return map;
     }
@@ -5218,15 +5299,7 @@
                         <div class="percorso-stop-sub">📍 ${(c.localita || '—')}${(c.provincia ? ' (' + c.provincia + ')' : '')}${approx}</div>
                     </div>
                 </div>`;
-            })).concat(route.without.map(c => `
-                <div class="percorso-stop">
-                    <div class="percorso-stop-num" style="background:#94a3b8;">?</div>
-                    <div class="percorso-stop-body">
-                        <div class="percorso-stop-title">${(c.nome || '').replace(/</g, '&lt;')}</div>
-                        <div class="percorso-stop-sub">📍 ${(c.localita || '—')} · posizione non disponibile</div>
-                    </div>
-                </div>
-            `));
+            }));
 
             const tappaEsc = String(g.name).replace(/"/g, '&quot;').replace(/</g, '&lt;');
             const tappaAttr = String(g.name).replace(/"/g, '&quot;');
@@ -5235,7 +5308,7 @@
                     <div class="percorso-card-head">
                         <div>
                             <h2>🚩 ${tappaEsc}</h2>
-                            <div class="percorso-card-meta">${g.clients.length} client${g.clients.length === 1 ? 'e' : 'i'} · partenza Casamassima · trascina per riordinare</div>
+                            <div class="percorso-card-meta">${route.ordered.length}/${g.clients.length} clienti in mappa · partenza Casamassima · trascina per riordinare</div>
                         </div>
                         <button type="button" class="btn" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.25);font-size:0.78rem;" onclick="resetPercorsoOrder('${String(g.name).replace(/'/g, "\'")}')" title="Ripristina ordine geografico automatico">↺ Auto</button>
                     </div>
