@@ -3871,6 +3871,7 @@
         }
     }
 
+
     window.deleteSpedizione = function(spedName) {
         if (confirm(`Eliminare l'intera spedizione "${spedName}"?`)) {
             clients = clients.filter(c => (c.spedizione || '').trim() !== spedName);
@@ -3878,6 +3879,140 @@
             render();
         }
     }
+
+    window.exportBackup = function() {
+        try {
+            const backupData = {
+                version: 18,
+                exportedAt: new Date().toISOString(),
+                clients: clients,
+                savedModels: savedModels,
+                savedSpedizioni: savedSpedizioni,
+                prepGroupMode: typeof prepGroupMode !== 'undefined' ? prepGroupMode : (localStorage.getItem('note_clienti_prep_group') || 'regione'),
+                urgentDays: localStorage.getItem('note_clienti_urgent_days') || '10',
+                percorsoOrder: (function() {
+                    try { return JSON.parse(localStorage.getItem('note_clienti_percorso_order') || '{}'); }
+                    catch (e) { return {}; }
+                })(),
+                geoCache: (function() {
+                    try { return JSON.parse(localStorage.getItem('note_clienti_geo_cache') || '{}'); }
+                    catch (e) { return {}; }
+                })()
+            };
+            const json = JSON.stringify(backupData, null, 2);
+            const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const day = new Date().toISOString().slice(0, 10);
+            a.href = url;
+            a.download = 'backup_note_clienti_' + day + '.json';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function() {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 200);
+        } catch (err) {
+            console.error(err);
+            alert('Errore durante il backup: ' + (err && err.message ? err.message : err));
+        }
+    };
+
+    window.importBackup = function(event) {
+        const input = event && event.target;
+        const file = input && input.files && input.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onerror = function() {
+            alert('Impossibile leggere il file di backup.');
+            if (input) input.value = '';
+        };
+        reader.onload = function(e) {
+            try {
+                const raw = e.target.result;
+                const imported = JSON.parse(raw);
+                if (!imported || !Array.isArray(imported.clients)) {
+                    alert('File non valido: manca l\'elenco clienti.');
+                    if (input) input.value = '';
+                    return;
+                }
+                if (!confirm('Ripristinare il backup?\n\nI dati attuali verranno sostituiti (' + imported.clients.length + ' clienti nel file).')) {
+                    if (input) input.value = '';
+                    return;
+                }
+
+                clients = imported.clients.map(function(client) {
+                    const c = Object.assign({}, client);
+                    if (c.spedizione === undefined) c.spedizione = '';
+                    if (c.tappa === undefined) c.tappa = '';
+                    if (c.tracking === undefined) c.tracking = '';
+                    if (c.notaPrep === undefined) c.notaPrep = '';
+                    if (c.scadenza === undefined) c.scadenza = '';
+                    if (c.notaDisponibilita === undefined) c.notaDisponibilita = '';
+                    c.calendarizzato = (c.calendarizzato === true || c.calendarizzato === 'true');
+                    c.preavviso = (c.preavviso === true || c.preavviso === 'true');
+                    c.disponibilita = (c.disponibilita === true || c.disponibilita === 'true');
+                    c.spedito = (c.spedito === true || c.spedito === 'true');
+                    c.consegnato = (c.consegnato === true || c.consegnato === 'true');
+                    c.installato = (c.installato === true || c.installato === 'true');
+                    c.standby = (c.standby === true || c.standby === 'true');
+                    c.inLavorazione = (c.inLavorazione === true || c.inLavorazione === 'true');
+                    if (!Array.isArray(c.modelli)) {
+                        if (c.modello) c.modelli = [{ nome: c.modello, qta: c.qta || 1 }];
+                        else c.modelli = [];
+                    }
+                    // riallinea provincia/regione se manca
+                    if ((!c.provincia || !c.regione) && c.localita && typeof resolveLocationData === 'function') {
+                        const res = resolveLocationData(c.localita);
+                        if (!c.provincia && res.prov) c.provincia = res.prov;
+                        if (!c.regione && res.reg) c.regione = res.reg;
+                    }
+                    return c;
+                });
+
+                if (Array.isArray(imported.savedModels)) {
+                    savedModels = imported.savedModels.slice();
+                }
+                if (Array.isArray(imported.savedSpedizioni)) {
+                    savedSpedizioni = imported.savedSpedizioni.slice();
+                }
+                if (imported.prepGroupMode) {
+                    prepGroupMode = imported.prepGroupMode;
+                    localStorage.setItem('note_clienti_prep_group', prepGroupMode);
+                }
+                if (imported.urgentDays != null) {
+                    localStorage.setItem('note_clienti_urgent_days', String(imported.urgentDays));
+                }
+                if (imported.percorsoOrder && typeof imported.percorsoOrder === 'object') {
+                    localStorage.setItem('note_clienti_percorso_order', JSON.stringify(imported.percorsoOrder));
+                }
+                if (imported.geoCache && typeof imported.geoCache === 'object') {
+                    localStorage.setItem('note_clienti_geo_cache', JSON.stringify(imported.geoCache));
+                }
+
+                localStorage.setItem('note_clienti_data', JSON.stringify(clients));
+                localStorage.setItem('note_clienti_modelli', JSON.stringify(savedModels));
+                localStorage.setItem('note_clienti_spedizioni', JSON.stringify(savedSpedizioni));
+
+                if (typeof updateModelliDatalist === 'function') updateModelliDatalist();
+                if (typeof updateSpedizioniDatalist === 'function') updateSpedizioniDatalist();
+                render();
+                if (typeof renderPrepPage === 'function' && currentView === 'prep') renderPrepPage();
+                if (typeof renderPercorsoPage === 'function' && currentView === 'percorso') renderPercorsoPage();
+                if (typeof renderInstallatiPage === 'function' && currentView === 'installati') renderInstallatiPage();
+                if (typeof renderStandbyPage === 'function' && currentView === 'standby') renderStandbyPage();
+
+                alert('Backup ripristinato: ' + clients.length + ' clienti.');
+            } catch (err) {
+                console.error(err);
+                alert('Errore nel ripristino: file JSON non valido.\n' + (err && err.message ? err.message : ''));
+            }
+            if (input) input.value = '';
+        };
+        reader.readAsText(file, 'UTF-8');
+    };
+
 
     window.scrollToPrepRegion = function(regId) {
         const el = document.getElementById(regId);
