@@ -2326,6 +2326,183 @@
                 transition-duration: 0.01ms !important;
             }
         }
+    
+        /* Note clienti mobile cards (stile Stand-by) */
+        .cards-list-note {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 10px;
+            background: #f8fafc;
+        }
+        .info-card-note {
+            background: #fff;
+            border-radius: 16px;
+            padding: 12px;
+            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+            border: 1px solid #e2e8f0;
+        }
+        .info-card-note .info-card-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .info-card-note .info-card-name {
+            margin: 0;
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.25;
+        }
+        .chip-tappa {
+            background: #e0e7ff;
+            color: #3730a3;
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 999px;
+            white-space: nowrap;
+        }
+        .chip-sped {
+            background: #ede9fe;
+            color: #5b21b6;
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 999px;
+            white-space: nowrap;
+        }
+        .info-card-note .info-card-models {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .info-card-note .info-card-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .info-card-note .info-item {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 8px 10px;
+        }
+        .info-card-note .info-item:first-child {
+            grid-column: 1 / -1;
+        }
+        .note-status-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+        .note-status-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 10px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: #475569;
+            min-height: 40px;
+            touch-action: manipulation;
+        }
+        .note-status-chip.active {
+            background: #eff6ff;
+            border-color: #93c5fd;
+            color: #1d4ed8;
+        }
+        .note-status-chip .checkbox-x {
+            width: 18px;
+            height: 18px;
+            border-radius: 5px;
+            border: 1.5px solid #cbd5e1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 800;
+        }
+        .note-status-chip.active .checkbox-x {
+            background: #dbeafe;
+            border-color: #2563eb;
+            color: #2563eb;
+        }
+        .note-field-card {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 4px 8px;
+        }
+        .note-field-card .note-input {
+            flex: 1;
+            border: none !important;
+            background: transparent !important;
+            min-height: 40px;
+            box-shadow: none !important;
+        }
+        .info-card-note .info-card-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+        .info-card-note .info-card-actions .btn {
+            min-height: 40px;
+            font-size: 0.78rem;
+            padding: 8px 6px;
+            border-radius: 10px;
+        }
+        .info-card-note .info-card-actions .btn-icon {
+            grid-column: 1 / -1;
+            width: 100%;
+            min-height: 40px;
+        }
+        .compact-select, .compact-date {
+            width: 100%;
+            min-height: 36px !important;
+            font-size: 16px !important;
+            padding: 6px 8px !important;
+        }
+        .note-card-tracking {
+            margin-bottom: 10px;
+        }
+        .note-card-tracking-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            margin-top: 4px;
+        }
+        .note-card-tracking-row .input-control {
+            flex: 1;
+            min-width: 0;
+        }
+        .btn-track {
+            background: #7c3aed;
+            color: #fff;
+            border: none;
+            min-height: 40px;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+        }
+        .track-badge {
+            background: #f5f3ff !important;
+            color: #5b21b6 !important;
+            border-color: #c4b5fd !important;
+        }
+
     </style>
 </head>
 <body class="locked">
@@ -4557,6 +4734,99 @@
         _renderTimer = setTimeout(function() { _renderTimer = null; render(); }, 180);
     };
 
+
+    function isMobileAppView() {
+        return window.matchMedia('(max-width: 600px)').matches;
+    }
+
+    function buildNoteClientSharedParts(client, isSpedizione) {
+        const mapUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(client.localita || '');
+        const modelsHTML = (client.modelli || []).map(function(mod, idx) {
+            return '<span class="model-badge">' +
+                '<span class="model-name" ondblclick="renameClientModel(\'' + client.id + '\', ' + idx + ')" title="Doppio click per rinominare">' + (mod.nome || '') + '</span>' +
+                '<span class="model-qta-badge" onclick="editModelQuantity(\'' + client.id + '\', ' + idx + ')" title="Modifica Q.tà">' + (mod.qta || 1) + ' pz</span>' +
+                '<button class="btn-del-badge" onclick="removeModelFromClient(\'' + client.id + '\', ' + idx + ')">×</button>' +
+                '</span>';
+        }).join('');
+        const isAddingModel = (String(activeInlineAddId) === String(client.id));
+        const inlineAddHTML = isAddingModel
+            ? ('<div class="inline-add-box">' +
+               '<input type="text" id="inline-model-input-' + client.id + '" class="input-control" list="modelliDatalist" placeholder="Modello..." autocomplete="off" onkeydown="onInlineModelKeydown(event, \'' + client.id + '\')">' +
+               '<select id="inline-model-qta-' + client.id + '" class="select-control">' + getQuantityOptionsHTML(1) + '</select>' +
+               '<button type="button" class="btn btn-primary" onclick="saveInlineModel(\'' + client.id + '\')">Salva</button>' +
+               '<button type="button" class="btn" onclick="toggleInlineAddModel(\'' + client.id + '\')">✕</button></div>')
+            : '';
+        let trackingHTML = '';
+        if (isSpedizione) {
+            const hasTrack = (client.tracking || '').trim() && !client._editingTracking;
+            if (hasTrack) {
+                const code = client.tracking.trim().replace(/'/g, "\\'");
+                trackingHTML = '<div class="note-card-tracking"><span class="info-label">📦 Tracking</span>' +
+                    '<div class="note-card-tracking-row">' +
+                    '<span class="model-badge track-badge" onclick="copyTrackingCode(\'' + code + '\', this)" ondblclick="event.preventDefault(); editTracking(\'' + client.id + '\');">' + (client.tracking.trim().replace(/</g, '&lt;')) + '</span>' +
+                    '<button type="button" class="btn btn-track" onclick="window.open(\'https://services.brt.it/it/tracking\',\'_blank\')">BRT</button></div></div>';
+            } else {
+                trackingHTML = '<div class="note-card-tracking"><span class="info-label">📦 Tracking</span>' +
+                    '<div class="note-card-tracking-row">' +
+                    '<input type="text" id="tracking-input-' + client.id + '" class="input-control" placeholder="Tracking BRT..." value="' + (client.tracking || '').replace(/"/g, '&quot;') + '" onkeydown="onTrackingKeydown(event, \'' + client.id + '\')">' +
+                    '<button type="button" class="btn btn-primary" onclick="saveTracking(\'' + client.id + '\')">Salva</button></div></div>';
+            }
+        }
+        return { mapUrl: mapUrl, modelsHTML: modelsHTML, inlineAddHTML: inlineAddHTML, trackingHTML: trackingHTML };
+    }
+
+    function buildNoteClientCardHTML(client, isSpedizione) {
+        const parts = buildNoteClientSharedParts(client, isSpedizione);
+        const statusCal = client.calendarizzato === true ? 'active' : '';
+        const statusPre = client.preavviso === true ? 'active' : '';
+        const statusDisp = client.disponibilita === true ? 'active' : '';
+        const statusSpe = client.spedito === true ? 'active' : '';
+        const statusCon = client.consegnato === true ? 'active' : '';
+        const extraStatus = isSpedizione
+            ? ('<button type="button" class="note-status-chip ' + statusSpe + '" data-toggle-id="' + client.id + '" data-toggle-field="spedito"><span class="checkbox-x">' + (statusSpe ? '✓' : '') + '</span> Spedito</button>' +
+               '<button type="button" class="note-status-chip ' + statusCon + '" data-toggle-id="' + client.id + '" data-toggle-field="consegnato"><span class="checkbox-x">' + (statusCon ? '✓' : '') + '</span> Consegnato</button>')
+            : ('<button type="button" class="note-status-chip ' + statusDisp + '" data-toggle-id="' + client.id + '" data-toggle-field="disponibilita"><span class="checkbox-x">' + (statusDisp ? '✓' : '') + '</span> Disponibilità</button>');
+
+        return (
+            '<article class="info-card info-card-note" id="client-row-' + client.id + '">' +
+              '<div class="info-card-head">' +
+                '<h3 class="info-card-name">' + (client.nome || '').replace(/</g, '&lt;') + '</h3>' +
+                (isSpedizione ? '<span class="info-chip chip-sped">📦 Spedizione</span>' : '<span class="info-chip chip-tappa">🚩 Tappa</span>') +
+              '</div>' +
+              '<div class="info-card-models">' + (parts.modelsHTML || '<span class="muted-dash">Nessun modello</span>') +
+                '<button class="btn-add-inline" onclick="toggleInlineAddModel(\'' + client.id + '\')">+ modello</button></div>' +
+              parts.inlineAddHTML +
+              '<div class="info-card-grid">' +
+                '<div class="info-item"><span class="info-label">Località</span><span class="info-value"><a href="' + parts.mapUrl + '" target="_blank" rel="noopener">📍 ' + (client.localita || '—') + '</a></span></div>' +
+                '<div class="info-item"><span class="info-label">Provincia</span><span class="info-value">' +
+                  '<select class="edit-select compact-select" onchange="updateProvincia(\'' + client.id + '\', this.value)">' +
+                  ITALIAN_PROVINCES.map(function(prov) {
+                    return '<option value="' + prov + '"' + (prov === client.provincia ? ' selected' : '') + '>' + provinceLabel(prov) + '</option>';
+                  }).join('') + '</select></span></div>' +
+                '<div class="info-item"><span class="info-label">Data</span><span class="info-value">' +
+                  '<input type="date" class="edit-input edit-input-date compact-date" value="' + (client.data || '') + '" onchange="updateDate(\'' + client.id + '\', this.value, false)" onblur="updateDate(\'' + client.id + '\', this.value, true)">' +
+                '</span></div>' +
+              '</div>' +
+              parts.trackingHTML +
+              '<div class="note-status-row">' +
+                '<button type="button" class="note-status-chip ' + statusCal + '" data-toggle-id="' + client.id + '" data-toggle-field="calendarizzato"><span class="checkbox-x">' + (statusCal ? '✓' : '') + '</span> Calendarizzato</button>' +
+                '<button type="button" class="note-status-chip ' + statusPre + '" data-toggle-id="' + client.id + '" data-toggle-field="preavviso"><span class="checkbox-x">' + (statusPre ? '✓' : '') + '</span> Preavviso</button>' +
+                extraStatus +
+              '</div>' +
+              '<div class="note-field note-field-card">' +
+                '<span class="note-field-icon">📝</span>' +
+                '<input type="text" class="note-input" placeholder="Note..." value="' + (client.notaDisponibilita || '').replace(/"/g, '&quot;') + '" data-note-id="' + client.id + '">' +
+              '</div>' +
+              '<div class="info-card-actions">' +
+                '<button type="button" class="btn" style="background:#2563eb;color:#fff;border:none;" onclick="moveToPrep(\'' + client.id + '\')">📋 Pre-pianif.</button>' +
+                '<button type="button" class="btn" style="background:#16a34a;color:#fff;border:none;" onclick="markInstallato(\'' + client.id + '\')">✅ Installato</button>' +
+                '<button type="button" class="btn" style="background:#d97706;color:#fff;border:none;" onclick="markStandby(\'' + client.id + '\')">⏸️ Stand-by</button>' +
+                '<button type="button" class="btn-icon danger" onclick="deleteClient(\'' + client.id + '\')" title="Elimina">🗑️</button>' +
+              '</div>' +
+            '</article>'
+        );
+    }
+
     function render() {
         clients.forEach(c => {
             if (c.spedizione === undefined) c.spedizione = '';
@@ -4698,7 +4968,7 @@
             }
 
             const countBadge = `<span class="stage-count-badge">${groupClients.length}</span>`;
-            let tableHTML = `
+            const headerHTML = `
                 <div class="stage-header ${isSpedizione ? 'stage-header-sped' : (isAttesa ? 'stage-header-attesa' : 'stage-header-tappa')}" style="${headerBg}">
                     <div class="stage-header-left">
                         <span class="stage-header-icon">${headerIcon}</span>
@@ -4710,6 +4980,25 @@
                     </div>
                     <div class="stage-header-actions">${deleteBtn}</div>
                 </div>
+            `;
+
+            // iPhone / mobile: card come Stand-by
+            if (isMobileAppView()) {
+                let cardsHTML = headerHTML + '<div class="cards-list cards-list-note">';
+                groupClients.forEach(client => {
+                    cardsHTML += buildNoteClientCardHTML(client, isSpedizione);
+                });
+                const groupDataJSON = JSON.stringify(groupClients).replace(/'/g, "&apos;");
+                cardsHTML += `</div>
+                    <div class="stage-footer">
+                        <button class="btn btn-route" onclick='openRoute(${groupDataJSON}, true)'>📍 Percorso da Casamassima (BA)</button>
+                    </div>`;
+                groupEl.innerHTML = cardsHTML;
+                container.appendChild(groupEl);
+                return; // continue next group in forEach of groups - wait, this is inside forEach of groups? need not use return if it's forEach on groups
+            }
+
+            let tableHTML = headerHTML + `
                 <table class="stage-table">
                     <thead>
                         <tr>
