@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <title>Gestione Note Clienti</title>
-    <meta name="note-clienti-build" content="2026-10-05-percorso-all">
+    <meta name="note-clienti-build" content="2026-10-06-iphone-perf">
     <style>
         :root {
             --primary: #1e293b;
@@ -2018,13 +2018,220 @@
             #viewPrep .prep-suggestions-card {
                 margin-bottom: 14px;
             }
+
+            /* ===== iPhone / smartphone: prestazioni e layout ===== */
+            * {
+                -webkit-tap-highlight-color: transparent;
+            }
+            .input-control, .select-control, .edit-input, .edit-select, .note-input, .search-input, .urgent-days-input {
+                font-size: 16px !important; /* evita zoom automatico iOS */
+                min-height: 44px;
+                border-radius: 12px;
+            }
+            .btn, .btn-primary, .btn-icon, .stage-pill, .note-urgent-item {
+                min-height: 44px;
+                touch-action: manipulation;
+            }
+            .btn-icon {
+                min-width: 44px;
+            }
+
+            /* Note: riquadro urgente sopra, compatto */
+            .note-work-area {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 12px !important;
+            }
+            .note-urgent-panel {
+                position: relative !important;
+                top: auto !important;
+                max-height: none !important;
+                border-radius: 16px;
+                order: -1;
+            }
+            .note-urgent-list {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 8px !important;
+                max-height: 200px !important;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch;
+                padding: 10px !important;
+            }
+            .note-urgent-item {
+                padding: 10px !important;
+                min-height: 0;
+            }
+            .note-urgent-item .u-name {
+                font-size: 0.82rem !important;
+            }
+            .note-urgent-controls {
+                flex-wrap: wrap;
+            }
+
+            /* Percorso: mappa alta + lista sotto, touch-friendly */
+            .percorso-intro {
+                font-size: 0.88rem;
+                margin-bottom: 12px;
+            }
+            .percorso-body {
+                display: flex !important;
+                flex-direction: column !important;
+            }
+            .percorso-map {
+                height: min(52vh, 360px) !important;
+                min-height: 260px !important;
+                border-radius: 0;
+            }
+            .percorso-stops {
+                max-height: none !important;
+                border-left: none !important;
+                border-top: 1px solid var(--border);
+                padding: 12px !important;
+                -webkit-overflow-scrolling: touch;
+            }
+            .percorso-stop.draggable-stop {
+                padding: 12px 8px !important;
+                margin: 4px 0 !important;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 12px;
+                gap: 8px;
+                align-items: center;
+                touch-action: none; /* drag touch */
+            }
+            .percorso-drag-handle {
+                width: 28px;
+                font-size: 1.2rem;
+                padding: 8px 0;
+            }
+            .percorso-stop-num {
+                width: 30px;
+                height: 30px;
+                font-size: 0.8rem;
+            }
+            .percorso-card-head {
+                padding: 12px 14px;
+                gap: 8px;
+            }
+            .percorso-card-head h2 {
+                font-size: 1rem;
+            }
+            .percorso-card-head .btn {
+                min-height: 36px;
+                font-size: 0.75rem;
+                padding: 6px 10px;
+            }
+            .percorso-stops-hint {
+                font-size: 0.75rem;
+                margin-bottom: 6px;
+            }
+            /* Leaflet: controlli più grandi su touch */
+            .leaflet-control-zoom a {
+                width: 36px !important;
+                height: 36px !important;
+                line-height: 36px !important;
+                font-size: 18px !important;
+            }
+            .leaflet-container {
+                font: 12px/1.4 system-ui, -apple-system, sans-serif;
+            }
+
+            /* Stage groups note */
+            #viewNote .stage-group {
+                border-radius: 16px;
+                margin-bottom: 14px;
+            }
+            #viewNote .stage-header {
+                padding: 12px 14px;
+            }
+            #viewNote .stage-table tbody tr.client-row {
+                margin: 10px;
+                padding: 12px;
+            }
+            #viewNote .client-actions-row {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+            #viewNote .client-actions-row .btn {
+                min-height: 44px;
+                margin: 0;
+                font-size: 0.8rem;
+            }
+            #viewNote .client-actions-row .btn-icon {
+                grid-column: 1 / -1;
+                width: 100%;
+            }
+
+            /* Stage pills sticky */
+            #viewNote #stagesNavBar,
+            #viewNote #spedizioniNavBar,
+            #viewPrep .prep-regions-nav {
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            #viewNote #stagesNavBar::-webkit-scrollbar,
+            #viewNote #spedizioniNavBar::-webkit-scrollbar {
+                display: none;
+            }
+            .stage-pill {
+                min-height: 40px;
+                padding: 8px 12px;
+                flex-shrink: 0;
+            }
+
+            /* Cards info */
+            .info-card {
+                padding: 14px !important;
+            }
+            .info-card-actions .btn {
+                min-height: 48px !important;
+            }
+            .assign-field .edit-input {
+                min-height: 46px !important;
+                font-size: 16px !important;
+            }
+
+            /* Login mobile */
+            .login-card {
+                margin: 24px 12px;
+                max-width: none;
+            }
+
+            /* Meno blur = più fluido su iPhone */
+            .portal-nav {
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+            }
+
+            /* Back to top sopra la tab bar */
+            #backToTopBtn {
+                bottom: calc(90px + env(safe-area-inset-bottom)) !important;
+                right: 14px !important;
+            }
         }
 
         @media (max-width: 380px) {
             .portal-nav-btn { font-size: 0.55rem; padding: 6px 1px 4px; }
+            .portal-nav-btn .nav-txt { font-size: 0.55rem; }
             .header-title-group h1 { font-size: 1.25rem; }
-            table { min-width: 560px; }
+            table { min-width: 0; }
             .main-content { padding-left: 10px; padding-right: 10px; }
+            .note-urgent-list {
+                grid-template-columns: 1fr !important;
+            }
+            .percorso-map {
+                height: min(46vh, 300px) !important;
+            }
+        }
+
+        /* Prefer reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
         }
     </style>
 </head>
@@ -2162,7 +2369,7 @@
 
     <div class="search-card">
         <span style="font-weight: 700; color: var(--primary);">🔍 Cerca:</span>
-        <input type="text" id="searchInput" class="search-input" placeholder="Filtra per cliente, località, provincia, regione, modello o note..." oninput="render()">
+        <input type="text" id="searchInput" class="search-input" placeholder="Filtra per cliente, località, provincia, regione, modello o note..." oninput="scheduleRender()">
     </div>
 
     <div class="note-work-area">
@@ -4168,6 +4375,12 @@
         else if (tappa) scrollToStage(tappa.replace(/[^a-zA-Z0-9-_]/g, '_'));
     };
 
+    let _renderTimer = null;
+    window.scheduleRender = function() {
+        if (_renderTimer) clearTimeout(_renderTimer);
+        _renderTimer = setTimeout(function() { _renderTimer = null; render(); }, 180);
+    };
+
     function render() {
         clients.forEach(c => {
             if (c.spedizione === undefined) c.spedizione = '';
@@ -5593,6 +5806,35 @@
         renderPercorsoPage();
     };
 
+    function applyPercorsoOrderFromList(list, tappaName, mapId) {
+        const newIds = Array.from(list.querySelectorAll('.draggable-stop')).map(n => n.getAttribute('data-client-id'));
+        setSavedOrderIds(tappaName, newIds);
+        Array.from(list.querySelectorAll('.draggable-stop')).forEach((n, i) => {
+            const num = n.querySelector('.percorso-stop-num');
+            if (num) num.textContent = String(i + 1);
+        });
+        const ordered = newIds.map((id, idx) => {
+            const c = clients.find(x => String(x.id) === String(id));
+            if (!c) return null;
+            let coords = resolveCoordsLocal(c.localita, c.provincia);
+            if (!coords) {
+                coords = { lat: CASAMASSIMA.lat + (idx + 1) * 0.02, lng: CASAMASSIMA.lng + (idx + 1) * 0.02, approx: true };
+            }
+            return { client: c, coords };
+        }).filter(Boolean);
+        const mapEl = document.getElementById(mapId);
+        if (mapEl) {
+            const idx = percorsoMaps.findIndex(m => {
+                try { return m.getContainer && m.getContainer() === mapEl; } catch (e) { return false; }
+            });
+            if (idx >= 0) {
+                try { percorsoMaps[idx].remove(); } catch (e) {}
+                percorsoMaps.splice(idx, 1);
+            }
+            drawTappaOsmMap(mapId, ordered);
+        }
+    }
+
     function bindPercorsoStopDrag(container) {
         let dragEl = null;
 
@@ -5603,6 +5845,7 @@
             list.querySelectorAll('.draggable-stop').forEach(item => {
                 item.setAttribute('draggable', 'true');
 
+                // --- Desktop HTML5 DnD ---
                 item.addEventListener('dragstart', function(e) {
                     dragEl = item;
                     item.classList.add('dragging');
@@ -5611,73 +5854,82 @@
                         e.dataTransfer.setData('text/plain', item.getAttribute('data-client-id') || '');
                     } catch (err) {}
                 });
-
                 item.addEventListener('dragend', function() {
                     item.classList.remove('dragging');
                     list.querySelectorAll('.drag-over').forEach(n => n.classList.remove('drag-over'));
                     dragEl = null;
                 });
-
                 item.addEventListener('dragover', function(e) {
                     e.preventDefault();
                     if (!dragEl || dragEl === item) return;
                     item.classList.add('drag-over');
-                    try { e.dataTransfer.dropEffect = 'move'; } catch (err) {}
                 });
-
                 item.addEventListener('dragleave', function() {
                     item.classList.remove('drag-over');
                 });
-
                 item.addEventListener('drop', function(e) {
                     e.preventDefault();
                     item.classList.remove('drag-over');
                     if (!dragEl || dragEl === item) return;
-
                     const nodes = Array.from(list.querySelectorAll('.draggable-stop'));
                     const from = nodes.indexOf(dragEl);
                     const to = nodes.indexOf(item);
                     if (from < 0 || to < 0) return;
+                    if (from < to) item.after(dragEl);
+                    else item.before(dragEl);
+                    applyPercorsoOrderFromList(list, tappaName, mapId);
+                });
 
-                    if (from < to) {
-                        item.after(dragEl);
-                    } else {
-                        item.before(dragEl);
+                // --- Touch / pointer (iPhone) ---
+                item.addEventListener('pointerdown', function(e) {
+                    if (e.pointerType === 'mouse' && e.button !== 0) return;
+                    // solo da handle o long-press sull'intera riga
+                    const isHandle = e.target.closest('.percorso-drag-handle');
+                    if (!isHandle && e.pointerType === 'touch') {
+                        // touch: permette scroll; drag solo dal handle
+                        return;
+                    }
+                    if (!isHandle && e.pointerType !== 'touch') {
+                        // mouse: drag da tutta la riga ok via HTML5
+                        return;
                     }
 
-                    // Rinumera e salva ordine
-                    const newIds = Array.from(list.querySelectorAll('.draggable-stop')).map(n => n.getAttribute('data-client-id'));
-                    setSavedOrderIds(tappaName, newIds);
+                    e.preventDefault();
+                    const pointerId = e.pointerId;
+                    try { item.setPointerCapture(pointerId); } catch (err) {}
+                    item.classList.add('dragging');
+                    dragEl = item;
 
-                    Array.from(list.querySelectorAll('.draggable-stop')).forEach((n, i) => {
-                        const num = n.querySelector('.percorso-stop-num');
-                        if (num) num.textContent = String(i + 1);
-                    });
-
-                    // Ridisegna mappa con nuovo ordine
-                    const ordered = newIds.map((id, idx) => {
-                        const c = clients.find(x => String(x.id) === String(id));
-                        if (!c) return null;
-                        let coords = resolveCoordsLocal(c.localita, c.provincia);
-                        if (!coords) {
-                            coords = { lat: CASAMASSIMA.lat + (idx + 1) * 0.02, lng: CASAMASSIMA.lng + (idx + 1) * 0.02, approx: true };
+                    const onMove = function(ev) {
+                        if (ev.pointerId !== pointerId) return;
+                        ev.preventDefault();
+                        const el = document.elementFromPoint(ev.clientX, ev.clientY);
+                        const over = el && el.closest ? el.closest('.draggable-stop') : null;
+                        list.querySelectorAll('.drag-over').forEach(n => n.classList.remove('drag-over'));
+                        if (over && over !== item && list.contains(over)) {
+                            over.classList.add('drag-over');
+                            const nodes = Array.from(list.querySelectorAll('.draggable-stop'));
+                            const from = nodes.indexOf(item);
+                            const to = nodes.indexOf(over);
+                            if (from < 0 || to < 0 || from === to) return;
+                            if (from < to) over.after(item);
+                            else over.before(item);
                         }
-                        return { client: c, coords };
-                    }).filter(Boolean);
-
-                    // rimuovi solo la mappa di questa card
-                    const mapEl = document.getElementById(mapId);
-                    if (mapEl) {
-                        // destroy previous leaflet instance if tracked
-                        const idx = percorsoMaps.findIndex(m => {
-                            try { return m.getContainer && m.getContainer() === mapEl; } catch (e) { return false; }
-                        });
-                        if (idx >= 0) {
-                            try { percorsoMaps[idx].remove(); } catch (e) {}
-                            percorsoMaps.splice(idx, 1);
-                        }
-                        drawTappaOsmMap(mapId, ordered);
-                    }
+                    };
+                    const onUp = function(ev) {
+                        if (ev.pointerId !== pointerId) return;
+                        item.classList.remove('dragging');
+                        list.querySelectorAll('.drag-over').forEach(n => n.classList.remove('drag-over'));
+                        try { item.releasePointerCapture(pointerId); } catch (err) {}
+                        document.removeEventListener('pointermove', onMove);
+                        document.removeEventListener('pointerup', onUp);
+                        document.removeEventListener('pointercancel', onUp);
+                        applyPercorsoOrderFromList(list, tappaName, mapId);
+                        dragEl = null;
+                    };
+                    document.addEventListener('pointermove', onMove, { passive: false });
+                    document.addEventListener('pointerup', onUp);
+                    document.addEventListener('pointercancel', onUp);
                 });
             });
         });
@@ -5800,9 +6052,17 @@
 
         el.innerHTML = '';
         el.style.position = 'relative';
+        const isTouch = window.matchMedia('(max-width: 900px)').matches || ('ontouchstart' in window);
         const map = L.map(el, {
-            scrollWheelZoom: true,
-            attributionControl: true
+            scrollWheelZoom: !isTouch,
+            dragging: true,
+            tap: true,
+            touchZoom: true,
+            doubleClickZoom: true,
+            boxZoom: !isTouch,
+            keyboard: !isTouch,
+            attributionControl: true,
+            zoomControl: true
         });
 
         // Solo tile OpenStreetMap gratuiti (niente API key)
