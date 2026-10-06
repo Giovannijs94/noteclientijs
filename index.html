@@ -1493,12 +1493,12 @@
                 align-items: stretch;
                 justify-content: space-around;
                 gap: 0;
-                padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
-                background: rgba(15, 23, 42, 0.92);
-                backdrop-filter: blur(16px);
-                -webkit-backdrop-filter: blur(16px);
+                padding: 4px 2px calc(4px + env(safe-area-inset-bottom));
+                background: rgba(15, 23, 42, 0.94);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
                 border-top: 1px solid rgba(255, 255, 255, 0.08);
-                box-shadow: 0 -8px 32px rgba(15, 23, 42, 0.18);
+                box-shadow: 0 -6px 24px rgba(15, 23, 42, 0.16);
             }
             .portal-nav .portal-brand {
                 display: none;
@@ -1510,17 +1510,18 @@
                 flex-direction: column;
                 justify-content: center;
                 align-items: center;
-                gap: 2px;
-                padding: 8px 2px 6px;
-                font-size: 0.62rem;
+                gap: 1px;
+                padding: 6px 1px 4px;
+                font-size: 0.58rem;
                 font-weight: 600;
-                border-radius: 12px;
+                border-radius: 10px;
                 color: #94a3b8;
                 background: transparent;
-                line-height: 1.15;
+                line-height: 1.1;
                 text-align: center;
                 letter-spacing: -0.01em;
             }
+            .portal-nav-btn .nav-ico { font-size: 1.05rem !important; }
             .portal-nav-btn:hover {
                 background: rgba(255, 255, 255, 0.06);
                 color: #e2e8f0;
@@ -1539,21 +1540,30 @@
                 min-width: 16px;
             }
             .main-content {
-                padding: 12px 12px;
-                padding-top: max(12px, env(safe-area-inset-top));
-                padding-bottom: calc(88px + env(safe-area-inset-bottom));
+                padding: 8px 10px;
+                padding-top: max(8px, env(safe-area-inset-top));
+                padding-bottom: calc(78px + env(safe-area-inset-bottom));
             }
             .header-bar {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 12px;
-                margin-bottom: 14px;
+                flex-direction: row;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 10px;
             }
+            .header-title-group { flex: 1; min-width: 0; }
             .header-title-group h1 {
-                font-size: 1.45rem;
+                font-size: 1.2rem;
                 font-weight: 800;
                 letter-spacing: -0.03em;
                 color: #0f172a;
+                margin: 0;
+            }
+            .header-actions { width: auto; flex-shrink: 0; }
+            .header-actions .settings-menu > .btn {
+                min-height: 40px;
+                padding: 8px 12px;
+                font-size: 0.85rem;
             }
             .header-actions { width: 100%; }
             .header-actions .btn,
@@ -1570,17 +1580,19 @@
                 left: 0; right: 0; min-width: 0; width: 100%;
                 border-radius: 16px;
             }
-            .form-grid { grid-template-columns: 1fr; gap: 14px; }
+            .form-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+            .form-group.full-width,
+            .form-group[style*="grid-column"] { grid-column: 1 / -1 !important; }
             .form-group[style*="grid-column"] { grid-column: 1 / -1 !important; }
             .form-group label { font-size: 0.72rem; letter-spacing: 0.04em; }
             .card {
-                padding: 16px;
-                margin-bottom: 14px;
-                border-radius: 16px;
+                padding: 12px;
+                margin-bottom: 10px;
+                border-radius: 14px;
                 border: none;
-                box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+                box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
             }
-            .card-title { font-size: 1.05rem; margin-bottom: 14px; font-weight: 800; }
+            .card-title { font-size: 0.95rem; margin-bottom: 10px; font-weight: 800; }
             .search-card {
                 flex-direction: row;
                 align-items: center;
@@ -2025,12 +2037,18 @@
             }
             .input-control, .select-control, .edit-input, .edit-select, .note-input, .search-input, .urgent-days-input {
                 font-size: 16px !important; /* evita zoom automatico iOS */
-                min-height: 44px;
-                border-radius: 12px;
+                min-height: 40px;
+                padding: 8px 10px !important;
+                border-radius: 10px;
             }
             .btn, .btn-primary, .btn-icon, .stage-pill, .note-urgent-item {
-                min-height: 44px;
+                min-height: 40px;
                 touch-action: manipulation;
+            }
+            .btn {
+                padding: 8px 12px;
+                font-size: 0.88rem;
+                border-radius: 10px;
             }
             .btn-icon {
                 min-width: 44px;
@@ -2050,18 +2068,22 @@
                 order: -1;
             }
             .note-urgent-list {
-                display: grid !important;
-                grid-template-columns: 1fr 1fr !important;
-                gap: 8px !important;
-                max-height: 200px !important;
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 6px !important;
+                max-height: 160px !important;
                 overflow-y: auto !important;
                 -webkit-overflow-scrolling: touch;
-                padding: 10px !important;
+                padding: 8px !important;
             }
             .note-urgent-item {
-                padding: 10px !important;
+                padding: 8px 10px !important;
                 min-height: 0;
+                display: grid !important;
+                grid-template-columns: 1fr auto !important;
+                gap: 4px 8px !important;
             }
+            .note-urgent-item .u-days { grid-row: 1 / 3; align-self: center; }
             .note-urgent-item .u-name {
                 font-size: 0.82rem !important;
             }
@@ -2079,8 +2101,8 @@
                 flex-direction: column !important;
             }
             .percorso-map {
-                height: min(52vh, 360px) !important;
-                min-height: 260px !important;
+                height: min(42vh, 280px) !important;
+                min-height: 200px !important;
                 border-radius: 0;
             }
             .percorso-stops {
@@ -2152,12 +2174,13 @@
             #viewNote .client-actions-row {
                 display: grid !important;
                 grid-template-columns: 1fr 1fr;
-                gap: 8px;
+                gap: 6px;
             }
             #viewNote .client-actions-row .btn {
-                min-height: 44px;
+                min-height: 40px;
                 margin: 0;
-                font-size: 0.8rem;
+                font-size: 0.78rem;
+                padding: 8px 6px;
             }
             #viewNote .client-actions-row .btn-icon {
                 grid-column: 1 / -1;
@@ -2183,10 +2206,11 @@
 
             /* Cards info */
             .info-card {
-                padding: 14px !important;
+                padding: 10px !important;
             }
             .info-card-actions .btn {
-                min-height: 48px !important;
+                min-height: 40px !important;
+                font-size: 0.8rem !important;
             }
             .assign-field .edit-input {
                 min-height: 46px !important;
@@ -2299,7 +2323,7 @@
                     </button>
                 </div>
             </div>
-            <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="importBackup(event)">
+            <input type="file" id="importFileInput" accept=".json,application/json,text/plain,*/*" style="display: none;" onchange="importBackup(event)">
         </div>
     </div>
 
@@ -4125,6 +4149,80 @@
         }
     };
 
+
+    function parseBackupJson(raw) {
+        if (raw == null) throw new Error('File vuoto');
+        let s = String(raw);
+        // BOM UTF-8 / UTF-16
+        if (s.charCodeAt(0) === 0xFEFF) s = s.slice(1);
+        s = s.replace(/^\uFEFF/, '').trim();
+        // a volte WhatsApp/email aggiungono testo prima/dopo
+        const firstBrace = s.indexOf('{');
+        const firstBracket = s.indexOf('[');
+        let start = -1;
+        if (firstBrace === -1) start = firstBracket;
+        else if (firstBracket === -1) start = firstBrace;
+        else start = Math.min(firstBrace, firstBracket);
+        if (start > 0) s = s.slice(start);
+        // taglia dopo ultima } o ]
+        const lastBrace = s.lastIndexOf('}');
+        const lastBracket = s.lastIndexOf(']');
+        const end = Math.max(lastBrace, lastBracket);
+        if (end >= 0) s = s.slice(0, end + 1);
+
+        let data;
+        try {
+            data = JSON.parse(s);
+        } catch (e1) {
+            // prova a rimuovere trailing commas comuni
+            const fixed = s.replace(/,\s*([}\]])/g, '$1');
+            try {
+                data = JSON.parse(fixed);
+            } catch (e2) {
+                throw new Error('JSON non leggibile. ' + (e1.message || ''));
+            }
+        }
+        return data;
+    }
+
+    function normalizeImportedClients(list) {
+        return list.map(function(client) {
+            const c = Object.assign({}, client);
+            if (c.spedizione === undefined) c.spedizione = '';
+            if (c.tappa === undefined) c.tappa = '';
+            if (c.tracking === undefined) c.tracking = '';
+            if (c.notaPrep === undefined) c.notaPrep = '';
+            if (c.scadenza === undefined) c.scadenza = '';
+            if (c.notaDisponibilita === undefined) c.notaDisponibilita = '';
+            if (c.localita === undefined) c.localita = '';
+            if (c.provincia === undefined) c.provincia = '';
+            if (c.regione === undefined) c.regione = '';
+            if (c.note === undefined) c.note = '';
+            if (c.data === undefined) c.data = '';
+            c.calendarizzato = (c.calendarizzato === true || c.calendarizzato === 'true');
+            c.preavviso = (c.preavviso === true || c.preavviso === 'true');
+            c.disponibilita = (c.disponibilita === true || c.disponibilita === 'true');
+            c.spedito = (c.spedito === true || c.spedito === 'true');
+            c.consegnato = (c.consegnato === true || c.consegnato === 'true');
+            c.installato = (c.installato === true || c.installato === 'true');
+            c.standby = (c.standby === true || c.standby === 'true');
+            c.inLavorazione = (c.inLavorazione === true || c.inLavorazione === 'true');
+            if (!Array.isArray(c.modelli)) {
+                if (c.modello) c.modelli = [{ nome: c.modello, qta: c.qta || 1 }];
+                else c.modelli = [];
+            }
+            if (!c.id) c.id = Date.now() + Math.random();
+            if ((!c.provincia || !c.regione) && c.localita && typeof resolveLocationData === 'function') {
+                try {
+                    const res = resolveLocationData(c.localita);
+                    if (!c.provincia && res.prov) c.provincia = res.prov;
+                    if (!c.regione && res.reg) c.regione = res.reg;
+                } catch (e) {}
+            }
+            return c;
+        });
+    }
+
     window.importBackup = function(event) {
         const input = event && event.target;
         const file = input && input.files && input.files[0];
@@ -4138,64 +4236,58 @@
         reader.onload = function(e) {
             try {
                 const raw = e.target.result;
-                const imported = JSON.parse(raw);
-                if (!imported || !Array.isArray(imported.clients)) {
-                    alert('File non valido: manca l\'elenco clienti.');
-                    if (input) input.value = '';
-                    return;
+                const data = parseBackupJson(raw);
+
+                let importedClients = null;
+                let importedModels = null;
+                let importedSped = null;
+
+                if (Array.isArray(data)) {
+                    // formato antico: solo array clienti
+                    importedClients = data;
+                } else if (data && typeof data === 'object') {
+                    if (Array.isArray(data.clients)) importedClients = data.clients;
+                    else if (Array.isArray(data.clienti)) importedClients = data.clienti;
+                    else if (Array.isArray(data.data)) importedClients = data.data;
+                    else if (Array.isArray(data.note_clienti_data)) importedClients = data.note_clienti_data;
+
+                    if (Array.isArray(data.savedModels)) importedModels = data.savedModels;
+                    else if (Array.isArray(data.modelli)) importedModels = data.modelli;
+                    else if (Array.isArray(data.note_clienti_modelli)) importedModels = data.note_clienti_modelli;
+
+                    if (Array.isArray(data.savedSpedizioni)) importedSped = data.savedSpedizioni;
+                    else if (Array.isArray(data.spedizioni)) importedSped = data.spedizioni;
                 }
-                if (!confirm('Ripristinare il backup?\n\nI dati attuali verranno sostituiti (' + imported.clients.length + ' clienti nel file).')) {
+
+                if (!importedClients) {
+                    alert('File non riconosciuto come backup.\\n\\nServe un JSON con elenco "clients" (o un array di clienti).');
                     if (input) input.value = '';
                     return;
                 }
 
-                clients = imported.clients.map(function(client) {
-                    const c = Object.assign({}, client);
-                    if (c.spedizione === undefined) c.spedizione = '';
-                    if (c.tappa === undefined) c.tappa = '';
-                    if (c.tracking === undefined) c.tracking = '';
-                    if (c.notaPrep === undefined) c.notaPrep = '';
-                    if (c.scadenza === undefined) c.scadenza = '';
-                    if (c.notaDisponibilita === undefined) c.notaDisponibilita = '';
-                    c.calendarizzato = (c.calendarizzato === true || c.calendarizzato === 'true');
-                    c.preavviso = (c.preavviso === true || c.preavviso === 'true');
-                    c.disponibilita = (c.disponibilita === true || c.disponibilita === 'true');
-                    c.spedito = (c.spedito === true || c.spedito === 'true');
-                    c.consegnato = (c.consegnato === true || c.consegnato === 'true');
-                    c.installato = (c.installato === true || c.installato === 'true');
-                    c.standby = (c.standby === true || c.standby === 'true');
-                    c.inLavorazione = (c.inLavorazione === true || c.inLavorazione === 'true');
-                    if (!Array.isArray(c.modelli)) {
-                        if (c.modello) c.modelli = [{ nome: c.modello, qta: c.qta || 1 }];
-                        else c.modelli = [];
-                    }
-                    // riallinea provincia/regione se manca
-                    if ((!c.provincia || !c.regione) && c.localita && typeof resolveLocationData === 'function') {
-                        const res = resolveLocationData(c.localita);
-                        if (!c.provincia && res.prov) c.provincia = res.prov;
-                        if (!c.regione && res.reg) c.regione = res.reg;
-                    }
-                    return c;
-                });
+                if (!confirm('Ripristinare il backup?\\n\\nI dati attuali verranno sostituiti (' + importedClients.length + ' clienti nel file).')) {
+                    if (input) input.value = '';
+                    return;
+                }
 
-                if (Array.isArray(imported.savedModels)) {
-                    savedModels = imported.savedModels.slice();
-                }
-                if (Array.isArray(imported.savedSpedizioni)) {
-                    savedSpedizioni = imported.savedSpedizioni.slice();
-                }
-                if (imported.prepGroupMode) {
-                    prepGroupMode = imported.prepGroupMode;
-                    localStorage.setItem('note_clienti_prep_group', prepGroupMode);
-                }
-                if (imported.urgentDays != null) {
-                    localStorage.setItem('note_clienti_urgent_days', String(imported.urgentDays));
-                }
-                if (imported.percorsoOrder && typeof imported.percorsoOrder === 'object') {
-                    localStorage.setItem('note_clienti_percorso_order', JSON.stringify(imported.percorsoOrder));
-                }
-                if (imported.geoCache && typeof imported.geoCache === 'object') {
-                    localStorage.setItem('note_clienti_geo_cache', JSON.stringify(imported.geoCache));
+                clients = normalizeImportedClients(importedClients);
+                if (importedModels) savedModels = importedModels.slice();
+                if (importedSped) savedSpedizioni = importedSped.slice();
+
+                if (data && typeof data === 'object' && !Array.isArray(data)) {
+                    if (data.prepGroupMode) {
+                        prepGroupMode = data.prepGroupMode;
+                        localStorage.setItem('note_clienti_prep_group', prepGroupMode);
+                    }
+                    if (data.urgentDays != null) {
+                        localStorage.setItem('note_clienti_urgent_days', String(data.urgentDays));
+                    }
+                    if (data.percorsoOrder && typeof data.percorsoOrder === 'object') {
+                        localStorage.setItem('note_clienti_percorso_order', JSON.stringify(data.percorsoOrder));
+                    }
+                    if (data.geoCache && typeof data.geoCache === 'object') {
+                        localStorage.setItem('note_clienti_geo_cache', JSON.stringify(data.geoCache));
+                    }
                 }
 
                 localStorage.setItem('note_clienti_data', JSON.stringify(clients));
@@ -4205,21 +4297,22 @@
                 if (typeof updateModelliDatalist === 'function') updateModelliDatalist();
                 if (typeof updateSpedizioniDatalist === 'function') updateSpedizioniDatalist();
                 render();
-                if (typeof renderPrepPage === 'function' && currentView === 'prep') renderPrepPage();
-                if (typeof renderPercorsoPage === 'function' && currentView === 'percorso') renderPercorsoPage();
-                if (typeof renderInstallatiPage === 'function' && currentView === 'installati') renderInstallatiPage();
-                if (typeof renderStandbyPage === 'function' && currentView === 'standby') renderStandbyPage();
+                try {
+                    if (typeof renderPrepPage === 'function' && currentView === 'prep') renderPrepPage();
+                    if (typeof renderPercorsoPage === 'function' && currentView === 'percorso') renderPercorsoPage();
+                    if (typeof renderInstallatiPage === 'function' && currentView === 'installati') renderInstallatiPage();
+                    if (typeof renderStandbyPage === 'function' && currentView === 'standby') renderStandbyPage();
+                } catch (e) {}
 
                 alert('Backup ripristinato: ' + clients.length + ' clienti.');
             } catch (err) {
                 console.error(err);
-                alert('Errore nel ripristino: file JSON non valido.\n' + (err && err.message ? err.message : ''));
+                alert('Errore nel ripristino del backup.\\n\\n' + (err && err.message ? err.message : 'File non valido') + '\\n\\nSuggerimento: usa un file .json scaricato da «Scarica Backup».');
             }
             if (input) input.value = '';
         };
         reader.readAsText(file, 'UTF-8');
     };
-
 
     window.scrollToPrepRegion = function(regId) {
         const el = document.getElementById(regId);
