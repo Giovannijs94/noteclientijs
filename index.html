@@ -4775,7 +4775,82 @@
         'salerno': [40.6824, 14.7681],
         'caserta': [41.0732, 14.324],
         'avellino': [40.9146, 14.792],
-        'benevento': [41.1297, 14.7826]
+        'benevento': [41.1297, 14.7826],
+        // Puglia / zona Casamassima — più dettaglio
+        'adelfia': [41.002, 16.872],
+        'sannicandro di bari': [41.0, 16.797],
+        'valenzano': [41.045, 16.885],
+        'capurso': [41.046, 16.922],
+        'cellamare': [41.018, 16.929],
+        'tricase': [39.931, 18.355],
+        'ostuni': [40.729, 17.576],
+        'fasano': [40.835, 17.36],
+        'martina franca': [40.704, 17.335],
+        'alberobello': [40.784, 17.237],
+        'noci': [40.793, 17.127],
+        'putignano': [40.849, 17.122],
+        'castellana grotte': [40.886, 17.166],
+        'turi': [40.917, 17.02],
+        'sammichele di bari': [40.894, 16.949],
+        'acquaviva delle fonti': [40.897, 16.843],
+        'santeramo in colle': [40.793, 16.755],
+        'gravina in puglia': [40.819, 16.425],
+        'corato': [41.151, 16.411],
+        'ruvo di puglia': [41.114, 16.487],
+        'terlizzi': [41.13, 16.545],
+        'giovinazzo': [41.185, 16.507],
+        'bitritto': [41.044, 16.825],
+        'palo del colle': [41.055, 16.705],
+        'grumo appula': [41.015, 16.708],
+        'toritto': [40.998, 16.68],
+        'cassano delle murge': [40.891, 16.768],
+        'locorotondo': [40.757, 17.327],
+        'cisternino': [40.743, 17.428],
+        'carovigno': [40.708, 17.657],
+        'san vito dei normanni': [40.658, 17.707],
+        'mesagne': [40.559, 17.808],
+        'francavilla fontana': [40.531, 17.586],
+        'oria': [40.499, 17.643],
+        'manduria': [40.402, 17.637],
+        'nardo': [40.179, 18.031],
+        'nardo\'': [40.179, 18.031],
+        'gallipoli': [40.055, 17.992],
+        'otranto': [40.148, 18.486],
+        'maglie': [40.118, 18.298],
+        'casarano': [40.012, 18.161],
+        'galatina': [40.174, 18.169],
+        'copertino': [40.271, 18.051],
+        'san cesario di lecce': [40.303, 18.16],
+        'cavallino': [40.31, 18.202],
+        'squinzano': [40.434, 18.042],
+        'campi salentina': [40.4, 18.022],
+        'trepuzzi': [40.405, 18.076],
+        'surbo': [40.397, 18.134],
+        'novoli': [40.378, 18.058],
+        'leverano': [40.289, 18.0],
+        'veglie': [40.334, 17.967],
+        'porto cesareo': [40.263, 17.898],
+        'ugento': [39.927, 18.162],
+        'presicce': [39.848, 18.264],
+        'specchia': [39.939, 18.297],
+        'santa maria di leuca': [39.801, 18.357],
+        'castellaneta': [40.628, 16.937],
+        'mottola': [40.634, 17.037],
+        'massafra': [40.59, 17.117],
+        'statte': [40.565, 17.2],
+        'grottaglie': [40.537, 17.434],
+        'san giorgio ionico': [40.472, 17.378],
+        'pulsano': [40.382, 17.455],
+        'manduria': [40.402, 17.637],
+        'sava': [40.402, 17.559],
+        'fragagnano': [40.43, 17.475],
+        'lizzano': [40.392, 17.448],
+        'laterza': [40.63, 16.8],
+        'ginosa': [40.577, 16.757],
+        'palagiano': [40.579, 17.039],
+        'palagianello': [40.611, 16.978],
+        'crispiano': [40.607, 17.23],
+        'martina': [40.704, 17.335]
     };
 
     function resolveCoordsLocal(localita, provincia) {
@@ -4806,10 +4881,112 @@
         return { lat: CASAMASSIMA.lat, lng: CASAMASSIMA.lng, approx: true, fallback: true };
     }
 
-    // Sostituisce il geocoding online (spesso bloccato) con risoluzione locale/offline
-    async function geocodeLocalita(localita, provincia, regione) {
-        return resolveCoordsLocal(localita, provincia);
+    function sleepMs(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
+
+    /**
+     * Geocoding preciso via Nominatim (OpenStreetMap), con cache locale.
+     * Rispetta ~1 richiesta/secondo.
+     */
+    async function geocodeLocalita(localita, provincia, regione) {
+        const key = geoKey(localita, provincia);
+        const cache = loadGeoCache();
+        if (cache[key] && cache[key].lat != null && cache[key].lng != null && cache[key].precise) {
+            return {
+                lat: Number(cache[key].lat),
+                lng: Number(cache[key].lng),
+                approx: false,
+                precise: true,
+                label: cache[key].label || ''
+            };
+        }
+
+        const local = resolveCoordsLocal(localita, provincia);
+        const queries = [];
+        const loc = (localita || '').trim();
+        const prov = (provincia || '').trim();
+        const reg = (regione || '').trim();
+        if (loc) {
+            if (prov && reg) queries.push(loc + ', ' + prov + ', ' + reg + ', Italia');
+            if (prov) queries.push(loc + ', ' + prov + ', Italia');
+            if (reg) queries.push(loc + ', ' + reg + ', Italia');
+            queries.push(loc + ', Italia');
+        }
+
+        for (const q of queries) {
+            try {
+                const params = new URLSearchParams({
+                    format: 'json',
+                    limit: '1',
+                    countrycodes: 'it',
+                    addressdetails: '0',
+                    q: q
+                });
+                const res = await fetch('https://nominatim.openstreetmap.org/search?' + params.toString(), {
+                    headers: { 'Accept': 'application/json', 'Accept-Language': 'it' }
+                });
+                if (!res.ok) {
+                    await sleepMs(1100);
+                    continue;
+                }
+                const data = await res.json();
+                if (data && data[0] && data[0].lat && data[0].lon) {
+                    const pt = {
+                        lat: parseFloat(data[0].lat),
+                        lng: parseFloat(data[0].lon),
+                        approx: false,
+                        precise: true,
+                        label: data[0].display_name || loc
+                    };
+                    cache[key] = {
+                        lat: pt.lat,
+                        lng: pt.lng,
+                        approx: false,
+                        precise: true,
+                        label: pt.label
+                    };
+                    saveGeoCache(cache);
+                    await sleepMs(1100);
+                    return pt;
+                }
+            } catch (e) {
+                /* rete/blocco: continua */
+            }
+            await sleepMs(900);
+        }
+
+        // fallback locale (città nota / provincia)
+        if (local) {
+            cache[key] = {
+                lat: local.lat,
+                lng: local.lng,
+                approx: true,
+                precise: false,
+                label: loc
+            };
+            saveGeoCache(cache);
+            return { ...local, precise: false };
+        }
+        return {
+            lat: CASAMASSIMA.lat,
+            lng: CASAMASSIMA.lng,
+            approx: true,
+            precise: false,
+            fallback: true
+        };
+    }
+
+    async function refineGroupCoords(group) {
+        const out = [];
+        for (let i = 0; i < group.clients.length; i++) {
+            const c = group.clients[i];
+            const coords = await geocodeLocalita(c.localita, c.provincia, c.regione);
+            out.push({ client: c, coords });
+        }
+        return out;
+    }
+
 
     function getActiveTappeGroups() {
         // Tutti i clienti attivi con una tappa (anche se hanno anche spedizione)
@@ -5225,10 +5402,14 @@
             });
             const nome = (item.client.nome || '').replace(/</g, '&lt;');
             const loc = (item.client.localita || '').replace(/</g, '&lt;');
-            const approx = item.coords.approx ? '<br><em style="color:#64748b">posizione approssimata</em>' : '';
+            const precise = item.coords.precise ? '<br><span style="color:#15803d;font-size:11px;">✓ posizione precisa (OSM)</span>' :
+                (item.coords.approx ? '<br><em style="color:#b45309;font-size:11px;">posizione approssimata</em>' : '');
+            const label = (item.coords.label || '').replace(/</g, '&lt;');
+            const extra = label ? '<br><span style="font-size:11px;color:#64748b;">' + label + '</span>' : '';
+            const coordsTxt = '<br><span style="font-size:10px;color:#94a3b8;">' + lat.toFixed(5) + ', ' + lng.toFixed(5) + '</span>';
             L.marker([lat, lng], { icon, zIndexOffset: 100 + num })
                 .addTo(map)
-                .bindPopup(`<strong>${num}. ${nome}</strong><br>📍 ${loc}${approx}`);
+                .bindPopup(`<strong>${num}. ${nome}</strong><br>📍 ${loc}${precise}${extra}${coordsTxt}`);
         });
 
         if (allLatLngs.length >= 2) {
@@ -5249,19 +5430,39 @@
         };
         countCtrl.addTo(map);
 
+        // Zoom più dettagliato quando i punti sono vicini
+        let maxZ = 13;
         try {
-            map.fitBounds(allLatLngs, { padding: [40, 40], maxZoom: 11 });
+            const lats = allLatLngs.map(p => p[0]);
+            const lngs = allLatLngs.map(p => p[1]);
+            const dLat = Math.max(...lats) - Math.min(...lats);
+            const dLng = Math.max(...lngs) - Math.min(...lngs);
+            const span = Math.max(dLat, dLng);
+            if (span < 0.08) maxZ = 14;
+            if (span < 0.04) maxZ = 15;
+            if (span < 0.02) maxZ = 16;
+            if (span > 0.5) maxZ = 11;
+            if (span > 1.2) maxZ = 9;
+        } catch (e) {}
+
+        try {
+            map.fitBounds(allLatLngs, { padding: [48, 48], maxZoom: maxZ });
         } catch (e) {
-            map.setView([CASAMASSIMA.lat, CASAMASSIMA.lng], 8);
+            map.setView([CASAMASSIMA.lat, CASAMASSIMA.lng], 10);
         }
 
         setTimeout(() => { try { map.invalidateSize(); } catch (e) {} }, 80);
-        setTimeout(() => { try { map.invalidateSize(); map.fitBounds(allLatLngs, { padding: [40, 40], maxZoom: 11 }); } catch (e) {} }, 350);
+        setTimeout(() => {
+            try {
+                map.invalidateSize();
+                map.fitBounds(allLatLngs, { padding: [48, 48], maxZoom: maxZ });
+            } catch (e) {}
+        }, 350);
         percorsoMaps.push(map);
         return map;
     }
 
-    function renderPercorsoPage() {
+    async function renderPercorsoPage() {
         const container = document.getElementById('percorsoContainer');
         if (!container) return;
         clearPercorsoMaps();
@@ -5273,10 +5474,52 @@
             return;
         }
 
-        const routesData = groups.map((g, gi) => {
-            const route = buildTappaRoute(g);
-            return { group: g, route, mapId: 'percorso-map-' + gi };
-        });
+        // Prima passata rapida (cache/locale), poi affinamento OSM
+        container.insertAdjacentHTML('afterbegin',
+            '<div id="percorsoGeoStatus" style="margin-bottom:12px;padding:10px 14px;border-radius:10px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;font-size:0.88rem;font-weight:600;">🛰️ Calcolo posizioni dettagliate su OpenStreetMap…</div>');
+
+        // Costruisci percorsi con geocoding preciso (Nominatim + cache)
+        const routesData = [];
+        for (let gi = 0; gi < groups.length; gi++) {
+            const g = groups[gi];
+            const status = document.getElementById('percorsoGeoStatus');
+            if (status) {
+                status.textContent = '🛰️ Posizioni dettagliate: tappa «' + g.name + '» (' + (gi + 1) + '/' + groups.length + ')…';
+            }
+            const points = await refineGroupCoords(g);
+            // riusa logica ordine di buildTappaRoute ma con points già pronti
+            const fakeGroup = { name: g.name, clients: points.map(p => p.client) };
+            // applica ordine salvato / nearest neighbor sui points precisi
+            const savedIds = getSavedOrderIds(g.name);
+            let ordered;
+            if (savedIds && savedIds.length) {
+                const byId = {};
+                points.forEach(p => { byId[String(p.client.id)] = p; });
+                ordered = [];
+                savedIds.forEach(id => {
+                    if (byId[id]) { ordered.push(byId[id]); delete byId[id]; }
+                });
+                const remaining = Object.values(byId);
+                if (remaining.length) {
+                    const start = ordered.length ? ordered[ordered.length - 1].coords : CASAMASSIMA;
+                    ordered = ordered.concat(nearestNeighborOrder(start, remaining));
+                }
+                if (ordered.length < points.length) {
+                    const inOrd = new Set(ordered.map(p => String(p.client.id)));
+                    points.forEach(p => { if (!inOrd.has(String(p.client.id))) ordered.push(p); });
+                }
+            } else {
+                ordered = nearestNeighborOrder(CASAMASSIMA, points);
+                if (ordered.length < points.length) {
+                    const inOrd = new Set(ordered.map(p => String(p.client.id)));
+                    points.forEach(p => { if (!inOrd.has(String(p.client.id))) ordered.push(p); });
+                }
+            }
+            routesData.push({ group: g, route: { ordered, without: [] }, mapId: 'percorso-map-' + gi });
+        }
+
+        const statusEl = document.getElementById('percorsoGeoStatus');
+        if (statusEl) statusEl.remove();
 
         container.innerHTML = routesData.map(({ group: g, route, mapId }) => {
             const stops = route.ordered;
