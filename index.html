@@ -18,24 +18,23 @@
     <title>Gestione Note Clienti</title>
     <meta name="note-clienti-build" content="2026-10-06-iphone-app-lock">
     <style>
-        /* APP LOCK: no zoom, no horizontal scroll */
+        /* APP LOCK: no horizontal page scroll; vertical wheel OK */
         html {
             width: 100%;
             overflow-x: hidden;
+            overflow-y: auto;
             overscroll-behavior-x: none;
             -webkit-text-size-adjust: 100%;
             text-size-adjust: 100%;
         }
-        html, body {
+        body {
             width: 100%;
             max-width: 100%;
             overflow-x: hidden;
+            overflow-y: auto;
             overscroll-behavior-x: none;
-            touch-action: pan-y;
-        }
-        body {
-            overscroll-behavior-y: contain;
             min-height: 100dvh;
+            /* touch-action solo su mobile (media query), non qui: blocca rotella su alcuni browser */
         }
 
         :root {
@@ -1231,6 +1230,7 @@
         .main-content {
             flex: 1;
             min-width: 0;
+            overflow: visible;
             padding: 20px 24px;
         }
         .view-panel { display: none; }
@@ -1493,6 +1493,7 @@
                 text-size-adjust: 100%;
                 background: #f1f5f9;
                 overflow-x: hidden !important;
+                overflow-y: auto !important;
                 width: 100% !important;
                 max-width: 100vw !important;
                 touch-action: pan-y;
@@ -1500,6 +1501,7 @@
             }
             html {
                 overflow-x: hidden !important;
+                overflow-y: auto !important;
                 touch-action: pan-y;
             }
             .app-layout {
@@ -2588,6 +2590,131 @@
             .dist-calc-result .dist-time { font-size: 1.2rem; }
         }
 
+    
+        .prep-form-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+        .prep-ai-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+        .prep-ai-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        .prep-ai-count {
+            background: #0f172a;
+            color: #fff;
+            font-size: 0.75rem;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 999px;
+            white-space: nowrap;
+        }
+        .prep-ai-urgency {
+            font-size: 0.82rem;
+            margin-top: 4px;
+            font-weight: 600;
+        }
+        .prep-ai-names {
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 4px;
+        }
+        .prep-ai-scad {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+        .prep-ai-route {
+            background: #fff;
+            border: 1px solid #dbeafe;
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 10px;
+        }
+        .prep-ai-route-title {
+            font-weight: 800;
+            font-size: 0.82rem;
+            color: #1d4ed8;
+            margin-bottom: 6px;
+        }
+        .prep-ai-leg {
+            font-size: 0.8rem;
+            color: #334155;
+            padding: 3px 0;
+            border-bottom: 1px dashed #e2e8f0;
+        }
+        .prep-ai-leg:last-of-type { border-bottom: none; }
+        .prep-ai-total {
+            margin-top: 8px;
+            font-size: 0.88rem;
+            color: #0f172a;
+        }
+        .prep-ai-actions .btn {
+            width: 100%;
+            justify-content: center;
+            min-height: 42px;
+        }
+        .prep-urgency-pill {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: #f1f5f9;
+            font-size: 0.72rem;
+        }
+        @media (max-width: 600px) {
+            .prep-form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+    
+        .prep-mini-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .prep-mini-row:last-child { border-bottom: none; }
+        .prep-mini-name {
+            font-weight: 800;
+            color: #0f172a;
+            font-size: 0.95rem;
+        }
+        .prep-mini-meta {
+            font-size: 0.78rem;
+            color: #64748b;
+            margin-top: 2px;
+            line-height: 1.35;
+        }
+        .prep-mini-btn {
+            flex-shrink: 0;
+            min-height: 40px;
+            padding: 8px 12px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+        @media (max-width: 600px) {
+            .prep-mini-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .prep-mini-btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
     </style>
 </head>
 <body class="locked">
@@ -2779,58 +2906,37 @@
     </div>
 
     <div class="card" style="margin-bottom:16px;">
-        <div class="card-title">➕ Aggiungi cliente in Pre-pianificazione</div>
+        <div class="card-title">➕ Nuovo cliente in Pre-pianificazione</div>
         <form id="prepClientForm">
-            <div class="form-grid">
+            <div class="form-grid prep-form-grid">
                 <div class="form-group">
-                    <label for="prepNome">Nome Cliente</label>
-                    <input type="text" id="prepNome" class="input-control" required placeholder="Es. Mario Rossi">
+                    <label for="prepNome">Nome</label>
+                    <input type="text" id="prepNome" class="input-control" required placeholder="Es. Mario Rossi" autocomplete="name">
                 </div>
                 <div class="form-group">
                     <label for="prepModello">Modello</label>
-                    <input type="text" id="prepModello" class="input-control" list="modelliDatalist" placeholder="Digita modello..." autocomplete="off">
+                    <input type="text" id="prepModello" class="input-control" list="modelliDatalist" placeholder="Es. Modello X" autocomplete="off">
                 </div>
                 <div class="form-group">
-                    <label for="prepQta">Quantità</label>
-                    <select id="prepQta" class="select-control">
-                        <option value="1">1 pz</option>
-                        <option value="2">2 pz</option>
-                        <option value="3">3 pz</option>
-                        <option value="4">4 pz</option>
-                        <option value="5">5 pz</option>
-                        <option value="6">6 pz</option>
-                        <option value="7">7 pz</option>
-                        <option value="8">8 pz</option>
-                        <option value="9">9 pz</option>
-                        <option value="10">10 pz</option>
+                    <label for="prepLocalita">Paese</label>
+                    <input type="text" id="prepLocalita" class="input-control" required placeholder="Es. Monopoli" oninput="onPrepLocalitaInput(this.value)" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label for="prepRegione">Regione <span style="font-weight:500;color:var(--text-muted);">(automatica)</span></label>
+                    <input type="text" id="prepRegioneDisplay" class="input-control" readonly placeholder="Si compila dal paese" tabindex="-1" style="background:#f1f5f9;cursor:default;">
+                    <select id="prepRegione" class="select-control" required hidden>
+                        <option value="">Seleziona regione...</option>
                     </select>
-                </div>
-                <div class="form-group">
-                    <label for="prepNota">Nota</label>
-                    <input type="text" id="prepNota" class="input-control" placeholder="Es. richiamare a settembre...">
-                </div>
-                <div class="form-group">
-                    <label for="prepScadenza">Scadenza</label>
-                    <input type="date" id="prepScadenza" class="input-control">
-                </div>
-                <div class="form-group">
-                    <label for="prepLocalita">Località / Paese</label>
-                    <input type="text" id="prepLocalita" class="input-control" required placeholder="Es. Casamassima" oninput="onPrepLocalitaInput(this.value)">
-                </div>
-                <div class="form-group">
-                    <label for="prepProvincia">Provincia</label>
-                    <select id="prepProvincia" class="select-control" required>
+                    <select id="prepProvincia" class="select-control" hidden>
                         <option value="">Seleziona provincia...</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="prepRegione">Regione</label>
-                    <select id="prepRegione" class="select-control" required>
-                        <option value="">Seleziona regione...</option>
-                    </select>
+                    <label for="prepScadenza">Scadenza</label>
+                    <input type="date" id="prepScadenza" class="input-control" required>
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:12px; margin-top:8px;">+ Aggiungi in Pre-pianificazione</button>
+            <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:12px; margin-top:8px;">+ Aggiungi</button>
         </form>
     </div>
 
@@ -2842,19 +2948,22 @@
     <!-- Consigli abbinamento intelligenti -->
     <div id="prepSuggestionsCard" class="card prep-suggestions-card" style="display:none; margin-bottom:16px;">
         <div class="card-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-            <span>💡 Consigli abbinamento</span>
+            <span>🤖 Consulente tappe IA</span>
             <span id="prepUrgencyStats" style="display:flex; gap:8px; flex-wrap:wrap; font-size:0.78rem; font-weight:600;"></span>
         </div>
-        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:14px; line-height:1.45;">
-            Suggerimenti automatici in base a <strong>scadenza</strong>, <strong>regione</strong> e <strong>località</strong>.
-            Puoi creare una tappa comune con un click.
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:12px; line-height:1.45;">
+            Analizza <strong>scadenze</strong> e <strong>distanze in auto</strong> tra i paesi per proporti le tappe migliori, con km e tempi di percorrenza.
         </p>
+        <div style="margin-bottom:12px;">
+            <button type="button" class="btn btn-primary" id="prepAiRefreshBtn" onclick="refreshPrepAiAdvice()">🔄 Aggiorna consigli IA</button>
+        </div>
         <div id="prepSuggestionsList" class="prep-suggestions-list"></div>
     </div>
 
-    <div class="installati-table-wrap">
-        <div class="installati-header">Clienti in pre-pianificazione</div>
-        <div id="prepTableContainer"></div>
+    <div class="card prep-mini-list-card" id="prepMiniListCard" style="margin-bottom:16px; display:none;">
+        <div class="card-title" style="margin-bottom:8px;">Clienti in coda</div>
+        <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:10px;">Solo spostamento in Note clienti (assegna una tappa).</p>
+        <div id="prepMiniList"></div>
     </div>
 </div><!-- /#viewPrep -->
 
@@ -3055,19 +3164,22 @@
 </div>
 
 <script>
-    // Blocca pinch-zoom e gesture iOS (app-like)
-    document.addEventListener('gesturestart', function(e) { e.preventDefault(); }, { passive: false });
-    document.addEventListener('gesturechange', function(e) { e.preventDefault(); }, { passive: false });
-    document.addEventListener('gestureend', function(e) { e.preventDefault(); }, { passive: false });
-    // Blocca double-tap zoom
-    let _lastTouchEnd = 0;
-    document.addEventListener('touchend', function(e) {
-        const now = Date.now();
-        if (now - _lastTouchEnd <= 300) {
-            e.preventDefault();
-        }
-        _lastTouchEnd = now;
-    }, { passive: false });
+    // Blocca pinch-zoom solo su dispositivi touch (non interferisce con rotella mouse)
+    (function() {
+        const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        if (!isTouch) return;
+        document.addEventListener('gesturestart', function(e) { e.preventDefault(); }, { passive: false });
+        document.addEventListener('gesturechange', function(e) { e.preventDefault(); }, { passive: false });
+        document.addEventListener('gestureend', function(e) { e.preventDefault(); }, { passive: false });
+        let _lastTouchEnd = 0;
+        document.addEventListener('touchend', function(e) {
+            const now = Date.now();
+            if (now - _lastTouchEnd <= 300) {
+                e.preventDefault();
+            }
+            _lastTouchEnd = now;
+        }, { passive: false });
+    })();
 
     const ITALIAN_REGIONS = [
         "Abruzzo", "Basilicata", "Calabria", "Campania", "Emilia-Romagna", 
@@ -5348,8 +5460,10 @@
         const res = resolveLocationData(val);
         const prepProv = document.getElementById('prepProvincia');
         const prepReg = document.getElementById('prepRegione');
+        const prepRegDisp = document.getElementById('prepRegioneDisplay');
         if (res.prov && prepProv) prepProv.value = res.prov;
         if (res.reg && prepReg) prepReg.value = res.reg;
+        if (prepRegDisp) prepRegDisp.value = res.reg || '';
     };
 
     (function setupPrepForm() {
@@ -5359,15 +5473,25 @@
         prepForm.addEventListener('submit', function(e) {
             e.preventDefault();
             const nomeVal = document.getElementById('prepNome').value.trim();
-            const notaVal = (document.getElementById('prepNota')?.value || '').trim();
             const scadenzaVal = document.getElementById('prepScadenza')?.value || '';
             const localitaVal = document.getElementById('prepLocalita').value.trim();
-            const provinciaVal = document.getElementById('prepProvincia').value;
-            const regioneVal = document.getElementById('prepRegione').value;
+            // ricalcola regione/provincia dal paese
+            const res = resolveLocationData(localitaVal);
+            let provinciaVal = document.getElementById('prepProvincia')?.value || res.prov || '';
+            let regioneVal = document.getElementById('prepRegione')?.value || res.reg || '';
+            if (res.prov) provinciaVal = res.prov;
+            if (res.reg) regioneVal = res.reg;
             const modelloVal = document.getElementById('prepModello').value.trim();
-            const qtaVal = parseInt(document.getElementById('prepQta').value, 10) || 1;
-            if (!nomeVal || !localitaVal || !provinciaVal || !regioneVal) {
-                alert('Compila nome, località, provincia e regione.');
+            if (!nomeVal || !localitaVal) {
+                alert('Compila almeno Nome e Paese.');
+                return;
+            }
+            if (!scadenzaVal) {
+                alert('Inserisci la scadenza.');
+                return;
+            }
+            if (!regioneVal) {
+                alert('Regione non riconosciuta dal paese. Controlla il nome del paese (es. «Bari», «Monopoli»).');
                 return;
             }
             if (findClientByName(nomeVal)) {
@@ -5376,32 +5500,189 @@
             }
             const modelli = [];
             if (modelloVal) {
-                modelli.push({ nome: modelloVal, qta: qtaVal });
+                modelli.push({ nome: modelloVal, qta: 1 });
                 if (typeof window.autoSaveNewTypedModel === 'function') window.autoSaveNewTypedModel(modelloVal);
             }
             clients.push({
                 id: 'id_' + Date.now() + Math.random().toString(36).substring(2, 7),
                 nome: nomeVal, modelli, localita: localitaVal, provincia: provinciaVal, regione: regioneVal,
                 tappa: '', spedizione: '', data: '', calendarizzato: false, preavviso: false, disponibilita: false,
-                spedito: false, consegnato: false, notaDisponibilita: '', notaPrep: notaVal, scadenza: scadenzaVal,
+                spedito: false, consegnato: false, notaDisponibilita: '', notaPrep: '', scadenza: scadenzaVal,
                 inLavorazione: false, installato: false, standby: false, inPrep: true
             });
             saveToLocalStorage();
             prepForm.reset();
+            const disp = document.getElementById('prepRegioneDisplay');
+            if (disp) disp.value = '';
             render();
             renderPrepPage();
         });
     })();
 
-    function renderPrepSuggestions(allPrep) {
+
+
+    function haversineKm(a, b) {
+        if (!a || !b || a.lat == null || b.lat == null || isNaN(a.lat) || isNaN(b.lat)) return 9999;
+        const R = 6371;
+        const toRad = function(x) { return x * Math.PI / 180; };
+        const dLat = toRad(Number(b.lat) - Number(a.lat));
+        const dLng = toRad(Number(b.lng) - Number(a.lng));
+        const la1 = toRad(Number(a.lat)), la2 = toRad(Number(b.lat));
+        const h = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(la1) * Math.cos(la2) * Math.sin(dLng/2) * Math.sin(dLng/2);
+        return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+    }
+
+    function prepClientPoint(c) {
+        let coords = null;
+        try {
+            coords = resolveCoordsLocal(c.localita, c.provincia);
+        } catch (e) {}
+        if (!coords || coords.lat == null || coords.lng == null) {
+            coords = { lat: 40.9569, lng: 16.9186, approx: true, fallback: true };
+        }
+        return {
+            client: c,
+            coords: { lat: Number(coords.lat), lng: Number(coords.lng), approx: !!coords.approx },
+            days: daysUntilDate(c.scadenza),
+            reg: (c.regione || '').trim() || 'Senza regione'
+        };
+    }
+
+    function clusterPrepClients(allPrep) {
+        const items = (allPrep || []).map(prepClientPoint);
+        const used = new Set();
+        const clusters = [];
+        const MAX_DIST = 55;
+        const order = items.slice().sort(function(a, b) {
+            if (a.days === null && b.days === null) return 0;
+            if (a.days === null) return 1;
+            if (b.days === null) return -1;
+            return a.days - b.days;
+        });
+        order.forEach(function(seed) {
+            const id = String(seed.client.id);
+            if (used.has(id)) return;
+            const cluster = [seed];
+            used.add(id);
+            order.forEach(function(other) {
+                const oid = String(other.client.id);
+                if (used.has(oid)) return;
+                // stessa regione preferita, ma se distano poco unisci comunque
+                const sameReg = seed.reg === other.reg;
+                const avgLat = cluster.reduce(function(s, x) { return s + x.coords.lat; }, 0) / cluster.length;
+                const avgLng = cluster.reduce(function(s, x) { return s + x.coords.lng; }, 0) / cluster.length;
+                const d = haversineKm({ lat: avgLat, lng: avgLng }, other.coords);
+                if ((sameReg && d <= MAX_DIST) || d <= 25) {
+                    cluster.push(other);
+                    used.add(oid);
+                }
+            });
+            const urgent = cluster.filter(function(x) { return x.days !== null && x.days <= 14; }).length;
+            const medium = cluster.filter(function(x) { return x.days !== null && x.days <= 30; }).length;
+            const score = urgent * 10 + medium * 3 + cluster.length * 2;
+            clusters.push({ items: cluster, reg: seed.reg, score: score, urgent: urgent, medium: medium });
+        });
+        clusters.sort(function(a, b) { return b.score - a.score; });
+        return clusters;
+    }
+
+    function estimateLegRoad(from, to) {
+        const straight = haversineKm(from, to);
+        const roadKm = straight * 1.35;
+        const hours = roadKm / 55;
+        return { km: roadKm * 1000, time: hours * 3600, approx: true };
+    }
+
+    async function buildRouteLegsForCluster(clusterItems) {
+        const start = (typeof CASAMASSIMA !== 'undefined' && CASAMASSIMA)
+            ? CASAMASSIMA
+            : { lat: 40.9569, lng: 16.9186, label: 'Casamassima' };
+
+        const points = (clusterItems || []).map(function(x) {
+            const coords = (x.coords && x.coords.lat != null)
+                ? x.coords
+                : prepClientPoint(x.client).coords;
+            return { client: x.client, coords: coords };
+        });
+        if (!points.length) return { ordered: [], legs: [], totalM: 0, totalS: 0 };
+
+        // nearest neighbor manuale (non dipende da altre funzioni)
+        const remaining = points.slice();
+        const ordered = [];
+        let current = { lat: start.lat, lng: start.lng };
+        while (remaining.length) {
+            let bestI = 0, bestD = Infinity;
+            for (let i = 0; i < remaining.length; i++) {
+                const d = haversineKm(current, remaining[i].coords);
+                if (d < bestD) { bestD = d; bestI = i; }
+            }
+            const next = remaining.splice(bestI, 1)[0];
+            ordered.push(next);
+            current = next.coords;
+        }
+
+        const legs = [];
+        let totalM = 0, totalS = 0;
+        let prev = { lat: start.lat, lng: start.lng, label: 'Casamassima' };
+
+        for (let i = 0; i < ordered.length; i++) {
+            const cur = ordered[i];
+            const toLabel = (cur.client.localita || cur.client.nome || 'Fermata').trim();
+            let leg = { from: prev.label, to: toLabel, km: 0, time: 0, approx: true };
+            let ok = false;
+            try {
+                if (typeof routeDrivingOSRM === 'function') {
+                    const r = await Promise.race([
+                        routeDrivingOSRM(
+                            { lat: Number(prev.lat), lng: Number(prev.lng) },
+                            { lat: Number(cur.coords.lat), lng: Number(cur.coords.lng) }
+                        ),
+                        new Promise(function(_, rej) { setTimeout(function() { rej(new Error('timeout')); }, 4000); })
+                    ]);
+                    if (r && r.distance != null) {
+                        leg.km = r.distance;
+                        leg.time = r.duration;
+                        leg.approx = false;
+                        ok = true;
+                    }
+                }
+            } catch (e) {}
+            if (!ok) {
+                const est = estimateLegRoad(prev, cur.coords);
+                leg.km = est.km;
+                leg.time = est.time;
+                leg.approx = true;
+            }
+            totalM += leg.km;
+            totalS += leg.time;
+            legs.push(leg);
+            prev = { lat: Number(cur.coords.lat), lng: Number(cur.coords.lng), label: toLabel };
+        }
+        return { ordered: ordered, legs: legs, totalM: totalM, totalS: totalS };
+    }
+
+    let _prepAiToken = 0;
+
+    window.refreshPrepAiAdvice = function() {
+        const allPrep = clients.filter(function(c) { return isInPrep(c); });
+        renderPrepSuggestions(allPrep, true);
+    };
+
+    async function renderPrepSuggestions(allPrep, forceRoute) {
         const card = document.getElementById('prepSuggestionsCard');
         const listEl = document.getElementById('prepSuggestionsList');
         const statsEl = document.getElementById('prepUrgencyStats');
         if (!card || !listEl) return;
-        if (!allPrep || allPrep.length === 0) { card.style.display = 'none'; return; }
+
+        if (!allPrep || allPrep.length === 0) {
+            card.style.display = 'none';
+            listEl.innerHTML = '';
+            return;
+        }
         card.style.display = 'block';
+
         let nUrgent = 0, nMedium = 0, nOk = 0, nNone = 0;
-        allPrep.forEach(c => {
+        allPrep.forEach(function(c) {
             const d = daysUntilDate(c.scadenza);
             if (d === null) nNone++;
             else if (d <= 14) nUrgent++;
@@ -5409,157 +5690,208 @@
             else nOk++;
         });
         if (statsEl) {
-            statsEl.innerHTML = `
-                <span class="prep-urgency-pill u-urgent">🔴 ${nUrgent} urgenti</span>
-                <span class="prep-urgency-pill u-medium">🟠 ${nMedium} ≤30gg</span>
-                <span class="prep-urgency-pill u-ok">🟢 ${nOk} ok</span>
-                <span class="prep-urgency-pill u-none">⚪ ${nNone} senza scad.</span>`;
+            statsEl.innerHTML =
+                '<span class="prep-urgency-pill u-urgent">🔴 ' + nUrgent + ' urgenti</span>' +
+                '<span class="prep-urgency-pill u-medium">🟠 ' + nMedium + ' ≤30gg</span>' +
+                '<span class="prep-urgency-pill u-ok">🟢 ' + nOk + ' ok</span>' +
+                '<span class="prep-urgency-pill u-none">⚪ ' + nNone + ' senza scad.</span>';
         }
-        listEl.innerHTML = `<div class="prep-sug-empty">Suggerimenti basati su regione e scadenze. Usa le card sotto per assegnare tappe.</div>`;
+
+        const myToken = ++_prepAiToken;
+        listEl.innerHTML = '<div class="prep-sug-empty">🤖 Analisi scadenze e percorsi in corso…</div>';
+
+        try {
+            const clusters = clusterPrepClients(allPrep).slice(0, 8);
+            if (myToken !== _prepAiToken) return;
+            if (!clusters.length) {
+                listEl.innerHTML = '<div class="prep-sug-empty">Nessun consiglio. Aggiungi clienti con paese e scadenza.</div>';
+                return;
+            }
+
+            // Prima mostra le proposte in modo sincron (stima km), poi affina
+            const blocks = [];
+            for (let ci = 0; ci < clusters.length; ci++) {
+                if (myToken !== _prepAiToken) return;
+                const cl = clusters[ci];
+                const names = cl.items.map(function(x) { return x.client.nome || ''; }).join(', ');
+                const ids = cl.items.map(function(x) { return String(x.client.id); });
+                const scadInfo = cl.items.map(function(x) {
+                    const d = x.days;
+                    if (d === null) return (x.client.nome || '') + ' (no scad.)';
+                    if (d < 0) return (x.client.nome || '') + ' (scaduta)';
+                    if (d === 0) return (x.client.nome || '') + ' (oggi)';
+                    return (x.client.nome || '') + ' (tra ' + d + ' gg)';
+                }).join(' · ');
+
+                let route;
+                try {
+                    route = await buildRouteLegsForCluster(cl.items);
+                } catch (e) {
+                    route = { legs: [], totalM: 0, totalS: 0 };
+                }
+                if (myToken !== _prepAiToken) return;
+
+                let routeHtml = '';
+                if (route.legs && route.legs.length) {
+                    const legsTxt = route.legs.map(function(leg, i) {
+                        const km = (typeof formatDistanceKm === 'function')
+                            ? formatDistanceKm(leg.km)
+                            : (Math.round((leg.km || 0) / 1000) + ' km');
+                        const tm = (typeof formatDriveDuration === 'function')
+                            ? formatDriveDuration(leg.time)
+                            : '';
+                        return '<div class="prep-ai-leg">' + (i === 0 ? 'S' : String(i)) + '→' + (i + 1) + ': <strong>' +
+                            String(leg.from || '').replace(/</g, '&lt;') + '</strong> → <strong>' +
+                            String(leg.to || '').replace(/</g, '&lt;') + '</strong> · 🚗 ' + km + ' · ⏱ ' + tm +
+                            (leg.approx ? ' <em>(stima)</em>' : '') + '</div>';
+                    }).join('');
+                    const totKm = (typeof formatDistanceKm === 'function') ? formatDistanceKm(route.totalM) : '';
+                    const totT = (typeof formatDriveDuration === 'function') ? formatDriveDuration(route.totalS) : '';
+                    routeHtml =
+                        '<div class="prep-ai-route">' +
+                        '<div class="prep-ai-route-title">Percorso consigliato da Casamassima</div>' +
+                        legsTxt +
+                        '<div class="prep-ai-total">Totale tappa: <strong>' + totKm + '</strong> · <strong>' + totT + '</strong></div>' +
+                        '</div>';
+                } else {
+                    routeHtml = '<div class="prep-ai-route"><em>Percorso non calcolabile per questa proposta.</em></div>';
+                }
+
+                const tappaName = 'Tappa ' + cl.reg + (cl.urgent ? ' urgente' : '');
+                const urgencyLabel = cl.urgent ? '🔴 Priorità alta (scadenze vicine)' :
+                    (cl.medium ? '🟠 Da pianificare entro 30 giorni' : '🟢 Finestra comoda');
+
+                blocks.push(
+                    '<article class="prep-ai-card">' +
+                    '<div class="prep-ai-head">' +
+                    '<div><strong>💡 Proposta ' + (ci + 1) + '</strong> · ' + String(cl.reg).replace(/</g, '&lt;') +
+                    '<div class="prep-ai-urgency">' + urgencyLabel + '</div></div>' +
+                    '<span class="prep-ai-count">' + cl.items.length + ' client' + (cl.items.length === 1 ? 'e' : 'i') + '</span>' +
+                    '</div>' +
+                    '<div class="prep-ai-names">' + names.replace(/</g, '&lt;') + '</div>' +
+                    '<div class="prep-ai-scad">' + scadInfo.replace(/</g, '&lt;') + '</div>' +
+                    routeHtml +
+                    '<div class="prep-ai-actions">' +
+                    '<button type="button" class="btn btn-primary prep-ai-apply" data-ids="' + ids.join(',') + '" data-tappa="' +
+                    String(tappaName).replace(/"/g, '&quot;').replace(/</g, '&lt;') +
+                    '">🚩 Crea tappa da questa proposta</button>' +
+                    '</div></article>'
+                );
+
+                // Aggiorna progressivamente l'UI
+                if (myToken === _prepAiToken) {
+                    listEl.innerHTML = blocks.join('') +
+                        (ci < clusters.length - 1 ? '<div class="prep-sug-empty">Calcolo proposta ' + (ci + 2) + '…</div>' : '');
+                }
+            }
+
+            if (myToken !== _prepAiToken) return;
+            listEl.innerHTML = blocks.join('') || '<div class="prep-sug-empty">Nessuna proposta generata.</div>';
+            listEl.querySelectorAll('.prep-ai-apply').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    const ids = (btn.getAttribute('data-ids') || '').split(',').filter(Boolean);
+                    const tappa = btn.getAttribute('data-tappa') || 'Tappa';
+                    if (typeof applyPrepSuggestedTappa === 'function') applyPrepSuggestedTappa(ids, tappa);
+                });
+            });
+        } catch (err) {
+            console.error('Prep AI error', err);
+            if (myToken === _prepAiToken) {
+                listEl.innerHTML = '<div class="prep-sug-empty">Errore consulente: ' +
+                    String((err && err.message) || err).replace(/</g, '&lt;') +
+                    '<br><button type="button" class="btn" onclick="refreshPrepAiAdvice()">Riprova</button></div>';
+            }
+        }
     }
 
-    function renderPrepPage() {
-        populatePrepDropdowns();
-        const box = document.getElementById('prepTableContainer');
-        const countEl = document.getElementById('navPrepCount');
-        const allPrep = clients.filter(c => isInPrep(c));
-        if (countEl) countEl.textContent = allPrep.length;
-        renderPrepSuggestions(allPrep);
-        if (!box) return;
+    window.applyPrepSuggestedTappa = function(ids, tappaName) {
+        let name = tappaName || ('Tappa ' + new Date().toLocaleDateString('it-IT'));
+        const custom = prompt('Nome tappa da assegnare:', name);
+        if (custom === null) return;
+        name = (custom || name).trim();
+        if (!name) return;
+        const idSet = new Set((ids || []).map(String));
+        clients.forEach(c => {
+            if (!idSet.has(String(c.id))) return;
+            c.tappa = name;
+            c.spedizione = '';
+            c.inPrep = false;
+        });
+        saveToLocalStorage();
+        render();
+        renderPrepPage();
+        alert('Tappa «' + name + '» creata con ' + idSet.size + ' clienti. Li trovi in Note clienti / Percorso.');
+    };
+
+
+
+    window.movePrepClientToNote = function(id) {
+        const client = clients.find(c => String(c.id) === String(id));
+        if (!client) return;
+        const suggested = (client.localita || client.nome || 'Tappa').trim();
+        const name = prompt('Nome tappa per portare il cliente in Note clienti:', suggested);
+        if (name === null) return;
+        const tappa = (name || suggested).trim();
+        if (!tappa) return;
+        client.tappa = tappa;
+        client.spedizione = '';
+        client.inPrep = false;
+        saveToLocalStorage();
+        render();
+        renderPrepPage();
+    };
+
+    function renderPrepMiniList(allPrep) {
+        const card = document.getElementById('prepMiniListCard');
+        const box = document.getElementById('prepMiniList');
+        if (!card || !box) return;
 
         const searchTerm = (document.getElementById('prepSearchInput')?.value || '').toLowerCase().trim();
         const list = searchTerm ? allPrep.filter(c => {
             const matchModels = (c.modelli || []).some(m => (m.nome || '').toLowerCase().includes(searchTerm));
             return (c.nome || '').toLowerCase().includes(searchTerm) || matchModels ||
                 (c.localita || '').toLowerCase().includes(searchTerm) ||
-                (c.provincia || '').toLowerCase().includes(searchTerm) ||
                 (c.regione || '').toLowerCase().includes(searchTerm) ||
-                (c.tappa || '').toLowerCase().includes(searchTerm) ||
-                (c.notaPrep || '').toLowerCase().includes(searchTerm);
+                (c.scadenza || '').includes(searchTerm);
         }) : allPrep;
 
-        if (allPrep.length === 0) {
-            box.innerHTML = '<p style="text-align:center; color: var(--text-muted); padding: 40px;">Nessun cliente in pre-pianificazione.</p>';
+        if (!list.length) {
+            card.style.display = 'none';
+            box.innerHTML = '';
             return;
         }
-        if (list.length === 0) {
-            box.innerHTML = '<p style="text-align:center; color: var(--text-muted); padding: 40px;">Nessun risultato per la ricerca.</p>';
-            return;
-        }
-
-        const byRegion = {};
-        list.forEach(c => {
-            const reg = (c.regione || '').trim() || 'Senza regione';
-            if (!byRegion[reg]) byRegion[reg] = [];
-            byRegion[reg].push(c);
-        });
-        const regions = Object.keys(byRegion).sort((a, b) => {
-            if (a === 'Senza regione') return 1;
-            if (b === 'Senza regione') return -1;
-            return a.localeCompare(b, 'it');
-        });
-
-        let pillsHtml = '<div id="prepRegionsNavBar" class="stages-nav-bar prep-regions-nav">';
-        regions.forEach(reg => {
-            const safeId = 'prep-reg-' + reg.replace(/[^a-zA-Z0-9-_]/g, '_');
-            pillsHtml += `<button type="button" class="stage-pill stage-pill-prep" onclick="scrollToPrepRegion('${safeId}')"><span class="pill-ico">🏛️</span><span class="pill-name">${reg}</span><span class="pill-count">${byRegion[reg].length}</span></button>`;
-        });
-        pillsHtml += '</div>';
-
-        let html = pillsHtml;
-        regions.forEach(reg => {
-            const group = byRegion[reg];
-            group.sort((a, b) => {
-                const da = a.scadenza || '', db = b.scadenza || '';
-                if (!da && !db) return (a.nome || '').localeCompare(b.nome || '', 'it');
-                if (!da) return 1;
-                if (!db) return -1;
-                return da.localeCompare(db);
-            });
-            const safeId = 'prep-reg-' + reg.replace(/[^a-zA-Z0-9-_]/g, '_');
-            html += `<section id="${safeId}" class="info-section info-section-prep" style="scroll-margin-top: 70px;">
-                <header class="info-section-head info-section-head-prep">
-                    <div class="info-section-head-left">
-                        <span class="info-section-ico">🏛️</span>
-                        <h2 class="info-section-title">${reg}</h2>
-                    </div>
-                    <span class="info-section-count">${group.length}</span>
-                </header>
-                <div class="cards-list">`;
-            group.forEach(client => {
-                const modelsText = (client.modelli || []).map(m => `<span class="model-badge">${m.nome}${m.qta ? ' <span class="model-qta-badge">' + m.qta + ' pz</span>' : ''}</span>`).join('') || '<span class="muted-dash">Nessun modello</span>';
-                const nota = (client.notaPrep || '').trim();
-                const inLav = client.inLavorazione === true;
-                const tappaHtml = (client.tappa || '').trim()
-                    ? `<span class="model-badge badge-tappa" ondblclick="editTappaPrep('${client.id}')">🚩 ${(client.tappa || '').replace(/</g, '&lt;')}</span>`
-                    : `<span class="prep-empty-tap" ondblclick="editTappaPrep('${client.id}')">🚩 + tappa</span>`;
-                const spedHtml = (client.spedizione || '').trim()
-                    ? `<span class="model-badge badge-sped">📦 ${(client.spedizione || '').replace(/</g, '&lt;')}</span>` : '';
-                html += `
-                    <article class="info-card info-card-prep ${inLav ? 'is-lavorazione' : ''}">
-                        <div class="info-card-head">
-                            <h3 class="info-card-name">${client.nome}</h3>
-                            <label class="in-lav-toggle ${inLav ? 'on' : ''}">
-                                <span class="status-cell ${inLav ? 'active' : ''}" onclick="toggleInLavorazione('${client.id}')" style="width:auto;"><div class="checkbox-x">${inLav ? '✓' : ''}</div></span>
-                                In lavorazione
-                            </label>
-                        </div>
-                        <div class="info-card-tags">${tappaHtml}${spedHtml}</div>
-                        <div class="info-card-models">${modelsText}</div>
-                        <div class="info-card-grid info-card-grid-prep">
-                            <div class="info-item info-item-wide"><span class="info-label">Scadenza</span><span class="info-value">${formatScadenzaBadge(client.scadenza, client.id)}</span></div>
-                            <div class="info-item"><span class="info-label">Località</span><span class="info-value">📍 ${client.localita || '—'}</span></div>
-                            <div class="info-item"><span class="info-label">Provincia</span><span class="info-value">${client.provincia || '—'}</span></div>
-                            <div class="info-item info-item-wide"><span class="info-label">Nota</span><span class="info-value">${nota ? `<span class="prep-nota-badge" ondblclick="editNotaPrep('${client.id}')">📝 ${nota.replace(/</g, '&lt;')}</span>` : `<span class="prep-empty-tap" ondblclick="editNotaPrep('${client.id}')">— aggiungi nota</span>`}</span></div>
-                        </div>
-                        <div class="info-card-assign">
-                            <div class="assign-field">
-                                <label>🚩 Assegna tappa</label>
-                                <input type="text" class="edit-input" value="${(client.tappa || '').replace(/"/g, '&quot;')}" placeholder="Nome tappa..." list="tappeDatalist" autocomplete="off" onchange="updateStageInPrep('${client.id}', this.value)">
-                            </div>
-                            <div class="assign-field">
-                                <label>📦 Assegna spedizione</label>
-                                <input type="text" class="edit-input" value="" placeholder="Nome spedizione..." list="spedizioniDatalist" autocomplete="off" onchange="updateSpedizione('${client.id}', this.value)">
-                            </div>
-                        </div>
-                        <div class="info-card-actions">
-                            <button type="button" class="btn btn-to-note" onclick="moveToNote('${client.id}')">📝 Note clienti</button>
-                            <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')">🗑️</button>
-                        </div>
-                    </article>`;
-            });
-            html += `</div></section>`;
-        });
-        box.innerHTML = html;
+        card.style.display = 'block';
+        box.innerHTML = list.map(c => {
+            const d = daysUntilDate(c.scadenza);
+            let scad = '—';
+            if (d !== null) {
+                if (d < 0) scad = 'scaduta';
+                else if (d === 0) scad = 'oggi';
+                else scad = 'tra ' + d + ' gg';
+            }
+            const models = (c.modelli || []).map(m => m.nome).filter(Boolean).join(', ');
+            return '<div class="prep-mini-row">' +
+                '<div class="prep-mini-info">' +
+                '<div class="prep-mini-name">' + String(c.nome || '').replace(/</g, '&lt;') + '</div>' +
+                '<div class="prep-mini-meta">📍 ' + String(c.localita || '—').replace(/</g, '&lt;') +
+                (c.regione ? ' · ' + String(c.regione).replace(/</g, '&lt;') : '') +
+                (models ? ' · ' + models.replace(/</g, '&lt;') : '') +
+                ' · 📅 ' + scad + '</div>' +
+                '</div>' +
+                '<button type="button" class="btn btn-primary prep-mini-btn" onclick="movePrepClientToNote(\'' + c.id + '\')">→ Note clienti</button>' +
+                '</div>';
+        }).join('');
     }
 
+    function renderPrepPage() {
+        populatePrepDropdowns();
+        const countEl = document.getElementById('navPrepCount');
+        const allPrep = clients.filter(c => isInPrep(c));
+        if (countEl) countEl.textContent = allPrep.length;
+        renderPrepSuggestions(allPrep);
+        renderPrepMiniList(allPrep);
+    }
 
-        const CASAMASSIMA = { lat: 40.9569, lng: 16.9186, label: 'Casamassima (BA)', query: 'Casamassima, Bari, Italy' };
-
-    // Coordinate approssimative capoluoghi provincia (fallback se geocoding non disponibile)
-    const PROVINCE_COORDS = {
-        AG:[37.3111,13.5765],AL:[44.9128,8.6153],AN:[43.6158,13.5189],AO:[45.737,7.3206],AP:[42.853,13.5765],AQ:[42.3512,13.3981],
-        AR:[43.4632,11.878],AT:[44.9009,8.2065],AV:[40.9146,14.792],BA:[41.1171,16.8719],BG:[45.6983,9.6773],
-        BI:[45.562,8.057],BL:[46.14,12.217],BN:[41.1297,14.782],BO:[44.4949,11.3426],BR:[40.638,17.946],
-        BS:[45.5416,10.2118],BT:[41.207,16.295],BZ:[46.4983,11.3548],CA:[39.2238,9.1217],CB:[41.56,14.66],
-        CE:[41.0732,14.324],CH:[42.35,14.167],CL:[37.49,14.062],CN:[44.39,7.548],CO:[45.81,9.085],
-        CR:[45.1333,10.033],CS:[39.31,16.25],CT:[37.5079,15.083],CZ:[38.91,16.59],EN:[37.566,14.267],
-        FC:[44.222,12.041],FE:[44.8381,11.6196],FG:[41.4622,15.5446],FI:[43.7696,11.2558],FM:[43.16,13.72],
-        FR:[41.64,13.35],GE:[44.4056,8.9463],GO:[45.941,13.62],GR:[42.76,11.11],IM:[43.887,8.03],
-        IS:[41.59,14.23],KR:[39.08,17.12],LC:[45.856,9.397],LE:[40.3515,18.175],LI:[43.55,10.31],
-        LO:[45.31,9.5],LT:[41.46,12.9],LU:[43.84,10.5],MB:[45.58,9.27],MC:[43.3,13.45],
-        ME:[38.193,15.554],MI:[45.4642,9.19],MN:[45.156,10.791],MO:[44.6471,10.9252],MS:[44.04,10.14],
-        MT:[40.666,16.604],NA:[40.8518,14.2681],NO:[45.45,8.62],NU:[40.32,9.33],OR:[39.9,8.59],
-        PA:[38.1157,13.3615],PC:[45.05,9.69],PD:[45.4064,11.8768],PE:[42.46,14.21],PG:[43.11,12.39],
-        PI:[43.72,10.4],PN:[45.96,12.66],PO:[43.88,11.1],PR:[44.8015,10.3279],PT:[43.93,10.92],
-        PU:[43.91,12.91],PV:[45.185,9.155],PZ:[40.64,15.81],RA:[44.418,12.203],RC:[38.11,15.65],
-        RE:[44.7,10.63],RG:[36.93,14.73],RI:[42.4,12.86],RM:[41.9028,12.4964],RN:[44.06,12.57],
-        RO:[45.07,11.79],SA:[40.68,14.77],SI:[43.32,11.33],SO:[46.17,9.87],SP:[44.1,9.82],
-        SR:[37.075,15.286],SS:[40.72,8.56],SU:[39.16,8.53],SV:[44.31,8.48],TA:[40.46,17.24],
-        TE:[42.66,13.7],TN:[46.07,11.12],TO:[45.0703,7.6869],TP:[38.02,12.54],TR:[42.56,12.65],
-        TS:[45.65,13.77],TV:[45.67,12.24],UD:[46.07,13.23],VA:[45.82,8.83],VB:[45.93,8.55],
-        VC:[45.32,8.42],VE:[45.44,12.32],VI:[45.55,11.55],VR:[45.44,10.99],VT:[42.42,12.1],VV:[38.68,16.1]
-    };
 
     function loadGeoCache() {
         try { return JSON.parse(localStorage.getItem('note_clienti_geo_cache') || '{}') || {}; }
@@ -5569,16 +5901,19 @@
         try { localStorage.setItem('note_clienti_geo_cache', JSON.stringify(cache)); } catch (e) {}
     }
 
+    
     function haversineKm(a, b) {
+        if (!a || !b || a.lat == null || b.lat == null || isNaN(Number(a.lat)) || isNaN(Number(b.lat))) return 9999;
         const R = 6371;
-        const toRad = (x) => x * Math.PI / 180;
+        const toRad = (x) => Number(x) * Math.PI / 180;
         const dLat = toRad(b.lat - a.lat);
         const dLng = toRad(b.lng - a.lng);
         const lat1 = toRad(a.lat);
         const lat2 = toRad(b.lat);
         const h = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLng/2)**2;
-        return 2 * R * Math.asin(Math.sqrt(h));
+        return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
     }
+
 
     function geoKey(localita, provincia) {
         return ((localita || '') + '|' + (provincia || '')).trim().toLowerCase();
@@ -5642,6 +5977,8 @@
     }
 
     // Coordinate città comuni (località frequenti) — offline, senza servizi esterni
+    const CASAMASSIMA = { lat: 40.9569, lng: 16.9186, label: 'Casamassima (BA)', query: 'Casamassima, Bari, Italy' };
+
     const CITY_COORDS = {
         /* === Partenza / Bari metro === */
         'casamassima': [40.9569, 16.9186],
@@ -6624,7 +6961,8 @@
         el.style.position = 'relative';
         const isTouch = window.matchMedia('(max-width: 900px)').matches || ('ontouchstart' in window);
         const map = L.map(el, {
-            scrollWheelZoom: !isTouch,
+            // Rotella = scroll pagina (non zoom mappa). Zoom: pulsanti +/- o pinch.
+            scrollWheelZoom: false,
             dragging: true,
             tap: true,
             touchZoom: true,
@@ -6772,49 +7110,105 @@
         return Math.round(km).toLocaleString('it-IT') + ' km';
     }
 
+
     async function geocodePlaceForDistance(query) {
         const q = (query || '').trim();
         if (!q) return null;
-        const local = (typeof resolveCoordsLocal === 'function') ? resolveCoordsLocal(q, '') : null;
-        if (local && local.precise && local.source === 'city-db') {
-            return { lat: local.lat, lng: local.lng, label: q };
+
+        // 1) Database locale città (veloce e offline)
+        if (typeof resolveCoordsLocal === 'function') {
+            const local = resolveCoordsLocal(q, '');
+            if (local && local.lat != null && local.lng != null && !local.fallback) {
+                return {
+                    lat: Number(local.lat),
+                    lng: Number(local.lng),
+                    label: q,
+                    approx: !!local.approx,
+                    source: local.source || 'local'
+                };
+            }
+            // anche con provincia vuota: se ha trovato qualcosa di usabile
+            if (local && local.lat != null && local.lng != null && local.source === 'city-db') {
+                return { lat: Number(local.lat), lng: Number(local.lng), label: q, approx: false, source: 'city-db' };
+            }
         }
+
+        // 2) Nominatim OpenStreetMap
         try {
             const params = new URLSearchParams({
                 format: 'json',
                 limit: '1',
                 countrycodes: 'it',
-                q: q + (q.toLowerCase().includes('italia') ? '' : ', Italia')
+                q: q.toLowerCase().includes('italia') ? q : (q + ', Italia')
             });
+            const controller = new AbortController();
+            const t = setTimeout(function() { controller.abort(); }, 5000);
             const res = await fetch('https://nominatim.openstreetmap.org/search?' + params.toString(), {
-                headers: { 'Accept': 'application/json', 'Accept-Language': 'it' }
+                headers: { 'Accept': 'application/json', 'Accept-Language': 'it' },
+                signal: controller.signal
             });
+            clearTimeout(t);
             if (res.ok) {
                 const data = await res.json();
-                if (data && data[0]) {
+                if (data && data[0] && data[0].lat && data[0].lon) {
                     return {
                         lat: parseFloat(data[0].lat),
                         lng: parseFloat(data[0].lon),
-                        label: data[0].display_name || q
+                        label: data[0].display_name || q,
+                        approx: false,
+                        source: 'nominatim'
                     };
                 }
             }
         } catch (e) {}
-        if (local && local.lat != null) {
-            return { lat: local.lat, lng: local.lng, label: q, approx: true };
+
+        // 3) Ultimo tentativo: resolveCoordsLocal anche fallback provincia
+        if (typeof resolveCoordsLocal === 'function') {
+            const local = resolveCoordsLocal(q, '');
+            if (local && local.lat != null && local.lng != null) {
+                return {
+                    lat: Number(local.lat),
+                    lng: Number(local.lng),
+                    label: q,
+                    approx: true,
+                    source: local.source || 'fallback'
+                };
+            }
         }
         return null;
     }
 
     async function routeDrivingOSRM(from, to) {
         const url = 'https://router.project-osrm.org/route/v1/driving/' +
-            from.lng + ',' + from.lat + ';' + to.lng + ',' + to.lat +
+            Number(from.lng) + ',' + Number(from.lat) + ';' +
+            Number(to.lng) + ',' + Number(to.lat) +
             '?overview=false&alternatives=false&steps=false';
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('Servizio percorsi non disponibile');
-        const data = await res.json();
-        if (!data.routes || !data.routes[0]) throw new Error('Percorso non trovato');
-        return data.routes[0];
+        const controller = new AbortController();
+        const timer = setTimeout(function() { controller.abort(); }, 6000);
+        try {
+            const res = await fetch(url, { signal: controller.signal });
+            clearTimeout(timer);
+            if (!res.ok) throw new Error('Servizio percorsi non disponibile');
+            const data = await res.json();
+            if (!data.routes || !data.routes[0]) throw new Error('Percorso non trovato');
+            return data.routes[0];
+        } catch (e) {
+            clearTimeout(timer);
+            throw e;
+        }
+    }
+
+    function estimateDrivingFallback(from, to) {
+        const straight = (typeof haversineKm === 'function')
+            ? haversineKm(from, to)
+            : 0;
+        const roadKm = straight * 1.35;
+        const hours = roadKm / 55;
+        return {
+            distance: roadKm * 1000,
+            duration: hours * 3600,
+            approx: true
+        };
     }
 
     window.scambiaPaesiDistanza = function() {
@@ -6831,7 +7225,10 @@
         const toEl = document.getElementById('distToInput');
         const box = document.getElementById('distCalcResult');
         const btn = document.getElementById('distCalcBtn');
-        if (!fromEl || !toEl || !box) return;
+        if (!fromEl || !toEl || !box) {
+            alert('Elementi calcolo distanza non trovati. Ricarica la pagina.');
+            return;
+        }
 
         const fromQ = fromEl.value.trim();
         const toQ = toEl.value.trim();
@@ -6849,15 +7246,34 @@
 
         try {
             const from = await geocodePlaceForDistance(fromQ);
-            if (typeof sleepMs === 'function') await sleepMs(350);
+            if (typeof sleepMs === 'function') await sleepMs(200);
             const to = await geocodePlaceForDistance(toQ);
+
             if (!from || !to) {
-                throw new Error('Paese non trovato. Controlla il nome (es. «Monopoli» o «Bari»).');
+                throw new Error('Paese non trovato. Prova nomi come «Bari», «Monopoli», «Casamassima».');
             }
-            const route = await routeDrivingOSRM(from, to);
-            const km = formatDistanceKm(route.distance);
-            const tempo = formatDriveDuration(route.duration);
-            const approx = (from.approx || to.approx) ? '<br><em>Posizione approssimata per uno dei due paesi.</em>' : '';
+
+            let route = null;
+            let usedApprox = !!(from.approx || to.approx);
+            try {
+                route = await routeDrivingOSRM(from, to);
+            } catch (e) {
+                route = estimateDrivingFallback(from, to);
+                usedApprox = true;
+            }
+
+            const km = (typeof formatDistanceKm === 'function')
+                ? formatDistanceKm(route.distance)
+                : (Math.round((route.distance || 0) / 1000) + ' km');
+            const tempo = (typeof formatDriveDuration === 'function')
+                ? formatDriveDuration(route.duration)
+                : '';
+
+            const noteApprox = usedApprox
+                ? '<br><em>Valori stimati (strada ~+35% rispetto al volo d\'uccello' +
+                  (route.approx || !route.distance ? '' : '') + ').</em>'
+                : '';
+
             box.className = 'dist-calc-result';
             box.innerHTML =
                 '<div class="dist-main">' +
@@ -6867,12 +7283,15 @@
                 '<div class="dist-sub">' +
                     '<strong>Da:</strong> ' + String(from.label || fromQ).replace(/</g, '&lt;') + '<br>' +
                     '<strong>A:</strong> ' + String(to.label || toQ).replace(/</g, '&lt;') +
-                    '<br>Distanza e tempo stimati su strada (auto), dati OpenStreetMap / OSRM.' +
-                    approx +
+                    '<br>Percorso in auto da OpenStreetMap / OSRM (o stima se offline).' +
+                    noteApprox +
                 '</div>';
         } catch (err) {
+            console.error(err);
             box.className = 'dist-calc-result error';
-            box.innerHTML = (err && err.message) ? err.message : 'Errore nel calcolo. Serve connessione internet.';
+            box.innerHTML = (err && err.message)
+                ? err.message
+                : 'Errore nel calcolo. Verifica i nomi dei paesi e la connessione.';
         } finally {
             if (btn) btn.disabled = false;
         }
