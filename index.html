@@ -6961,8 +6961,8 @@
         el.style.position = 'relative';
         const isTouch = window.matchMedia('(max-width: 900px)').matches || ('ontouchstart' in window);
         const map = L.map(el, {
-            // Rotella = scroll pagina (non zoom mappa). Zoom: pulsanti +/- o pinch.
-            scrollWheelZoom: false,
+            // Rotella del mouse: zoom sulla mini-mappa quando il cursore è sopra
+            scrollWheelZoom: true,
             dragging: true,
             tap: true,
             touchZoom: true,
@@ -6972,6 +6972,12 @@
             attributionControl: true,
             zoomControl: true
         });
+        // Evita che lo scroll della pagina "ruba" la rotella mentre si è sulla mappa
+        try {
+            map.on('focus', function() { map.scrollWheelZoom.enable(); });
+            // abilita subito lo zoom rotella
+            if (map.scrollWheelZoom) map.scrollWheelZoom.enable();
+        } catch (e) {}
 
         // Solo tile OpenStreetMap gratuiti (niente API key)
         const providers = [
