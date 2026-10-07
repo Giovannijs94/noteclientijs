@@ -2503,6 +2503,91 @@
             border-color: #c4b5fd !important;
         }
 
+    
+        .dist-calc-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px 18px;
+            margin-bottom: 18px;
+            box-shadow: var(--shadow);
+        }
+        .dist-calc-title {
+            font-weight: 800;
+            font-size: 1rem;
+            color: #0f172a;
+            margin-bottom: 12px;
+        }
+        .dist-calc-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .dist-calc-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .dist-calc-result {
+            margin-top: 14px;
+            padding: 14px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #eff6ff, #f0fdf4);
+            border: 1px solid #bfdbfe;
+        }
+        .dist-calc-result .dist-main {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: baseline;
+        }
+        .dist-calc-result .dist-km {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #1d4ed8;
+        }
+        .dist-calc-result .dist-time {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #15803d;
+        }
+        .dist-calc-result .dist-sub {
+            margin-top: 8px;
+            font-size: 0.85rem;
+            color: #64748b;
+            line-height: 1.4;
+        }
+        .dist-calc-result.error {
+            background: #fef2f2;
+            border-color: #fecaca;
+            color: #b91c1c;
+        }
+        .dist-calc-result.loading {
+            background: #f8fafc;
+            border-color: #e2e8f0;
+            color: #475569;
+            font-weight: 600;
+        }
+        @media (max-width: 600px) {
+            .dist-calc-card {
+                padding: 12px;
+                margin-bottom: 12px;
+                border-radius: 14px;
+            }
+            .dist-calc-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            .dist-calc-actions .btn-primary {
+                flex: 1;
+                min-height: 44px;
+            }
+            .dist-calc-result .dist-km { font-size: 1.35rem; }
+            .dist-calc-result .dist-time { font-size: 1.2rem; }
+        }
+
     </style>
 </head>
 <body class="locked">
@@ -2663,6 +2748,26 @@
         </div>
     </div>
     <p class="percorso-intro">Una mini-mappa per ogni tappa. Partenza sempre da <strong>Casamassima (BA)</strong>, fermate ordinate per distanza geografica (percorso più comodo).</p>
+
+    <div class="dist-calc-card" id="distCalcCard">
+        <div class="dist-calc-title">📏 Calcola distanza tra due paesi</div>
+        <div class="dist-calc-grid">
+            <div class="form-group">
+                <label for="distFromInput">Da</label>
+                <input type="text" id="distFromInput" class="input-control" placeholder="Es. Casamassima" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label for="distToInput">A</label>
+                <input type="text" id="distToInput" class="input-control" placeholder="Es. Bari" autocomplete="off">
+            </div>
+        </div>
+        <div class="dist-calc-actions">
+            <button type="button" class="btn btn-primary" id="distCalcBtn" onclick="calcolaDistanzaPaesi()">Calcola percorso in auto</button>
+            <button type="button" class="btn" onclick="scambiaPaesiDistanza()" title="Scambia">⇄</button>
+        </div>
+        <div id="distCalcResult" class="dist-calc-result" hidden></div>
+    </div>
+
     <div id="percorsoContainer" class="percorso-container"></div>
 </div><!-- /#viewPercorso -->
 
@@ -6650,6 +6755,128 @@
         percorsoMaps.push(map);
         return map;
     }
+
+
+    function formatDriveDuration(seconds) {
+        const s = Math.max(0, Math.round(Number(seconds) || 0));
+        const h = Math.floor(s / 3600);
+        const m = Math.round((s % 3600) / 60);
+        if (h <= 0) return m + ' min';
+        if (m === 0) return h + (h === 1 ? ' ora' : ' ore');
+        return h + (h === 1 ? ' ora' : ' ore') + ' ' + m + ' min';
+    }
+
+    function formatDistanceKm(meters) {
+        const km = (Number(meters) || 0) / 1000;
+        if (km < 10) return km.toFixed(1).replace('.', ',') + ' km';
+        return Math.round(km).toLocaleString('it-IT') + ' km';
+    }
+
+    async function geocodePlaceForDistance(query) {
+        const q = (query || '').trim();
+        if (!q) return null;
+        const local = (typeof resolveCoordsLocal === 'function') ? resolveCoordsLocal(q, '') : null;
+        if (local && local.precise && local.source === 'city-db') {
+            return { lat: local.lat, lng: local.lng, label: q };
+        }
+        try {
+            const params = new URLSearchParams({
+                format: 'json',
+                limit: '1',
+                countrycodes: 'it',
+                q: q + (q.toLowerCase().includes('italia') ? '' : ', Italia')
+            });
+            const res = await fetch('https://nominatim.openstreetmap.org/search?' + params.toString(), {
+                headers: { 'Accept': 'application/json', 'Accept-Language': 'it' }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data[0]) {
+                    return {
+                        lat: parseFloat(data[0].lat),
+                        lng: parseFloat(data[0].lon),
+                        label: data[0].display_name || q
+                    };
+                }
+            }
+        } catch (e) {}
+        if (local && local.lat != null) {
+            return { lat: local.lat, lng: local.lng, label: q, approx: true };
+        }
+        return null;
+    }
+
+    async function routeDrivingOSRM(from, to) {
+        const url = 'https://router.project-osrm.org/route/v1/driving/' +
+            from.lng + ',' + from.lat + ';' + to.lng + ',' + to.lat +
+            '?overview=false&alternatives=false&steps=false';
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Servizio percorsi non disponibile');
+        const data = await res.json();
+        if (!data.routes || !data.routes[0]) throw new Error('Percorso non trovato');
+        return data.routes[0];
+    }
+
+    window.scambiaPaesiDistanza = function() {
+        const a = document.getElementById('distFromInput');
+        const b = document.getElementById('distToInput');
+        if (!a || !b) return;
+        const t = a.value;
+        a.value = b.value;
+        b.value = t;
+    };
+
+    window.calcolaDistanzaPaesi = async function() {
+        const fromEl = document.getElementById('distFromInput');
+        const toEl = document.getElementById('distToInput');
+        const box = document.getElementById('distCalcResult');
+        const btn = document.getElementById('distCalcBtn');
+        if (!fromEl || !toEl || !box) return;
+
+        const fromQ = fromEl.value.trim();
+        const toQ = toEl.value.trim();
+        if (!fromQ || !toQ) {
+            box.hidden = false;
+            box.className = 'dist-calc-result error';
+            box.innerHTML = 'Inserisci entrambi i paesi (Da e A).';
+            return;
+        }
+
+        box.hidden = false;
+        box.className = 'dist-calc-result loading';
+        box.innerHTML = '🛰️ Calcolo percorso in auto…';
+        if (btn) btn.disabled = true;
+
+        try {
+            const from = await geocodePlaceForDistance(fromQ);
+            if (typeof sleepMs === 'function') await sleepMs(350);
+            const to = await geocodePlaceForDistance(toQ);
+            if (!from || !to) {
+                throw new Error('Paese non trovato. Controlla il nome (es. «Monopoli» o «Bari»).');
+            }
+            const route = await routeDrivingOSRM(from, to);
+            const km = formatDistanceKm(route.distance);
+            const tempo = formatDriveDuration(route.duration);
+            const approx = (from.approx || to.approx) ? '<br><em>Posizione approssimata per uno dei due paesi.</em>' : '';
+            box.className = 'dist-calc-result';
+            box.innerHTML =
+                '<div class="dist-main">' +
+                    '<span class="dist-km">🚗 ' + km + '</span>' +
+                    '<span class="dist-time">⏱ ' + tempo + '</span>' +
+                '</div>' +
+                '<div class="dist-sub">' +
+                    '<strong>Da:</strong> ' + String(from.label || fromQ).replace(/</g, '&lt;') + '<br>' +
+                    '<strong>A:</strong> ' + String(to.label || toQ).replace(/</g, '&lt;') +
+                    '<br>Distanza e tempo stimati su strada (auto), dati OpenStreetMap / OSRM.' +
+                    approx +
+                '</div>';
+        } catch (err) {
+            box.className = 'dist-calc-result error';
+            box.innerHTML = (err && err.message) ? err.message : 'Errore nel calcolo. Serve connessione internet.';
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    };
 
     async function renderPercorsoPage() {
         const container = document.getElementById('percorsoContainer');
