@@ -2715,6 +2715,63 @@
             }
         }
 
+    
+        .percorso-stop-models {
+            font-size: 0.75rem;
+            color: #1e40af;
+            margin-top: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+        .percorso-models-btn {
+            margin-top: 6px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 8px;
+            border: 1px solid #bfdbfe;
+            background: #eff6ff;
+            color: #1d4ed8;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        .percorso-models-btn:hover {
+            background: #dbeafe;
+        }
+        .percorso-models-popup {
+            position: fixed;
+            z-index: 10000;
+            min-width: 200px;
+            max-width: 300px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18);
+            padding: 12px 14px;
+        }
+        .percorso-models-popup-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .percorso-models-popup-close {
+            border: none;
+            background: #f1f5f9;
+            border-radius: 8px;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            font-weight: 700;
+        }
+        .percorso-models-popup-body {
+            font-size: 0.88rem;
+            line-height: 1.5;
+        }
+
     </style>
 </head>
 <body class="locked">
@@ -7569,6 +7626,27 @@
         return result;
     }
 
+
+    function formatClientModelsText(client) {
+        const mods = (client && client.modelli) ? client.modelli : [];
+        if (!mods.length) return 'Nessun modello';
+        return mods.map(function(m) {
+            const n = (m && m.nome) ? String(m.nome) : '—';
+            const q = (m && m.qta) ? (' × ' + m.qta) : '';
+            return n + q;
+        }).join(', ');
+    }
+
+    function formatClientModelsHtml(client) {
+        const mods = (client && client.modelli) ? client.modelli : [];
+        if (!mods.length) return '<em style="color:#94a3b8;">Nessun modello</em>';
+        return mods.map(function(m) {
+            const n = String((m && m.nome) || '—').replace(/</g, '&lt;');
+            const q = (m && m.qta) ? (' <span style="color:#64748b;">× ' + m.qta + '</span>') : '';
+            return '<span style="display:inline-block;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:8px;padding:2px 8px;margin:2px 4px 2px 0;font-size:12px;font-weight:700;">' + n + q + '</span>';
+        }).join('');
+    }
+
     function drawTappaOsmMap(mapElId, ordered) {
         const el = document.getElementById(mapElId);
         if (!el) return null;
@@ -7698,9 +7776,10 @@
             const label = (item.coords.label || '').replace(/</g, '&lt;');
             const extra = label ? '<br><span style="font-size:11px;color:#64748b;">' + label + '</span>' : '';
             const coordsTxt = '<br><span style="font-size:10px;color:#94a3b8;">' + lat.toFixed(5) + ', ' + lng.toFixed(5) + '</span>';
+            const modelsHtml = '<div style="margin-top:6px;"><strong style="font-size:11px;color:#475569;">📦 Modelli</strong><br>' + formatClientModelsHtml(item.client) + '</div>';
             L.marker([lat, lng], { icon, zIndexOffset: 100 + num })
                 .addTo(map)
-                .bindPopup(`<strong>${num}. ${nome}</strong><br>📍 ${loc}${precise}${extra}${coordsTxt}`);
+                .bindPopup('<strong>' + num + '. ' + nome + '</strong><br>📍 ' + loc + precise + extra + modelsHtml + coordsTxt, { maxWidth: 280 });
         });
 
         if (allLatLngs.length >= 2) {
@@ -8134,12 +8213,16 @@
             ].concat(stops.map((s, i) => {
                 const c = s.client;
                 const approx = s.coords && s.coords.approx ? ' · posizione approssimata (provincia)' : '';
+                const modelsTxt = formatClientModelsText(c).replace(/</g, '&lt;');
+                const modelsHtml = formatClientModelsHtml(c);
                 return `<div class="percorso-stop draggable-stop" draggable="true" data-client-id="${c.id}">
                     <span class="percorso-drag-handle" title="Trascina per riordinare">⠿</span>
                     <div class="percorso-stop-num">${i + 1}</div>
                     <div class="percorso-stop-body">
                         <div class="percorso-stop-title">${(c.nome || '').replace(/</g, '&lt;')}</div>
                         <div class="percorso-stop-sub">📍 ${(c.localita || '—')}${(c.provincia ? ' (' + c.provincia + ')' : '')}${approx}</div>
+                        <div class="percorso-stop-models" title="${modelsTxt}">📦 ${modelsTxt}</div>
+                        <button type="button" class="percorso-models-btn" data-client-id="${c.id}" onclick="event.stopPropagation(); showPercorsoModelsPopup(event, '${String(c.id).replace(/'/g, "\\'")}')">Vedi modelli</button>
                     </div>
                 </div>`;
             }));
