@@ -2881,12 +2881,13 @@
         <div class="dist-calc-grid">
             <div class="form-group">
                 <label for="distFromInput">Da</label>
-                <input type="text" id="distFromInput" class="input-control" placeholder="Es. Casamassima" autocomplete="off">
+                <input type="text" id="distFromInput" class="input-control" list="distCitiesDatalist" placeholder="Es. Casamassima, Monopoli, Roma…" autocomplete="off">
             </div>
             <div class="form-group">
                 <label for="distToInput">A</label>
-                <input type="text" id="distToInput" class="input-control" placeholder="Es. Bari" autocomplete="off">
+                <input type="text" id="distToInput" class="input-control" list="distCitiesDatalist" placeholder="Es. Bari, Lecce, Napoli…" autocomplete="off">
             </div>
+            <datalist id="distCitiesDatalist"></datalist>
         </div>
         <div class="dist-calc-actions">
             <button type="button" class="btn btn-primary" id="distCalcBtn" onclick="calcolaDistanzaPaesi()">Calcola percorso in auto</button>
@@ -6375,8 +6376,660 @@
         'teramo': [42.661, 13.699],
         'lanciano': [42.231, 14.390],
         'vasto': [42.112, 14.710],
-        'ortona': [42.356, 14.404]
+
+        'ortona': [42.356, 14.404],
+        /* === Capoluoghi e centri principali (tutte le province) === */
+        'agrigento': [37.3111, 13.5765],
+        'alessandria': [44.9127, 8.6153],
+        'ancona': [43.6158, 13.5189],
+        'aosta': [45.7370, 7.3206],
+        'arezzo': [43.4633, 11.8796],
+        'ascoli piceno': [42.8533, 13.5765],
+        'asti': [44.9009, 8.2069],
+        'avellino': [40.9146, 14.7907],
+        'barletta': [41.3193, 16.2839],
+        'belluno': [46.1425, 12.2167],
+        'benevento': [41.1297, 14.7826],
+        'bergamo': [45.6983, 9.6773],
+        'biella': [45.5628, 8.0581],
+        'bolzano': [46.4983, 11.3548],
+        'bozen': [46.4983, 11.3548],
+        'brescia': [45.5416, 10.2118],
+        'brindisi': [40.6327, 17.9418],
+        'cagliari': [39.2238, 9.1217],
+        'caltanissetta': [37.4901, 14.0629],
+        'campobasso': [41.5610, 14.6590],
+        'caserta': [41.0732, 14.3240],
+        'catania': [37.5079, 15.0830],
+        'catanzaro': [38.9100, 16.5870],
+        'chieti': [42.3512, 14.1670],
+        'como': [45.8081, 9.0852],
+        'cosenza': [39.2985, 16.2537],
+        'cremona': [45.1333, 10.0227],
+        'crotone': [39.0809, 17.1271],
+        'cuneo': [44.3903, 7.5482],
+        'enna': [37.5675, 14.2794],
+        'fermo': [43.1606, 13.7180],
+        'ferrara': [44.8378, 11.6196],
+        'firenze': [43.7696, 11.2558],
+        'foggia': [41.4622, 15.5446],
+        'forli': [44.2227, 12.0407],
+        'forlì': [44.2227, 12.0407],
+        'frosinone': [41.6401, 13.3506],
+        'genova': [44.4056, 8.9463],
+        'gorizia': [45.9411, 13.6210],
+        'grosseto': [42.7631, 11.1124],
+        'imperia': [43.8881, 8.0270],
+        'isernia': [41.5942, 14.2307],
+        'la spezia': [44.1025, 9.8241],
+        'l aquila': [42.3498, 13.3995],
+        'laquila': [42.3498, 13.3995],
+        "l'aquila": [42.3498, 13.3995],
+        'latina': [41.4676, 12.9037],
+        'lecce': [40.3516, 18.1750],
+        'lecco': [45.8566, 9.3977],
+        'livorno': [43.5485, 10.3106],
+        'lodi': [45.3097, 9.5037],
+        'lucca': [43.8429, 10.5027],
+        'macerata': [43.3008, 13.4534],
+        'mantova': [45.1564, 10.7914],
+        'massa': [44.0354, 10.1393],
+        'matera': [40.6664, 16.6043],
+        'messina': [38.1938, 15.5540],
+        'milano': [45.4642, 9.1900],
+        'modena': [44.6471, 10.9252],
+        'monza': [45.5845, 9.2744],
+        'napoli': [40.8518, 14.2681],
+        'novara': [45.4469, 8.6221],
+        'nuoro': [40.3210, 9.3301],
+        'oristano': [39.9062, 8.5916],
+        'padova': [45.4064, 11.8768],
+        'palermo': [38.1157, 13.3615],
+        'parma': [44.8015, 10.3279],
+        'pavia': [45.1847, 9.1582],
+        'perugia': [43.1107, 12.3908],
+        'pesaro': [43.9102, 12.9133],
+        'pescara': [42.4618, 14.2161],
+        'piacenza': [45.0526, 9.6926],
+        'pisa': [43.7228, 10.4017],
+        'pistoia': [43.9333, 10.9170],
+        'pordenone': [45.9626, 12.6605],
+        'potenza': [40.6395, 15.8050],
+        'prato': [43.8777, 11.1023],
+        'ragusa': [36.9269, 14.7255],
+        'ravenna': [44.4184, 12.2035],
+        'reggio calabria': [38.1113, 15.6473],
+        'reggio emilia': [44.6989, 10.6297],
+        'reggio nell emilia': [44.6989, 10.6297],
+        'rieti': [42.4048, 12.8573],
+        'rimini': [44.0678, 12.5695],
+        'roma': [41.9028, 12.4964],
+        'rovigo': [45.0705, 11.7904],
+        'salerno': [40.6824, 14.7681],
+        'sassari': [40.7259, 8.5557],
+        'savona': [44.3091, 8.4772],
+        'siena': [43.3188, 11.3308],
+        'siracusa': [37.0755, 15.2866],
+        'sondrio': [46.1710, 9.8720],
+        'sud sardegna': [39.3090, 8.9850],
+        'taranto': [40.4644, 17.2470],
+        'teramo': [42.6589, 13.7036],
+        'terni': [42.5636, 12.6427],
+        'torino': [45.0703, 7.6869],
+        'trapani': [38.0173, 12.5365],
+        'trento': [46.0748, 11.1217],
+        'treviso': [45.6669, 12.2430],
+        'trieste': [45.6495, 13.7768],
+        'udine': [46.0710, 13.2346],
+        'varese': [45.8206, 8.8250],
+        'venezia': [45.4408, 12.3155],
+        'verbania': [45.9216, 8.5516],
+        'vercelli': [45.3202, 8.4185],
+        'verona': [45.4384, 10.9916],
+        'vibo valentia': [38.6759, 16.1000],
+        'vicenza': [45.5455, 11.5354],
+        'viterbo': [42.4207, 12.1077],
+        /* === Puglia completa (comuni principali) === */
+        'acquarica del capo': [39.9100, 18.2450],
+        'acquaviva delle fonti': [40.8970, 16.8430],
+        'adelfia': [41.0020, 16.8720],
+        'alberobello': [40.7864, 17.2370],
+        'alezio': [40.0620, 18.0570],
+        'alliste': [39.9490, 18.0890],
+        'altamura': [40.8267, 16.5494],
+        'andrano': [39.9840, 18.3790],
+        'andria': [41.2316, 16.2950],
+        'aradeo': [40.1320, 18.1340],
+        'avetrana': [40.3440, 17.7300],
+        'bagnolo del salento': [40.1500, 18.3520],
+        'bari': [41.1177, 16.8719],
+        'barletta': [41.3193, 16.2839],
+        'bisceglie': [41.2430, 16.5050],
+        'bitonto': [41.1080, 16.6910],
+        'bitritto': [41.0440, 16.8250],
+        'botrugno': [40.0640, 18.3240],
+        'brindisi': [40.6327, 17.9418],
+        'cagnano varano': [41.8280, 15.7730],
+        'calimera': [40.2500, 18.2790],
+        'campi salentina': [40.4000, 18.0220],
+        'canosa di puglia': [41.2230, 16.0660],
+        'capurso': [41.0460, 16.9220],
+        'carovigno': [40.7080, 17.6570],
+        'casamassima': [40.9569, 16.9186],
+        'casarano': [40.0120, 18.1610],
+        'cassano delle murge': [40.8910, 16.7680],
+        'castellana grotte': [40.8860, 17.1660],
+        'castellaneta': [40.6280, 16.9370],
+        'castro': [40.0070, 18.4270],
+        'cavallino': [40.3100, 18.2020],
+        'ceglie messapica': [40.6460, 17.5170],
+        'cellamare': [41.0180, 16.9290],
+        'cellino san marco': [40.4710, 17.9630],
+        'cerignola': [41.2650, 15.9000],
+        'cisternino': [40.7430, 17.4280],
+        'conversano': [40.9680, 17.1130],
+        'copertino': [40.2710, 18.0510],
+        'corato': [41.1510, 16.4110],
+        'corigliano d otranto': [40.1590, 18.2560],
+        'crispiano': [40.6070, 17.2300],
+        'cutrofiano': [40.1270, 18.2020],
+        'diso': [40.0100, 18.3920],
+        'erchie': [40.4370, 17.7360],
+        'fasano': [40.8350, 17.3600],
+        'foggia': [41.4622, 15.5446],
+        'fragagnano': [40.4300, 17.4750],
+        'francavilla fontana': [40.5310, 17.5860],
+        'gagliano del capo': [39.8460, 18.3700],
+        'galatina': [40.1740, 18.1690],
+        'galatone': [40.1440, 18.0710],
+        'gallipoli': [40.0559, 17.9920],
+        'ginosa': [40.5770, 16.7570],
+        'gioia del colle': [40.7990, 16.9230],
+        'giovinazzo': [41.1850, 16.5070],
+        'giurdignano': [40.0930, 18.4300],
+        'gravina in puglia': [40.8190, 16.4250],
+        'grottaglie': [40.5370, 17.4340],
+        'grumo appula': [41.0150, 16.7080],
+        'laterza': [40.6300, 16.8000],
+        'latiano': [40.5350, 17.7200],
+        'lecce': [40.3516, 18.1750],
+        'lequile': [40.3060, 18.1400],
+        'leverano': [40.2890, 18.0000],
+        'lizzano': [40.3920, 17.4480],
+        'locorotondo': [40.7570, 17.3270],
+        'lucera': [41.5080, 15.3390],
+        'maglie': [40.1180, 18.2980],
+        'manduria': [40.4020, 17.6370],
+        'manfredonia': [41.6300, 15.9100],
+        'margherita di savoia': [41.3720, 16.1540],
+        'martano': [40.2030, 18.3030],
+        'martina franca': [40.7040, 17.3350],
+        'maruggio': [40.3220, 17.5700],
+        'massafra': [40.5900, 17.1170],
+        'matino': [40.0320, 18.1360],
+        'melendugno': [40.2380, 18.3370],
+        'mesagne': [40.5590, 17.8080],
+        'minervino murge': [41.0840, 16.0780],
+        'modugno': [41.0850, 16.7800],
+        'mola di bari': [41.0600, 17.0880],
+        'molfetta': [41.2000, 16.5990],
+        'monopoli': [40.9497, 17.2975],
+        'monteroni di lecce': [40.3330, 18.0990],
+        'monte sant angelo': [41.7070, 15.9660],
+        'mottola': [40.6340, 17.0370],
+        'nardo': [40.1790, 18.0310],
+        'nardò': [40.1790, 18.0310],
+        'noci': [40.7930, 17.1270],
+        'noicattaro': [41.0340, 16.9900],
+        'novoli': [40.3780, 18.0580],
+        'oria': [40.4990, 17.6430],
+        'orta nova': [41.3300, 15.7100],
+        'ostuni': [40.7290, 17.5760],
+        'otranto': [40.1480, 18.4860],
+        'palagiano': [40.5790, 17.0390],
+        'palo del colle': [41.0550, 16.7050],
+        'parabita': [40.0520, 18.1280],
+        'peschici': [41.9460, 16.0140],
+        'polignano a mare': [40.9960, 17.2200],
+        'porto cesareo': [40.2630, 17.8980],
+        'presicce': [39.8480, 18.2640],
+        'pulsano': [40.3820, 17.4550],
+        'putignano': [40.8490, 17.1220],
+        'racale': [39.9710, 18.0940],
+        'rodi garganico': [41.9280, 15.8840],
+        'rutigliano': [41.0100, 17.0060],
+        'ruvo di puglia': [41.1140, 16.4870],
+        'salve': [39.8610, 18.2960],
+        'sammichele di bari': [40.8940, 16.9490],
+        'san cesario di lecce': [40.3030, 18.1600],
+        'san ferdinando di puglia': [41.3030, 16.0700],
+        'san giorgio ionico': [40.4720, 17.3780],
+        'san giovanni rotondo': [41.7060, 15.7290],
+        'san marco in lamis': [41.7120, 15.6350],
+        'san pancrazio salentino': [40.4190, 17.8090],
+        'san pietro vernotico': [40.4900, 18.0000],
+        'san severo': [41.6910, 15.3790],
+        'san vito dei normanni': [40.6580, 17.7070],
+        'sannicandro di bari': [41.0000, 16.7970],
+        'santeramo in colle': [40.7930, 16.7550],
+        'santa cesarea terme': [40.0360, 18.4560],
+        'santa maria di leuca': [39.8010, 18.3570],
+        'sava': [40.4020, 17.5590],
+        'specchia': [39.9390, 18.2970],
+        'spinazzola': [41.0010, 16.0900],
+        'squinzano': [40.4340, 18.0420],
+        'statte': [40.5650, 17.2000],
+        'surbo': [40.3970, 18.1340],
+        'taranto': [40.4644, 17.2470],
+        'taviano': [39.9820, 18.0870],
+        'terlizzi': [41.1300, 16.5450],
+        'toritto': [40.9980, 16.6800],
+        'torchiarolo': [40.4850, 18.0520],
+        'trani': [41.2770, 16.4170],
+        'trepuzzi': [40.4050, 18.0760],
+        'tricase': [39.9310, 18.3550],
+        'trinitapoli': [41.3560, 16.0890],
+        'turi': [40.9170, 17.0200],
+        'ugento': [39.9270, 18.1620],
+        'valenzano': [41.0450, 16.8850],
+        'veglie': [40.3340, 17.9670],
+        'vico del gargano': [41.8980, 15.9560],
+        'vieste': [41.8820, 16.1780],
+        'villa castelli': [40.5840, 17.4740],
+        /* === Campania / Basilicata / Calabria utili === */
+        'agropoli': [40.3470, 14.9960],
+        'battipaglia': [40.6090, 14.9830],
+        'bernalda': [40.4130, 16.6890],
+        'castellammare di stabia': [40.6940, 14.4800],
+        'eboli': [40.6190, 15.0580],
+        'melfi': [40.9970, 15.6530],
+        'montescaglioso': [40.5550, 16.6650],
+        'paestum': [40.4220, 15.0060],
+        'pisticci': [40.3910, 16.5460],
+        'policoro': [40.2140, 16.6720],
+        'pompei': [40.7510, 14.5000],
+        'pozzuoli': [40.8320, 14.1250],
+        'rionero in vulture': [40.9230, 15.6710],
+        'scanzano jonico': [40.2500, 16.6980],
+        'sorrento': [40.6260, 14.3760],
+        'venosa': [40.9620, 15.8150],
+        'lamezia terme': [38.9660, 16.3090],
+        'rossano': [39.5750, 16.6330],
+        'scalea': [39.8150, 15.7940],
+        'tropea': [38.6760, 15.8970],
+        /* === Centro-Nord aggiuntivi === */
+        'abano terme': [45.3590, 11.7900],
+        'alba': [44.7000, 8.0350],
+        'assisi': [43.0700, 12.6170],
+        'biella': [45.5628, 8.0581],
+        'bra': [44.6970, 7.8510],
+        'cesena': [44.1390, 12.2430],
+        'cinisello balsamo': [45.5570, 9.2140],
+        'desenzano del garda': [45.4690, 10.5350],
+        'faenza': [44.2860, 11.8830],
+        'fano': [43.8440, 13.0170],
+        'fiumicino': [41.7680, 12.2360],
+        'formia': [41.2560, 13.6060],
+        'gallarate': [45.6600, 8.7930],
+        'imola': [44.3530, 11.7160],
+        'jesolo': [45.5330, 12.6410],
+        'legnano': [45.5980, 8.9170],
+        'lido di jesolo': [45.5090, 12.6430],
+        'massa marittima': [43.0500, 10.8880],
+        'mazara del vallo': [37.6540, 12.5880],
+        'mirano': [45.4940, 12.1080],
+        'modica': [36.8590, 14.7610],
+        'mondovi': [44.3900, 7.8200],
+        'montecatini terme': [43.8830, 10.7710],
+        'nettuno': [41.4580, 12.6630],
+        'olbia': [40.9230, 9.5030],
+        'ostia': [41.7320, 12.2780],
+        'peschiera del garda': [45.4390, 10.6880],
+        'riccione': [43.9990, 12.6570],
+        'rho': [45.5320, 9.0390],
+        'sanremo': [43.8150, 7.7770],
+        'san remo': [43.8150, 7.7770],
+        'sesto san giovanni': [45.5340, 9.2350],
+        'spoleto': [42.7390, 12.7380],
+        'taormina': [37.8530, 15.2880],
+        'tivoli': [41.9630, 12.7970],
+        'viareggio': [43.8680, 10.2500],
+
+        'vigevano': [45.3140, 8.8540],
+        /* === Ulteriori comuni Italia (lista ampliata) === */
+        'acerra': [40.9450, 14.3730],
+        'acireale': [37.6120, 15.1660],
+        'afragola': [40.9260, 14.3100],
+        'agrigento': [37.3111, 13.5765],
+        'alba adriatica': [42.8320, 13.9260],
+        'albenga': [44.0490, 8.2180],
+        'alcamo': [37.9770, 12.9650],
+        'alghero': [40.5580, 8.3190],
+        'altavilla milicia': [38.0380, 13.5500],
+        'amalfi': [40.6340, 14.6030],
+        'anagni': [41.7440, 13.1520],
+        'andorno micca': [45.6100, 8.0530],
+        'angri': [40.7380, 14.5690],
+        'anzio': [41.4520, 12.6220],
+        'aosta': [45.7370, 7.3206],
+        'aprilia': [41.5910, 12.6500],
+        'ardea': [41.6080, 12.5140],
+        'ardea': [41.6080, 12.5140],
+        'arese': [45.5520, 9.0780],
+        'ariano irpino': [41.1530, 15.0880],
+        'arpaia': [41.0300, 14.5520],
+        'arzignano': [45.5200, 11.3400],
+        'ascoli satriano': [41.2060, 15.5640],
+        'asolo': [45.7990, 11.9140],
+        'atri': [42.5790, 13.9990],
+        'augusta': [37.2300, 15.2210],
+        'avola': [36.9100, 15.1360],
+        'bacoli': [40.8000, 14.0800],
+        'bagheria': [38.0790, 13.5080],
+        'bagnara calabra': [38.2880, 15.8080],
+        'barano d ischia': [40.7170, 13.9250],
+        'barberino di mugello': [44.0000, 11.2370],
+        'bassano del grappa': [45.7660, 11.7360],
+        'battipaglia': [40.6090, 14.9830],
+        'bellaria igea marina': [44.1400, 12.4700],
+        'belpasso': [37.5950, 14.9830],
+        'bergamo': [45.6983, 9.6773],
+        'biella': [45.5628, 8.0581],
+        'bisceglie': [41.2430, 16.5050],
+        'bitonto': [41.1080, 16.6910],
+        'bollate': [45.5460, 9.1200],
+        'borgomanero': [45.6990, 8.4620],
+        'bra': [44.6970, 7.8510],
+        'brescia': [45.5416, 10.2118],
+        'bressanone': [46.7150, 11.6560],
+        'bronzolo': [46.4030, 11.3200],
+        'brugherio': [45.5530, 9.3010],
+        'buccinasco': [45.4210, 9.1100],
+        'busto arsizio': [45.6110, 8.8490],
+        'cagliari': [39.2238, 9.1217],
+        'caivano': [40.9560, 14.3080],
+        'calenzano': [43.8570, 11.1640],
+        'caltanissetta': [37.4901, 14.0629],
+        'camaiore': [43.9390, 10.3020],
+        'campi bisenzio': [43.8250, 11.1330],
+        'campobasso': [41.5610, 14.6590],
+        'canosa di puglia': [41.2230, 16.0660],
+        'cantu': [45.7410, 9.1280],
+        'cantù': [45.7410, 9.1280],
+        'capaccio': [40.4500, 15.0800],
+        'capaccio paestum': [40.4500, 15.0800],
+        'carbonia': [39.1670, 8.5220],
+        'carini': [38.1560, 13.1810],
+        'carpi': [44.7830, 10.8780],
+        'carrara': [44.0790, 10.0970],
+        'casalecchio di reno': [44.4760, 11.2770],
+        'casalnuovo di napoli': [40.9090, 14.3460],
+        'casamassima': [40.9569, 16.9186],
+        'casarano': [40.0120, 18.1610],
+        'cascina': [43.6790, 10.4990],
+        'caserta': [41.0732, 14.3240],
+        'casoria': [40.9060, 14.2930],
+        'castelfranco veneto': [45.6720, 11.9280],
+        'castellammare di stabia': [40.6940, 14.4800],
+        'castelvetrano': [37.6810, 12.7920],
+        'castiglione delle stiviere': [45.3900, 10.4890],
+        'catania': [37.5079, 15.0830],
+        'catanzaro': [38.9100, 16.5870],
+        'cava de tirreni': [40.7010, 14.7060],
+        'cave': [41.8170, 12.9330],
+        'cecina': [43.3110, 10.5190],
+        'cento': [44.7270, 11.2880],
+        'cerignola': [41.2650, 15.9000],
+        'cervia': [44.2620, 12.3480],
+        'cerveteri': [41.9980, 12.0910],
+        'cesano maderno': [45.6290, 9.1460],
+        'cesena': [44.1390, 12.2430],
+        'chiari': [45.5380, 9.9870],
+        'chiavari': [44.3170, 9.3240],
+        'chieri': [45.0130, 7.8220],
+        'chioggia': [45.2190, 12.2780],
+        'chiusi': [43.0160, 11.9480],
+        'ciampino': [41.7990, 12.6010],
+        'cinisello balsamo': [45.5570, 9.2140],
+        'cinisi': [38.1610, 13.1080],
+        'civitavecchia': [42.0920, 11.7950],
+        'collegno': [45.0780, 7.5740],
+        'comiso': [36.9480, 14.6070],
+        'como': [45.8081, 9.0852],
+        'conegliano': [45.8870, 12.2970],
+        'corciano': [43.1290, 12.2870],
+        'cormano': [45.5420, 9.1680],
+        'corridonia': [43.2480, 13.5100],
+        'cosenza': [39.2985, 16.2537],
+        'cremona': [45.1333, 10.0227],
+        'crotone': [39.0809, 17.1271],
+        'cuneo': [44.3903, 7.5482],
+        'desio': [45.6200, 9.2080],
+        'eboli': [40.6190, 15.0580],
+        'empoli': [43.7190, 10.9460],
+        'enna': [37.5675, 14.2794],
+        'ercolano': [40.8070, 14.3530],
+        'faenza': [44.2860, 11.8830],
+        'fano': [43.8440, 13.0170],
+        'fasano': [40.8350, 17.3600],
+        'favara': [37.3180, 13.6630],
+        'fiano romano': [42.1720, 12.5930],
+        'fidenza': [44.8650, 10.0610],
+        'figline e incisa valdarno': [43.6200, 11.4700],
+        'fiumicino': [41.7680, 12.2360],
+        'florence': [43.7696, 11.2558],
+        'foligno': [42.9560, 12.7030],
+        'follonica': [42.9240, 10.7640],
+        'fondi': [41.3580, 13.4310],
+        'fonte nuova': [41.9950, 12.6280],
+        'forli': [44.2227, 12.0407],
+        'formia': [41.2560, 13.6060],
+        'fossano': [44.5500, 7.7240],
+        'francavilla al mare': [42.4200, 14.2920],
+        'frattamaggiore': [40.9410, 14.2920],
+        'frosinone': [41.6401, 13.3506],
+        'gela': [37.0660, 14.2500],
+        'genova': [44.4056, 8.9463],
+        'gessate': [45.5530, 9.4380],
+        'giugliano in campania': [40.9280, 14.1950],
+        'giulianova': [42.7540, 13.9560],
+        'grado': [45.6780, 13.3950],
+        'grosseto': [42.7631, 11.1124],
+        'grugliasco': [45.0680, 7.5780],
+        'guidonia montecelio': [41.9900, 12.7260],
+        'iglesias': [39.3110, 8.5350],
+        'imola': [44.3530, 11.7160],
+        'imperia': [43.8881, 8.0270],
+        'ischia': [40.7380, 13.9480],
+        'ivrea': [45.4670, 7.8750],
+        'jesolo': [45.5330, 12.6410],
+        'jesi': [43.5210, 13.2440],
+        'la spezia': [44.1025, 9.8241],
+        'ladispoli': [41.9540, 12.0760],
+        'lainate': [45.5720, 9.0270],
+        'lamezia terme': [38.9660, 16.3090],
+        'latina': [41.4676, 12.9037],
+        'lecco': [45.8566, 9.3977],
+        'legnago': [45.1930, 11.3030],
+        'legnano': [45.5980, 8.9170],
+        'lentini': [37.2860, 15.0000],
+        'licata': [37.1080, 13.9390],
+        'limbiate': [45.5560, 9.1280],
+        'livorno': [43.5485, 10.3106],
+        'lodi': [45.3097, 9.5037],
+        'lucca': [43.8429, 10.5027],
+        'lugo': [44.4210, 11.9100],
+        'macomer': [40.2630, 8.7750],
+        'macerata': [43.3008, 13.4534],
+        'maddaloni': [41.0340, 14.3830],
+        'magenta': [45.4640, 8.8830],
+        'majano': [46.1880, 13.0670],
+        'manfredonia': [41.6300, 15.9100],
+        'mantova': [45.1564, 10.7914],
+        'marano di napoli': [40.8970, 14.1880],
+        'marcianise': [41.0320, 14.2980],
+        'marina di carrara': [44.0380, 10.0460],
+        'marina di grosseto': [42.7190, 10.9820],
+        'marina di massa': [44.0070, 10.1040],
+        'marsala': [37.7980, 12.4360],
+        'martina franca': [40.7040, 17.3350],
+        'massa': [44.0354, 10.1393],
+        'massafra': [40.5900, 17.1170],
+        'matelica': [43.2560, 13.0090],
+        'matera': [40.6664, 16.6043],
+        'mazara del vallo': [37.6540, 12.5880],
+        'melito di napoli': [40.9190, 14.2310],
+        'mentana': [42.0350, 12.6440],
+        'merano': [46.6700, 11.1600],
+        'messina': [38.1938, 15.5540],
+        'mestre': [45.4900, 12.2400],
+        'milano': [45.4642, 9.1900],
+        'misterbianco': [37.5180, 15.0070],
+        'modena': [44.6471, 10.9252],
+        'modica': [36.8590, 14.7610],
+        'mola di bari': [41.0600, 17.0880],
+        'molfetta': [41.2000, 16.5990],
+        'moncalieri': [45.0000, 7.6850],
+        'mondovi': [44.3900, 7.8200],
+        'monopoli': [40.9497, 17.2975],
+        'montebelluna': [45.7770, 12.0440],
+        'montecatini terme': [43.8830, 10.7710],
+        'montevarchi': [43.5540, 11.5680],
+        'monza': [45.5845, 9.2744],
+        'muggia': [45.6040, 13.7680],
+        'mugnano di napoli': [40.9100, 14.2060],
+        'napoli': [40.8518, 14.2681],
+        'nardo': [40.1790, 18.0310],
+        'nardò': [40.1790, 18.0310],
+        'nettuno': [41.4580, 12.6630],
+        'nichelino': [44.9950, 7.6470],
+        'nola': [40.9220, 14.5280],
+        'novara': [45.4469, 8.6221],
+        'novi ligure': [44.7630, 8.7870],
+        'nuoro': [40.3210, 9.3301],
+        'olbia': [40.9230, 9.5030],
+        'olgiate comasco': [45.7850, 8.9680],
+        'oliveto citra': [40.6900, 15.2330],
+        'omegna': [45.8790, 8.4080],
+        'oristano': [39.9062, 8.5916],
+        'ostia': [41.7320, 12.2780],
+        'ostuni': [40.7290, 17.5760],
+        'otranto': [40.1480, 18.4860],
+        'padova': [45.4064, 11.8768],
+        'padula': [40.3390, 15.6570],
+        'pagani': [40.7520, 14.6140],
+        'palermo': [38.1157, 13.3615],
+        'parma': [44.8015, 10.3279],
+        'partinico': [38.0410, 13.1180],
+        'pavia': [45.1847, 9.1582],
+        'perugia': [43.1107, 12.3908],
+        'pesaro': [43.9102, 12.9133],
+        'pescara': [42.4618, 14.2161],
+        'peschiera del garda': [45.4390, 10.6880],
+        'pescia': [43.9010, 10.6900],
+        'piacenza': [45.0526, 9.6926],
+        'piazza armerina': [37.3850, 14.3670],
+        'pinerolo': [44.8850, 7.3300],
+        'piombino': [42.9250, 10.5250],
+        'pisa': [43.7228, 10.4017],
+        'pistoia': [43.9333, 10.9170],
+        'poggibonsi': [43.4700, 11.1490],
+        'pomezia': [41.6690, 12.5020],
+        'pomigliano d arco': [40.9100, 14.3980],
+        'pompei': [40.7510, 14.5000],
+        'pontedera': [43.6630, 10.6330],
+        'porcia': [45.9630, 12.6110],
+        'pordenone': [45.9626, 12.6605],
+        'portici': [40.8160, 14.3410],
+        'porto recanati': [43.4360, 13.6620],
+        'porto san giorgio': [43.1810, 13.7950],
+        'porto torres': [40.8370, 8.4010],
+        'portogruaro': [45.7770, 12.8400],
+        'potenza': [40.6395, 15.8050],
+        'pozzuoli': [40.8320, 14.1250],
+        'prato': [43.8777, 11.1023],
+        'putignano': [40.8490, 17.1220],
+        'qualiano': [40.9230, 14.1480],
+        'quartu sant elena': [39.2410, 9.1840],
+        'ragusa': [36.9269, 14.7255],
+        'rapallo': [44.3500, 9.2310],
+        'ravenna': [44.4184, 12.2035],
+        'reggio calabria': [38.1113, 15.6473],
+        'reggio emilia': [44.6989, 10.6297],
+        'rho': [45.5320, 9.0390],
+        'riccione': [43.9990, 12.6570],
+        'rimini': [44.0678, 12.5695],
+        'rivoli': [45.0700, 7.5200],
+        'roma': [41.9028, 12.4964],
+        'rome': [41.9028, 12.4964],
+        'rovigo': [45.0705, 11.7904],
+        'rozzano': [45.3830, 9.1560],
+        'salerno': [40.6824, 14.7681],
+        'san benedetto del tronto': [42.9490, 13.8840],
+        'san dona di piave': [45.6300, 12.5640],
+        'san donà di piave': [45.6300, 12.5640],
+        'san giorgio a cremano': [40.8330, 14.3340],
+        'san giovanni in persiceto': [44.6410, 11.1880],
+        'san giovanni rotondo': [41.7060, 15.7290],
+        'san giuliano milanese': [45.3940, 9.2910],
+        'san giuliano terme': [43.7630, 10.4410],
+        'san lazzaro di savena': [44.4710, 11.4140],
+        'san miniato': [43.6800, 10.8490],
+        'san severo': [41.6910, 15.3790],
+        'sanremo': [43.8150, 7.7770],
+        'sant antimo': [40.9420, 14.2350],
+        'santa maria capua vetere': [41.0820, 14.2540],
+        'sarno': [40.8110, 14.6210],
+        'sassari': [40.7259, 8.5557],
+        'sassuolo': [44.5520, 10.7850],
+        'savona': [44.3091, 8.4772],
+        'schio': [45.7120, 11.3580],
+        'sciacca': [37.5080, 13.0890],
+        'scicli': [36.7910, 14.7020],
+        'scordia': [37.2980, 14.8420],
+        'senigallia': [43.7130, 13.2230],
+        'seriate': [45.6830, 9.7150],
+        'sesto fiorentino': [43.8340, 11.1950],
+        'sesto san giovanni': [45.5340, 9.2350],
+        'settevignano': [41.8710, 12.4030],
+        'seveso': [45.6440, 9.1430],
+        'siena': [43.3188, 11.3308],
+        'siracusa': [37.0755, 15.2866],
+        'sondrio': [46.1710, 9.8720],
+        'spinea': [45.4930, 12.1610],
+        'spoleto': [42.7390, 12.7380],
+        'squinzano': [40.4340, 18.0420],
+        'sulmona': [42.0480, 13.9260],
+        'taormina': [37.8530, 15.2880],
+        'taranto': [40.4644, 17.2470],
+        'teramo': [42.6589, 13.7036],
+        'terme': [38.1320, 15.2150],
+        'terni': [42.5636, 12.6427],
+        'terzigno': [40.8080, 14.4940],
+        'tivoli': [41.9630, 12.7970],
+        'torre annunziata': [40.7570, 14.4520],
+        'torre del greco': [40.7840, 14.3950],
+        'tortona': [44.8940, 8.8640],
+        'trani': [41.2770, 16.4170],
+        'trapani': [38.0173, 12.5365],
+        'trento': [46.0748, 11.1217],
+        'treviso': [45.6669, 12.2430],
+        'trieste': [45.6495, 13.7768],
+        'udine': [46.0710, 13.2346],
+        'varese': [45.8206, 8.8250],
+        'venezia': [45.4408, 12.3155],
+        'verbania': [45.9216, 8.5516],
+        'vercelli': [45.3202, 8.4185],
+        'verona': [45.4384, 10.9916],
+        'viareggio': [43.8680, 10.2500],
+        'vicenza': [45.5455, 11.5354],
+        'vigevano': [45.3140, 8.8540],
+        'viterbo': [42.4207, 12.1077],
+        'vittoria': [36.9520, 14.5300],
+        'voghera': [44.9920, 9.0090]
     };
+
+
 
     function normalizePlaceName(s) {
         return (s || '').toLowerCase().trim()
@@ -7121,21 +7774,67 @@
         const q = (query || '').trim();
         if (!q) return null;
 
-        // 1) Database locale città (veloce e offline)
-        if (typeof resolveCoordsLocal === 'function') {
-            const local = resolveCoordsLocal(q, '');
-            if (local && local.lat != null && local.lng != null && !local.fallback) {
-                return {
-                    lat: Number(local.lat),
-                    lng: Number(local.lng),
-                    label: q,
-                    approx: !!local.approx,
-                    source: local.source || 'local'
-                };
+        // 0) Match con località già usate dai clienti
+        try {
+            const qn = (typeof normalizePlaceName === 'function') ? normalizePlaceName(q) : q.toLowerCase();
+            for (let i = 0; i < (clients || []).length; i++) {
+                const c = clients[i];
+                const ln = (typeof normalizePlaceName === 'function') ? normalizePlaceName(c.localita || '') : String(c.localita || '').toLowerCase();
+                if (ln && (ln === qn || ln.indexOf(qn) >= 0 || qn.indexOf(ln) >= 0) && ln.length >= 3) {
+                    const loc = resolveCoordsLocal(c.localita, c.provincia || '');
+                    if (loc && loc.lat != null && loc.lng != null) {
+                        return {
+                            lat: Number(loc.lat),
+                            lng: Number(loc.lng),
+                            label: c.localita || q,
+                            approx: !!loc.approx,
+                            source: 'client-localita'
+                        };
+                    }
+                }
             }
-            // anche con provincia vuota: se ha trovato qualcosa di usabile
-            if (local && local.lat != null && local.lng != null && local.source === 'city-db') {
-                return { lat: Number(local.lat), lng: Number(local.lng), label: q, approx: false, source: 'city-db' };
+        } catch (e) {}
+
+        // 1) Database locale città (molto completo, offline)
+        if (typeof resolveCoordsLocal === 'function') {
+            const variants = [q];
+            // togli eventuale provincia in parentesi "Monopoli (BA)"
+            const noPar = q.replace(/\s*\([^)]*\)\s*/g, ' ').trim();
+            if (noPar && noPar !== q) variants.push(noPar);
+            const lower = q.toLowerCase().trim();
+            if (CITY_COORDS && CITY_COORDS[lower]) {
+                const [lat, lng] = CITY_COORDS[lower];
+                return { lat: lat, lng: lng, label: q, approx: false, source: 'city-db' };
+            }
+            for (let vi = 0; vi < variants.length; vi++) {
+                const local = resolveCoordsLocal(variants[vi], '');
+                if (local && local.lat != null && local.lng != null && !local.fallback) {
+                    return {
+                        lat: Number(local.lat),
+                        lng: Number(local.lng),
+                        label: q,
+                        approx: !!local.approx,
+                        source: local.source || 'local'
+                    };
+                }
+            }
+            // match diretto chiavi CITY_COORDS (parziale)
+            if (CITY_COORDS && typeof normalizePlaceName === 'function') {
+                const nq = normalizePlaceName(q);
+                let best = null, bestLen = 0;
+                for (const k of Object.keys(CITY_COORDS)) {
+                    const nk = normalizePlaceName(k);
+                    if (!nk) continue;
+                    let score = 0;
+                    if (nq === nk) score = 1000 + nk.length;
+                    else if (nq.indexOf(nk) >= 0 && nk.length >= 4) score = 100 + nk.length;
+                    else if (nk.indexOf(nq) >= 0 && nq.length >= 4) score = 50 + nq.length;
+                    if (score > bestLen) { bestLen = score; best = k; }
+                }
+                if (best) {
+                    const [lat, lng] = CITY_COORDS[best];
+                    return { lat: lat, lng: lng, label: q, approx: bestLen < 1000, source: 'city-db' };
+                }
             }
         }
 
@@ -7225,6 +7924,66 @@
         a.value = b.value;
         b.value = t;
     };
+
+
+
+    function titleCasePlace(name) {
+        return String(name || '').trim().replace(/\s+/g, ' ').replace(/\b[\wàèéìòù']/gi, function(c) {
+            return c.toUpperCase();
+        });
+    }
+
+    function collectAllKnownPlaceNames() {
+        const set = new Set();
+        // database città
+        Object.keys(CITY_COORDS || {}).forEach(function(k) {
+            if (k && k.length >= 2) set.add(k);
+        });
+        // località dei clienti (tutte le sezioni)
+        (clients || []).forEach(function(c) {
+            const loc = (c.localita || '').trim();
+            if (loc) set.add(loc.toLowerCase());
+            // variante senza provincia
+            const clean = loc.replace(/\s*\([^)]*\)\s*/g, ' ').trim();
+            if (clean) set.add(clean.toLowerCase());
+        });
+        // cache geocoding (paesi già cercati)
+        try {
+            const cache = (typeof loadGeoCache === 'function') ? loadGeoCache() : {};
+            Object.keys(cache || {}).forEach(function(key) {
+                const part = key.split('|')[0];
+                if (part && part.length >= 2) set.add(part.toLowerCase());
+                if (cache[key] && cache[key].label) {
+                    const lb = String(cache[key].label).split(',')[0].trim();
+                    if (lb) set.add(lb.toLowerCase());
+                }
+            });
+        } catch (e) {}
+        return Array.from(set);
+    }
+
+    function populateDistCitiesDatalist() {
+        const dl = document.getElementById('distCitiesDatalist');
+        if (!dl) return;
+        try {
+            const names = collectAllKnownPlaceNames().filter(function(k) {
+                return k && k.length >= 2 && k.indexOf("'") < 0;
+            }).sort(function(a, b) { return a.localeCompare(b, 'it'); });
+            dl.innerHTML = '';
+            const frag = document.createDocumentFragment();
+            // fino a 2000 voci: clienti + database
+            names.slice(0, 2000).forEach(function(name) {
+                const opt = document.createElement('option');
+                opt.value = titleCasePlace(name);
+                frag.appendChild(opt);
+            });
+            dl.appendChild(frag);
+            dl.dataset.filled = '1';
+            dl.dataset.count = String(names.length);
+        } catch (e) {
+            console.error(e);
+        }
+    }
 
     window.calcolaDistanzaPaesi = async function() {
         const fromEl = document.getElementById('distFromInput');
@@ -7430,7 +8189,7 @@
         document.getElementById('navPrep').classList.toggle('active', view === 'prep');
         document.getElementById('navInstallati').classList.toggle('active', view === 'installati');
         document.getElementById('navStandby').classList.toggle('active', view === 'standby');
-        if (view === 'percorso') renderPercorsoPage();
+        if (view === 'percorso') { try { populateDistCitiesDatalist(); } catch(e) {} renderPercorsoPage(); }
         if (view === 'prep') renderPrepPage();
         if (view === 'installati') renderInstallatiPage();
         if (view === 'standby') renderStandbyPage();
