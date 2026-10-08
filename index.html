@@ -2772,6 +2772,13 @@
             line-height: 1.5;
         }
 
+    
+        .dist-calc-hint {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin: -4px 0 12px;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body class="locked">
@@ -2935,6 +2942,7 @@
 
     <div class="dist-calc-card" id="distCalcCard">
         <div class="dist-calc-title">📏 Calcola distanza tra due paesi</div>
+        <p class="dist-calc-hint">Puoi scrivere <strong>qualsiasi comune italiano</strong> (oltre 7.900 comuni). I più usati e quelli dei tuoi clienti sono in elenco; gli altri si cercano online su OpenStreetMap.</p>
         <div class="dist-calc-grid">
             <div class="form-group">
                 <label for="distFromInput">Da</label>
@@ -5977,6 +5985,36 @@
         return ((localita || '') + '|' + (provincia || '')).trim().toLowerCase();
     }
 
+    const PROVINCE_COORDS = {
+        'AG': [37.311, 13.576], 'AL': [44.913, 8.615], 'AN': [43.616, 13.519], 'AO': [45.737, 7.321],
+        'AR': [43.463, 11.880], 'AP': [42.853, 13.577], 'AT': [44.901, 8.207], 'AV': [40.915, 14.791],
+        'BA': [41.118, 16.872], 'BT': [41.319, 16.284], 'BL': [46.143, 12.217], 'BN': [41.130, 14.783],
+        'BG': [45.698, 9.677], 'BI': [45.563, 8.058], 'BO': [44.494, 11.343], 'BZ': [46.498, 11.355],
+        'BS': [45.542, 10.212], 'BR': [40.633, 17.942], 'CA': [39.224, 9.122], 'CL': [37.490, 14.063],
+        'CB': [41.561, 14.659], 'CE': [41.073, 14.324], 'CT': [37.508, 15.083], 'CZ': [38.910, 16.587],
+        'CH': [42.351, 14.167], 'CO': [45.808, 9.085], 'CS': [39.299, 16.254], 'CR': [45.133, 10.023],
+        'KR': [39.081, 17.127], 'CN': [44.390, 7.548], 'EN': [37.568, 14.279], 'FM': [43.161, 13.718],
+        'FE': [44.838, 11.620], 'FI': [43.770, 11.256], 'FG': [41.462, 15.545], 'FC': [44.223, 12.041],
+        'FR': [41.640, 13.351], 'GE': [44.406, 8.946], 'GO': [45.941, 13.621], 'GR': [42.763, 11.112],
+        'IM': [43.888, 8.027], 'IS': [41.594, 14.231], 'SP': [44.103, 9.824], 'AQ': [42.350, 13.400],
+        'LT': [41.468, 12.904], 'LE': [40.352, 18.175], 'LC': [45.857, 9.398], 'LI': [43.549, 10.311],
+        'LO': [45.310, 9.504], 'LU': [43.843, 10.503], 'MC': [43.301, 13.453], 'MN': [45.156, 10.791],
+        'MS': [44.035, 10.139], 'MT': [40.666, 16.604], 'ME': [38.194, 15.554], 'MI': [45.464, 9.190],
+        'MO': [44.647, 10.925], 'MB': [45.585, 9.274], 'NA': [40.852, 14.268], 'NO': [45.447, 8.622],
+        'NU': [40.321, 9.330], 'OR': [39.906, 8.592], 'PD': [45.406, 11.877], 'PA': [38.116, 13.362],
+        'PR': [44.802, 10.328], 'PV': [45.185, 9.158], 'PG': [43.111, 12.391], 'PU': [43.910, 12.913],
+        'PE': [42.462, 14.216], 'PC': [45.053, 9.693], 'PI': [43.723, 10.402], 'PT': [43.933, 10.917],
+        'PN': [45.963, 12.661], 'PZ': [40.640, 15.805], 'PO': [43.878, 11.102], 'RG': [36.927, 14.726],
+        'RA': [44.418, 12.204], 'RC': [38.111, 15.647], 'RE': [44.699, 10.630], 'RI': [42.405, 12.857],
+        'RN': [44.068, 12.570], 'RM': [41.903, 12.496], 'RO': [45.071, 11.790], 'SA': [40.682, 14.768],
+        'SS': [40.726, 8.556], 'SV': [44.309, 8.477], 'SI': [43.319, 11.331], 'SR': [37.076, 15.287],
+        'SO': [46.171, 9.872], 'SU': [39.309, 8.985], 'TA': [40.464, 17.247], 'TE': [42.659, 13.704],
+        'TR': [42.564, 12.643], 'TO': [45.070, 7.687], 'TP': [38.017, 12.537], 'TN': [46.075, 11.122],
+        'TV': [45.667, 12.243], 'TS': [45.650, 13.777], 'UD': [46.071, 13.235], 'VA': [45.821, 8.825],
+        'VE': [45.441, 12.316], 'VB': [45.922, 8.552], 'VC': [45.320, 8.419], 'VR': [45.438, 10.992],
+        'VV': [38.676, 16.100], 'VI': [45.546, 11.535], 'VT': [42.421, 12.108]
+    };
+
     function coordsFromProvince(provincia) {
         const p = (provincia || '').toUpperCase().trim();
         const pair = PROVINCE_COORDS[p];
@@ -7849,111 +7887,163 @@
     }
 
 
+
     async function geocodePlaceForDistance(query) {
         const q = (query || '').trim();
         if (!q) return null;
+        const base = q.replace(/\s*\([^)]*\)\s*/g, ' ').trim();
+        const lower = base.toLowerCase();
+        const nq = (typeof normalizePlaceName === 'function') ? normalizePlaceName(base) : lower;
 
-        // 0) Match con località già usate dai clienti
-        try {
-            const qn = (typeof normalizePlaceName === 'function') ? normalizePlaceName(q) : q.toLowerCase();
-            for (let i = 0; i < (clients || []).length; i++) {
-                const c = clients[i];
-                const ln = (typeof normalizePlaceName === 'function') ? normalizePlaceName(c.localita || '') : String(c.localita || '').toLowerCase();
-                if (ln && (ln === qn || ln.indexOf(qn) >= 0 || qn.indexOf(ln) >= 0) && ln.length >= 3) {
-                    const loc = resolveCoordsLocal(c.localita, c.provincia || '');
-                    if (loc && loc.lat != null && loc.lng != null) {
-                        return {
-                            lat: Number(loc.lat),
-                            lng: Number(loc.lng),
-                            label: c.localita || q,
-                            approx: !!loc.approx,
-                            source: 'client-localita'
-                        };
-                    }
-                }
-            }
-        } catch (e) {}
-
-        // 1) Database locale città (molto completo, offline)
-        if (typeof resolveCoordsLocal === 'function') {
-            const variants = [q];
-            // togli eventuale provincia in parentesi "Monopoli (BA)"
-            const noPar = q.replace(/\s*\([^)]*\)\s*/g, ' ').trim();
-            if (noPar && noPar !== q) variants.push(noPar);
-            const lower = q.toLowerCase().trim();
-            if (CITY_COORDS && CITY_COORDS[lower]) {
+        // --- A) Match ESATTO nel database locale (solo preciso) ---
+        if (CITY_COORDS) {
+            if (CITY_COORDS[lower]) {
                 const [lat, lng] = CITY_COORDS[lower];
-                return { lat: lat, lng: lng, label: q, approx: false, source: 'city-db' };
+                return { lat: lat, lng: lng, label: base, approx: false, source: 'city-db' };
             }
-            for (let vi = 0; vi < variants.length; vi++) {
-                const local = resolveCoordsLocal(variants[vi], '');
-                if (local && local.lat != null && local.lng != null && !local.fallback) {
-                    return {
-                        lat: Number(local.lat),
-                        lng: Number(local.lng),
-                        label: q,
-                        approx: !!local.approx,
-                        source: local.source || 'local'
-                    };
-                }
+            if (nq && CITY_COORDS[nq]) {
+                const [lat, lng] = CITY_COORDS[nq];
+                return { lat: lat, lng: lng, label: base, approx: false, source: 'city-db' };
             }
-            // match diretto chiavi CITY_COORDS (parziale)
-            if (CITY_COORDS && typeof normalizePlaceName === 'function') {
-                const nq = normalizePlaceName(q);
-                let best = null, bestLen = 0;
-                for (const k of Object.keys(CITY_COORDS)) {
-                    const nk = normalizePlaceName(k);
-                    if (!nk) continue;
-                    let score = 0;
-                    if (nq === nk) score = 1000 + nk.length;
-                    else if (nq.indexOf(nk) >= 0 && nk.length >= 4) score = 100 + nk.length;
-                    else if (nk.indexOf(nq) >= 0 && nq.length >= 4) score = 50 + nq.length;
-                    if (score > bestLen) { bestLen = score; best = k; }
-                }
-                if (best) {
-                    const [lat, lng] = CITY_COORDS[best];
-                    return { lat: lat, lng: lng, label: q, approx: bestLen < 1000, source: 'city-db' };
+            // match esatto normalizzato su tutte le chiavi
+            for (const k of Object.keys(CITY_COORDS)) {
+                const nk = (typeof normalizePlaceName === 'function') ? normalizePlaceName(k) : k;
+                if (nk && nq && nk === nq) {
+                    const [lat, lng] = CITY_COORDS[k];
+                    return { lat: lat, lng: lng, label: base, approx: false, source: 'city-db' };
                 }
             }
         }
 
-        // 2) Nominatim OpenStreetMap
+        // --- B) Cache geocoding precedente ---
+        try {
+            if (typeof loadGeoCache === 'function') {
+                const cache = loadGeoCache();
+                const key = (typeof geoKey === 'function') ? geoKey(base, '') : lower;
+                if (cache[key] && cache[key].lat != null) {
+                    return {
+                        lat: Number(cache[key].lat),
+                        lng: Number(cache[key].lng),
+                        label: cache[key].label || base,
+                        approx: !cache[key].precise,
+                        source: 'cache'
+                    };
+                }
+            }
+        } catch (e) {}
+
+        // --- C) RICERCA INTERNET (obbligatoria se non esatto) ---
+        function rememberGeo(lat, lng, label, precise) {
+            try {
+                if (typeof loadGeoCache === 'function') {
+                    const cache = loadGeoCache();
+                    const key = (typeof geoKey === 'function') ? geoKey(base, '') : lower;
+                    cache[key] = { lat: lat, lng: lng, precise: !!precise, label: label || base };
+                    if (typeof saveGeoCache === 'function') saveGeoCache(cache);
+                    else localStorage.setItem('note_clienti_geo_cache', JSON.stringify(cache));
+                }
+            } catch (e) {}
+        }
+
+        // C1) Open-Meteo (CORS ok, tutti i comuni)
+        try {
+            const url = 'https://geocoding-api.open-meteo.com/v1/search?name=' +
+                encodeURIComponent(base) + '&count=5&language=it&format=json&countryCode=IT';
+            const controller = new AbortController();
+            const timer = setTimeout(function() { controller.abort(); }, 8000);
+            const res = await fetch(url, { signal: controller.signal });
+            clearTimeout(timer);
+            if (res.ok) {
+                const data = await res.json();
+                const results = (data && data.results) ? data.results : [];
+                const hit = results.find(function(r) {
+                    return r && r.latitude != null && r.longitude != null &&
+                        (!r.country_code || String(r.country_code).toUpperCase() === 'IT');
+                }) || results[0];
+                if (hit && hit.latitude != null) {
+                    const label = [hit.name, hit.admin1, hit.country].filter(Boolean).join(', ');
+                    rememberGeo(hit.latitude, hit.longitude, label, true);
+                    return {
+                        lat: Number(hit.latitude),
+                        lng: Number(hit.longitude),
+                        label: label || base,
+                        approx: false,
+                        source: 'open-meteo'
+                    };
+                }
+            }
+        } catch (e) {
+            console.warn('Open-Meteo geocode fail', e);
+        }
+
+        // C2) Photon Komoot
+        try {
+            const url = 'https://photon.komoot.io/api/?limit=5&lang=it&q=' + encodeURIComponent(base + ', Italia');
+            const controller = new AbortController();
+            const timer = setTimeout(function() { controller.abort(); }, 8000);
+            const res = await fetch(url, { signal: controller.signal });
+            clearTimeout(timer);
+            if (res.ok) {
+                const data = await res.json();
+                const feats = (data && data.features) ? data.features : [];
+                for (let i = 0; i < feats.length; i++) {
+                    const f = feats[i];
+                    const p = f.properties || {};
+                    const cc = (p.countrycode || p.country || '').toString().toUpperCase();
+                    if (cc && cc !== 'IT' && cc !== 'ITALY' && cc !== 'ITALIA') continue;
+                    if (!f.geometry || !f.geometry.coordinates) continue;
+                    const lng = f.geometry.coordinates[0];
+                    const lat = f.geometry.coordinates[1];
+                    const label = p.name || p.city || base;
+                    rememberGeo(lat, lng, label, true);
+                    return { lat: Number(lat), lng: Number(lng), label: label, approx: false, source: 'photon' };
+                }
+            }
+        } catch (e) {
+            console.warn('Photon geocode fail', e);
+        }
+
+        // C3) Nominatim OSM
         try {
             const params = new URLSearchParams({
                 format: 'json',
-                limit: '1',
+                limit: '5',
                 countrycodes: 'it',
-                q: q.toLowerCase().includes('italia') ? q : (q + ', Italia')
+                q: base + ', Italia'
             });
             const controller = new AbortController();
-            const t = setTimeout(function() { controller.abort(); }, 5000);
+            const timer = setTimeout(function() { controller.abort(); }, 8000);
             const res = await fetch('https://nominatim.openstreetmap.org/search?' + params.toString(), {
                 headers: { 'Accept': 'application/json', 'Accept-Language': 'it' },
                 signal: controller.signal
             });
-            clearTimeout(t);
+            clearTimeout(timer);
             if (res.ok) {
                 const data = await res.json();
                 if (data && data[0] && data[0].lat && data[0].lon) {
+                    const pick = data[0];
+                    rememberGeo(parseFloat(pick.lat), parseFloat(pick.lon), pick.display_name || base, true);
                     return {
-                        lat: parseFloat(data[0].lat),
-                        lng: parseFloat(data[0].lon),
-                        label: data[0].display_name || q,
+                        lat: parseFloat(pick.lat),
+                        lng: parseFloat(pick.lon),
+                        label: pick.display_name || base,
                         approx: false,
                         source: 'nominatim'
                     };
                 }
             }
-        } catch (e) {}
+        } catch (e) {
+            console.warn('Nominatim geocode fail', e);
+        }
 
-        // 3) Ultimo tentativo: resolveCoordsLocal anche fallback provincia
+        // --- D) Fallback locale approssimato (solo se internet fallisce) ---
         if (typeof resolveCoordsLocal === 'function') {
-            const local = resolveCoordsLocal(q, '');
+            const local = resolveCoordsLocal(base, '');
             if (local && local.lat != null && local.lng != null) {
                 return {
                     lat: Number(local.lat),
                     lng: Number(local.lng),
-                    label: q,
+                    label: base,
                     approx: true,
                     source: local.source || 'fallback'
                 };
@@ -8085,7 +8175,7 @@
 
         box.hidden = false;
         box.className = 'dist-calc-result loading';
-        box.innerHTML = '🛰️ Calcolo percorso in auto…';
+        box.innerHTML = '🛰️ Ricerca paesi online e calcolo percorso…';
         if (btn) btn.disabled = true;
 
         try {
@@ -8127,7 +8217,9 @@
                 '<div class="dist-sub">' +
                     '<strong>Da:</strong> ' + String(from.label || fromQ).replace(/</g, '&lt;') + '<br>' +
                     '<strong>A:</strong> ' + String(to.label || toQ).replace(/</g, '&lt;') +
-                    '<br>Percorso in auto da OpenStreetMap / OSRM (o stima se offline).' +
+                    '<br>Percorso in auto (OSRM o stima).' +
+                    '<br><span style="font-size:0.75rem;color:#94a3b8;">Posizioni: ' +
+                    String(from.source || '?') + ' → ' + String(to.source || '?') + '</span>' +
                     noteApprox +
                 '</div>';
         } catch (err) {
