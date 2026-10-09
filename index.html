@@ -907,7 +907,8 @@
         .model-qta-badge { background: var(--accent); color: white; font-size: 0.75rem; padding: 1px 6px; border-radius: 8px; cursor: pointer; }
         .btn-del-badge { background: none; border: none; color: #ef4444; cursor: pointer; font-weight: bold; font-size: 0.9rem; }
         .btn-add-inline { background: #f1f5f9; border: 1px dashed #cbd5e1; color: #475569; border-radius: 12px; padding: 4px 10px; font-size: 0.75rem; font-weight: 700; cursor: pointer; }
-        .client-location-link { display: inline-flex; align-items: center; gap: 4px; font-size: 0.85rem; color: var(--accent); font-weight: 600; text-decoration: none; margin-right: 10px; }
+        .client-location-link { display: inline-flex; align-items: center; gap: 4px; font-size: 0.85rem; color: var(--accent); font-weight: 600; text-decoration: none; margin-right: 10px; cursor: pointer; }
+        .client-location-link:hover { text-decoration: underline; }
         .client-badge-meta { display: inline-block; font-size: 0.75rem; background: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--border); font-weight: 600; margin-right: 4px; }
         .edit-controls { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
         .edit-group { display: flex; align-items: center; gap: 4px; }
@@ -3060,6 +3061,17 @@
             padding: 6px 10px;
             line-height: 1.35;
         }
+    
+        .models-hint {
+            font-size: 0.78rem;
+            color: #64748b;
+            margin: -4px 0 8px;
+            line-height: 1.35;
+        }
+        .model-input.model-invalid {
+            border-color: #f97316 !important;
+            background: #fff7ed;
+        }
     </style>
 </head>
 <body class="locked">
@@ -3378,9 +3390,13 @@
             <button class="modal-close" onclick="closeModelsModal()">✕</button>
         </div>
         <div class="modal-body" id="modalModelsList"></div>
+        <div class="models-add-row" style="display:flex;gap:8px;margin-bottom:10px;">
+            <input type="text" id="newModelInput" class="input-control" placeholder="Nome nuovo modello..." autocomplete="off"
+                onkeydown="if(event.key==='Enter'){event.preventDefault();addNewModelFromInput();}">
+            <button type="button" class="btn btn-primary" onclick="addNewModelFromInput()">+ Aggiungi</button>
+        </div>
         <div style="display: flex; gap: 8px;">
-            <button type="button" class="btn btn-primary" style="flex: 1;" onclick="promptNewModel()">+ Nuovo Modello</button>
-            <button type="button" class="btn" onclick="closeModelsModal()">Chiudi</button>
+            <button type="button" class="btn" style="flex:1;" onclick="closeModelsModal()">Chiudi</button>
         </div>
     </div>
 </div>
@@ -4083,7 +4099,7 @@
         const row = document.createElement('div');
         row.className = 'model-select-row';
         row.innerHTML = `
-            <input type="text" class="input-control model-input" list="modelliDatalist" value="${valoreModello}" placeholder="Digita modello..." required autocomplete="off" onchange="autoSaveNewTypedModel(this.value)">
+            <input type="text" class="input-control model-input" list="modelliDatalist" value="${valoreModello}" placeholder="Cerca modello registrato..." required autocomplete="off" onchange="validateModelFromList(this)" onblur="validateModelFromList(this)">
             <select class="select-control model-qta-select" style="width: 90px;">
                 ${getQuantityOptionsHTML(qta)}
             </select>
@@ -4109,15 +4125,31 @@
         }
     }
 
+    // Non crea più modelli nuovi da Note: solo da ⚙️ Gestione modelli
     window.autoSaveNewTypedModel = function(val) {
-        const clean = val.trim();
-        if (clean && !savedModels.includes(clean)) {
-            savedModels.push(clean);
-            savedModels.sort();
-            localStorage.setItem('note_clienti_modelli', JSON.stringify(savedModels));
-            updateModelliDatalist();
+        return;
+    };
+
+    window.validateModelFromList = function(el) {
+        if (!el) return false;
+        const clean = (el.value || '').trim();
+        el.classList.remove('model-invalid');
+        if (!clean) return false;
+        // match case-insensitive su lista registrata
+        const found = (savedModels || []).find(function(m) {
+            return String(m).trim().toLowerCase() === clean.toLowerCase();
+        });
+        if (!found) {
+            el.classList.add('model-invalid');
+            el.title = 'Modello non registrato. Aggiungilo da Impostazioni → Modelli.';
+            return false;
         }
-    }
+        // normalizza al nome ufficiale
+        el.value = found;
+        el.title = '';
+        return true;
+    };
+
 
     window.editSelectedModelRow = function(btn) {
         const val = btn.closest('.model-select-row').querySelector('.model-input').value.trim();
@@ -4143,6 +4175,29 @@
         const menu = document.getElementById('settingsMenu');
         if (menu && !menu.contains(e.target)) menu.classList.remove('open');
     });
+
+
+    window.addNewModelFromInput = function() {
+        const el = document.getElementById('newModelInput');
+        const name = el ? el.value.trim() : '';
+        if (!name) {
+            alert('Scrivi il nome del modello.');
+            return;
+        }
+        const exists = (savedModels || []).some(function(m) {
+            return String(m).trim().toLowerCase() === name.toLowerCase();
+        });
+        if (exists) {
+            alert('Questo modello è già registrato.');
+            return;
+        }
+        savedModels.push(name);
+        savedModels.sort(function(a, b) { return a.localeCompare(b, 'it'); });
+        localStorage.setItem('note_clienti_modelli', JSON.stringify(savedModels));
+        if (typeof updateModelliDatalist === 'function') updateModelliDatalist();
+        if (typeof renderModelsModalList === 'function') renderModelsModalList();
+        if (el) { el.value = ''; try { el.focus(); } catch (e) {} }
+    };
 
     window.promptNewModel = function() {
         const name = prompt("Nome del nuovo modello:");
@@ -4414,13 +4469,29 @@
             const inputEl = row.querySelector('.model-input');
             const qtaSelect = row.querySelector('.model-qta-select');
             if (inputEl && inputEl.value.trim() !== '') {
+                if (!validateModelFromList(inputEl)) {
+                    return;
+                }
                 const modelName = inputEl.value.trim();
                 modelli.push({ nome: modelName, qta: parseInt(qtaSelect.value) || 1 });
-                window.autoSaveNewTypedModel(modelName);
             }
         });
 
+        // Blocca se ha digitato modelli non in elenco
+        let invalidModel = false;
+        rows.forEach(row => {
+            const inputEl = row.querySelector('.model-input');
+            if (inputEl && inputEl.value.trim() && inputEl.classList.contains('model-invalid')) {
+                invalidModel = true;
+            }
+        });
+        if (invalidModel) {
+            alert('Uno o più modelli non sono registrati.\nAggiungili da Impostazioni → Modelli, oppure scegli un modello dall\'elenco.');
+            return;
+        }
+
         if (modelli.length === 0) {
+
             alert("Inserisci almeno un modello.");
             return;
         }
@@ -4645,6 +4716,16 @@
             inputEl.style.borderColor = '#dc2626';
             return;
         }
+        // Solo modelli già registrati in Gestione modelli
+        const found = (savedModels || []).find(function(m) {
+            return String(m).trim().toLowerCase() === nome.toLowerCase();
+        });
+        if (!found) {
+            alert('Modello non registrato.\nAggiungilo da Impostazioni → Modelli.');
+            inputEl.focus();
+            inputEl.style.borderColor = '#f97316';
+            return;
+        }
         const client = clients.find(c => String(c.id) === sid);
         if (!client) {
             console.warn('Cliente non trovato', sid);
@@ -4652,8 +4733,7 @@
         }
         if (!Array.isArray(client.modelli)) client.modelli = [];
         const qta = qtaEl ? (parseInt(qtaEl.value, 10) || 1) : 1;
-        client.modelli.push({ nome: nome, qta: qta });
-        window.autoSaveNewTypedModel(nome);
+        client.modelli.push({ nome: found, qta: qta });
         activeInlineAddId = null;
         saveToLocalStorage();
         render();
@@ -5461,7 +5541,7 @@
                 '<button class="btn-add-inline" onclick="toggleInlineAddModel(\'' + client.id + '\')">+ modello</button></div>' +
               parts.inlineAddHTML +
               '<div class="info-card-grid">' +
-                '<div class="info-item"><span class="info-label">Località</span><span class="info-value"><a href="' + parts.mapUrl + '" target="_blank" rel="noopener">📍 ' + (client.localita || '—') + '</a></span></div>' +
+                '<div class="info-item"><span class="info-label">Località</span><span class="info-value"><a href="#" class="client-location-link" data-localita="' + String(client.localita || '').replace(/"/g, '&quot;').replace(/</g, '&lt;') + '">📍 ' + String(client.localita || '—').replace(/</g, '&lt;') + '</a></span></div>' +
                 '<div class="info-item"><span class="info-label">Provincia</span><span class="info-value">' +
                   '<select class="edit-select compact-select" onchange="updateProvincia(\'' + client.id + '\', this.value)">' +
                   ITALIAN_PROVINCES.map(function(prov) {
@@ -5770,7 +5850,7 @@
                             </div>
                             ${inlineAddHTML}
                             <div style="margin-top: 4px;">
-                                <a href="${mapUrl}" target="_blank" rel="noopener" class="client-location-link">📍 ${client.localita || ''} 🔗</a>
+                                <a href="#" class="client-location-link" title="Apri in Percorso sulla mappa" data-localita="${String(client.localita || '').replace(/"/g, '&quot;')}">📍 ${client.localita || ''}</a>
                             </div>
                             ${isSpedizione ? (() => {
                                 const hasTrack = (client.tracking || '').trim() && !client._editingTracking;
@@ -8596,6 +8676,52 @@
 
     let placeFindMap = null;
     let placeFindMarker = null;
+
+
+    window.openPaeseInPercorso = function(localita) {
+        const place = String(localita || '').trim();
+        if (!place) {
+            alert('Nessun paese indicato per questo cliente.');
+            return;
+        }
+        // Salva il paese da cercare dopo il cambio vista
+        window._pendingPlaceFind = place;
+        try {
+            if (typeof switchView === 'function') switchView('percorso');
+            else if (typeof window.switchView === 'function') window.switchView('percorso');
+        } catch (e) {
+            console.error(e);
+        }
+        // Esegui ricerca dopo che la vista Percorso è attiva
+        function runFind() {
+            const input = document.getElementById('placeFindInput');
+            const card = document.getElementById('placeFindCard');
+            if (!input) {
+                setTimeout(runFind, 100);
+                return;
+            }
+            input.value = window._pendingPlaceFind || place;
+            if (card) {
+                try { card.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
+            }
+            if (typeof window.cercaPaeseSuMappa === 'function') {
+                window.cercaPaeseSuMappa();
+            }
+        }
+        setTimeout(runFind, 200);
+        setTimeout(runFind, 500);
+    };
+
+    // Click sul paese in Note → Percorso mappa (delegation)
+    document.addEventListener('click', function(e) {
+        const a = e.target && e.target.closest ? e.target.closest('a.client-location-link') : null;
+        if (!a) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const place = a.getAttribute('data-localita') || a.textContent.replace(/^📍\s*/, '').trim();
+        window.openPaeseInPercorso(place);
+    }, true);
+
 
     window.cercaPaeseSuMappa = async function() {
         const input = document.getElementById('placeFindInput');
