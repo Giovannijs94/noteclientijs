@@ -2999,6 +2999,55 @@
                 font-size: 1.1rem;
             }
         }
+    
+        .place-find-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px 18px;
+            margin-bottom: 18px;
+            box-shadow: var(--shadow);
+        }
+        .place-find-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .place-find-row .input-control {
+            flex: 1;
+            min-width: 180px;
+        }
+        .place-find-status {
+            margin-top: 10px;
+            font-size: 0.88rem;
+            color: #334155;
+            line-height: 1.4;
+        }
+        .place-find-status.error { color: #b91c1c; }
+        .place-find-status.loading { color: #1d4ed8; font-weight: 600; }
+        .place-find-map {
+            margin-top: 12px;
+            height: 280px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+            background: #e2e8f0;
+        }
+        .place-find-map .leaflet-container {
+            width: 100%;
+            height: 100%;
+        }
+        @media (max-width: 600px) {
+            .place-find-card { padding: 12px; margin-bottom: 12px; }
+            .place-find-map { height: 220px; }
+            .place-find-row .btn-primary {
+                width: 100%;
+                min-height: 44px;
+                justify-content: center;
+            }
+        }
+
     </style>
 </head>
 <body class="locked">
@@ -3163,6 +3212,18 @@
         </div>
     </div>
     <p class="percorso-intro">Una mini-mappa per ogni tappa. Partenza sempre da <strong>Casamassima (BA)</strong>, fermate ordinate per distanza geografica (percorso più comodo).</p>
+
+    <div class="place-find-card" id="placeFindCard">
+        <div class="dist-calc-title">📍 Trova paese sulla mappa</div>
+        <p class="dist-calc-hint">Scrivi un comune italiano (anche non in elenco: ricerca online). Verrà mostrato sulla mappa.</p>
+        <div class="place-find-row">
+            <input type="text" id="placeFindInput" class="input-control" list="distCitiesDatalist" placeholder="Es. Ostuni, Roma, Gallipoli…" autocomplete="off"
+                onkeydown="if(event.key==='Enter'){event.preventDefault();cercaPaeseSuMappa();}">
+            <button type="button" class="btn btn-primary" id="placeFindBtn" onclick="cercaPaeseSuMappa()">Cerca</button>
+        </div>
+        <div id="placeFindStatus" class="place-find-status" hidden></div>
+        <div id="placeFindMap" class="place-find-map" hidden></div>
+    </div>
 
     <div class="dist-calc-card" id="distCalcCard">
         <div class="dist-calc-title">📏 Calcola distanza tra due paesi</div>
@@ -8449,6 +8510,127 @@
         }
     }
 
+
+    let placeFindMap = null;
+    let placeFindMarker = null;
+
+    window.cercaPaeseSuMappa = async function() {
+        const input = document.getElementById('placeFindInput');
+        const status = document.getElementById('placeFindStatus');
+        const mapEl = document.getElementById('placeFindMap');
+        const btn = document.getElementById('placeFindBtn');
+        if (!input || !status || !mapEl) return;
+
+        const q = input.value.trim();
+        if (!q) {
+            status.hidden = false;
+            status.className = 'place-find-status error';
+            status.textContent = 'Scrivi il nome di un paese.';
+            return;
+        }
+
+        status.hidden = false;
+        status.className = 'place-find-status loading';
+        status.textContent = '🛰️ Ricerca posizione…';
+        mapEl.hidden = true;
+        if (btn) btn.disabled = true;
+
+        try {
+            const place = await geocodePlaceForDistance(q);
+            if (!place || place.lat == null || place.lng == null) {
+                throw new Error('Paese non trovato. Prova un altro nome (es. «Monopoli» o «Roma»).');
+            }
+
+            const lat = Number(place.lat);
+            const lng = Number(place.lng);
+            const label = place.label || q;
+            const src = place.source || '';
+
+            status.className = 'place-find-status';
+            status.innerHTML = '<strong>📍 ' + String(label).replace(/</g, '&lt;') + '</strong>' +
+                '<br><span style="font-size:0.8rem;color:#64748b;">Coordinate: ' +
+                lat.toFixed(5) + ', ' + lng.toFixed(5) +
+                (src ? ' · fonte: ' + src : '') +
+                (place.approx ? ' · approssimata' : '') + '</span>';
+
+            mapEl.hidden = false;
+
+            if (typeof L === 'undefined') {
+                status.innerHTML += '<br><em>Mappa non disponibile (Leaflet assente).</em>';
+                return;
+            }
+
+            if (!placeFindMap) {
+                placeFindMap = L.map(mapEl, {
+                    scrollWheelZoom: true,
+                    dragging: true,
+                    touchZoom: true,
+                    doubleClickZoom: true,
+                    attributionControl: true
+                });
+                // Stessi mirror OSM delle altre mappe (evita "accesso bloccato")
+                const providers = [
+                    L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
+                        maxZoom: 18,
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
+                    }),
+                    L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+                        maxZoom: 20,
+                        subdomains: 'abc',
+                        attribution: '&copy; OpenStreetMap / OSM-FR'
+                    }),
+                    L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+                        maxZoom: 19,
+                        subdomains: 'abc',
+                        attribution: '&copy; OpenStreetMap HOT'
+                    })
+                ];
+                let ti = 0;
+                providers[0].addTo(placeFindMap);
+                providers[0].on('tileerror', function() {
+                    if (ti >= providers.length - 1) return;
+                    try { placeFindMap.removeLayer(providers[ti]); } catch (e) {}
+                    ti++;
+                    providers[ti].addTo(placeFindMap);
+                });
+            } else {
+                setTimeout(function() {
+                    try { placeFindMap.invalidateSize(); } catch (e) {}
+                }, 100);
+            }
+
+            if (placeFindMarker) {
+                try { placeFindMap.removeLayer(placeFindMarker); } catch (e) {}
+                placeFindMarker = null;
+            }
+
+            const icon = L.divIcon({
+                className: 'place-find-marker',
+                html: '<div style="background:#dc2626;width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35);"></div>',
+                iconSize: [22, 22],
+                iconAnchor: [11, 22]
+            });
+
+            placeFindMarker = L.marker([lat, lng], { icon: icon })
+                .addTo(placeFindMap)
+                .bindPopup('<strong>' + String(label).replace(/</g, '&lt;') + '</strong>')
+                .openPopup();
+
+            placeFindMap.setView([lat, lng], 12);
+            setTimeout(function() {
+                try { placeFindMap.invalidateSize(); placeFindMap.setView([lat, lng], 12); } catch (e) {}
+            }, 150);
+
+            try { populateDistCitiesDatalist(); } catch (e) {}
+        } catch (err) {
+            status.className = 'place-find-status error';
+            status.textContent = (err && err.message) ? err.message : 'Errore nella ricerca.';
+            mapEl.hidden = true;
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    };
+
     window.calcolaDistanzaPaesi = async function() {
         const fromEl = document.getElementById('distFromInput');
         const toEl = document.getElementById('distToInput');
@@ -8866,7 +9048,7 @@
         document.getElementById('navPrep').classList.toggle('active', view === 'prep');
         document.getElementById('navInstallati').classList.toggle('active', view === 'installati');
         document.getElementById('navStandby').classList.toggle('active', view === 'standby');
-        if (view === 'percorso') { try { populateDistCitiesDatalist(); } catch(e) {} renderPercorsoPage(); }
+        if (view === 'percorso') { try { populateDistCitiesDatalist(); } catch(e) {} renderPercorsoPage(); try { if (placeFindMap) setTimeout(function(){ placeFindMap.invalidateSize(); }, 200); } catch(e) {} }
         if (view === 'meteo') { try { renderMeteoPage(); } catch(e) { console.error(e); } }
         if (view === 'prep') renderPrepPage();
         if (view === 'installati') renderInstallatiPage();
