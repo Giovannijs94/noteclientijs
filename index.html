@@ -2840,6 +2840,131 @@
             }
         }
 
+    
+        .meteo-intro {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 14px;
+            line-height: 1.45;
+        }
+        .meteo-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .meteo-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        .meteo-card-head {
+            padding: 14px 16px;
+            background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+            color: #fff;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .meteo-card-head h2 {
+            margin: 0;
+            font-size: 1.05rem;
+            font-weight: 800;
+        }
+        .meteo-card-meta {
+            font-size: 0.82rem;
+            opacity: 0.95;
+        }
+        .meteo-days {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+            padding: 14px;
+        }
+        .meteo-day {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px 10px;
+            text-align: center;
+        }
+        .meteo-day-date {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #475569;
+            margin-bottom: 4px;
+        }
+        .meteo-day-icon {
+            font-size: 1.8rem;
+            line-height: 1.2;
+        }
+        .meteo-day-desc {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin: 4px 0 6px;
+            min-height: 2.2em;
+        }
+        .meteo-day-temp {
+            font-weight: 800;
+            font-size: 0.95rem;
+            color: #0f172a;
+        }
+        .meteo-day-rain {
+            font-size: 0.75rem;
+            color: #0284c7;
+            margin-top: 4px;
+        }
+        .meteo-empty, .meteo-warn {
+            padding: 20px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        .meteo-warn {
+            background: #fff7ed;
+            color: #c2410c;
+            border-radius: 12px;
+            border: 1px solid #fed7aa;
+            margin: 12px;
+            padding: 12px;
+        }
+        @media (max-width: 600px) {
+            .meteo-days {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+    
+        .meteo-clients {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+        .meteo-client {
+            border-top: 1px solid #e2e8f0;
+            padding: 12px 14px 16px;
+        }
+        .meteo-client:first-child {
+            border-top: none;
+        }
+        .meteo-client-head {
+            margin-bottom: 10px;
+        }
+        .meteo-client-name {
+            font-weight: 800;
+            font-size: 1rem;
+            color: #0f172a;
+        }
+        .meteo-client-meta {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-top: 2px;
+            line-height: 1.4;
+        }
+
     </style>
 </head>
 <body class="locked">
@@ -2866,6 +2991,10 @@
     <button type="button" class="portal-nav-btn" id="navPercorso" onclick="switchView('percorso')">
         <span class="nav-ico">🗺️</span><span class="nav-txt">Percorso</span>
         <span class="nav-badge" id="navPercorsoCount">0</span>
+    </button>
+    <button type="button" class="portal-nav-btn" id="navMeteo" onclick="switchView('meteo')">
+        <span class="nav-ico">🌤️</span><span class="nav-txt">Meteo</span>
+        <span class="nav-badge" id="navMeteoCount">0</span>
     </button>
     <button type="button" class="portal-nav-btn" id="navPrep" onclick="switchView('prep')">
         <span class="nav-ico">📋</span><span class="nav-txt">Pre-pianif.</span>
@@ -3024,6 +3153,19 @@
 
     <div id="percorsoContainer" class="percorso-container"></div>
 </div><!-- /#viewPercorso -->
+
+<div id="viewMeteo" class="view-panel">
+    <div class="header-bar">
+        <div class="header-title-group">
+            <h1>🌤️ Meteo tappe</h1>
+        </div>
+        <div class="header-actions">
+            <button type="button" class="btn btn-primary" onclick="renderMeteoPage(true)">🔄 Aggiorna meteo</button>
+        </div>
+    </div>
+    <p class="meteo-intro">Previsione <strong>per ogni cliente</strong>, in base al suo paese e ai giorni <strong>dal → al</strong> della tappa (Note clienti). Dati Open-Meteo.</p>
+    <div id="meteoContainer" class="meteo-container"></div>
+</div><!-- /#viewMeteo -->
 
 <div id="viewPrep" class="view-panel">
     <div class="header-bar">
@@ -8468,21 +8610,230 @@
         });
     }
 
+
+    function weatherCodeInfo(code) {
+        const c = Number(code);
+        if (c === 0) return { icon: '☀️', label: 'Sereno' };
+        if (c === 1) return { icon: '🌤️', label: 'Preval. sereno' };
+        if (c === 2) return { icon: '⛅', label: 'Parz. nuvoloso' };
+        if (c === 3) return { icon: '☁️', label: 'Coperto' };
+        if (c === 45 || c === 48) return { icon: '🌫️', label: 'Nebbia' };
+        if (c >= 51 && c <= 57) return { icon: '🌦️', label: 'Pioviggine' };
+        if (c >= 61 && c <= 67) return { icon: '🌧️', label: 'Pioggia' };
+        if (c >= 71 && c <= 77) return { icon: '🌨️', label: 'Neve' };
+        if (c >= 80 && c <= 82) return { icon: '🌧️', label: 'Rovesci' };
+        if (c >= 85 && c <= 86) return { icon: '🌨️', label: 'Rovesci neve' };
+        if (c >= 95) return { icon: '⛈️', label: 'Temporale' };
+        return { icon: '🌡️', label: 'N/D' };
+    }
+
+    function buildTappaDateRange(dal, al) {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = now.getMonth();
+        const d1 = parseInt(dal, 10);
+        const d2 = parseInt(al, 10);
+        if (!d1 || !d2 || d1 < 1 || d2 < 1) return null;
+        const start = new Date(y, m, Math.min(31, d1));
+        let end = (d2 >= d1)
+            ? new Date(y, m, Math.min(31, d2))
+            : new Date(y, m + 1, Math.min(31, d2));
+        const maxEnd = new Date(now);
+        maxEnd.setDate(maxEnd.getDate() + 15);
+        maxEnd.setHours(23, 59, 59, 0);
+        if (end > maxEnd) end = maxEnd;
+        if (start > end) return null;
+        const fmt = function(d) {
+            return d.getFullYear() + '-' +
+                String(d.getMonth() + 1).padStart(2, '0') + '-' +
+                String(d.getDate()).padStart(2, '0');
+        };
+        return { start: fmt(start), end: fmt(end) };
+    }
+
+    function tappaCentroid(clientsList) {
+        let lat = 0, lng = 0, n = 0;
+        (clientsList || []).forEach(function(c) {
+            const coords = resolveCoordsLocal(c.localita, c.provincia);
+            if (coords && coords.lat != null && coords.lng != null) {
+                lat += Number(coords.lat);
+                lng += Number(coords.lng);
+                n++;
+            }
+        });
+        if (n === 0) {
+            return { lat: (typeof CASAMASSIMA !== 'undefined' ? CASAMASSIMA.lat : 40.9569),
+                     lng: (typeof CASAMASSIMA !== 'undefined' ? CASAMASSIMA.lng : 16.9186) };
+        }
+        return { lat: lat / n, lng: lng / n };
+    }
+
+    async function fetchOpenMeteoDaily(lat, lng, start, end) {
+        const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + encodeURIComponent(lat) +
+            '&longitude=' + encodeURIComponent(lng) +
+            '&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max' +
+            '&timezone=Europe%2FRome&start_date=' + start + '&end_date=' + end;
+        const controller = new AbortController();
+        const timer = setTimeout(function() { controller.abort(); }, 10000);
+        try {
+            const res = await fetch(url, { signal: controller.signal });
+            clearTimeout(timer);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return await res.json();
+        } catch (e) {
+            clearTimeout(timer);
+            throw e;
+        }
+    }
+
+    function formatItDate(iso) {
+        try {
+            const p = String(iso).split('-');
+            const d = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+            return d.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' });
+        } catch (e) { return iso; }
+    }
+
+
+    window.renderMeteoPage = async function() {
+        const box = document.getElementById('meteoContainer');
+        const countEl = document.getElementById('navMeteoCount');
+        if (!box) return;
+
+        const groups = (typeof getActiveTappeGroups === 'function') ? getActiveTappeGroups() : [];
+        if (countEl) countEl.textContent = String(groups.length);
+
+        if (!groups.length) {
+            box.innerHTML = '<div class="meteo-empty">Nessuna tappa attiva.<br>Assegna una tappa in Note clienti e imposta <strong>dal</strong> / <strong>al</strong>.</div>';
+            return;
+        }
+
+        box.innerHTML = '<div class="meteo-empty">🌤️ Caricamento meteo per ogni cliente…</div>';
+        const weatherCache = {}; // key lat,lng,start,end -> daily data
+        const cards = [];
+
+        async function getDailyForCoords(lat, lng, start, end) {
+            const key = Number(lat).toFixed(3) + ',' + Number(lng).toFixed(3) + '|' + start + '|' + end;
+            if (weatherCache[key]) return weatherCache[key];
+            const data = await fetchOpenMeteoDaily(lat, lng, start, end);
+            weatherCache[key] = data;
+            return data;
+        }
+
+        function renderDaysHtml(daily) {
+            const times = (daily && daily.time) ? daily.time : [];
+            if (!times.length) {
+                return '<div class="meteo-warn">Nessuna previsione per questo intervallo (max ~16 giorni da oggi).</div>';
+            }
+            return '<div class="meteo-days">' + times.map(function(iso, i) {
+                const info = weatherCodeInfo((daily.weathercode || [])[i]);
+                const tmax = (daily.temperature_2m_max || [])[i];
+                const tmin = (daily.temperature_2m_min || [])[i];
+                const rain = (daily.precipitation_sum || [])[i];
+                const prob = (daily.precipitation_probability_max || [])[i];
+                return '<div class="meteo-day">' +
+                    '<div class="meteo-day-date">' + formatItDate(iso) + '</div>' +
+                    '<div class="meteo-day-icon">' + info.icon + '</div>' +
+                    '<div class="meteo-day-desc">' + info.label + '</div>' +
+                    '<div class="meteo-day-temp">' +
+                    (tmin != null ? Math.round(tmin) + '°' : '—') + ' / ' +
+                    (tmax != null ? Math.round(tmax) + '°' : '—') +
+                    '</div>' +
+                    '<div class="meteo-day-rain">💧 ' +
+                    (rain != null ? Number(rain).toFixed(1) + ' mm' : '—') +
+                    (prob != null ? ' · ' + Math.round(prob) + '%' : '') +
+                    '</div></div>';
+            }).join('') + '</div>';
+        }
+
+        for (let gi = 0; gi < groups.length; gi++) {
+            const g = groups[gi];
+            const rangeVals = (typeof getTappaRange === 'function') ? getTappaRange(g.name) : { dal: '', al: '' };
+            const dateRange = buildTappaDateRange(rangeVals.dal, rangeVals.al);
+            const rangeLabel = (rangeVals.dal && rangeVals.al)
+                ? ('dal ' + rangeVals.dal + ' al ' + rangeVals.al)
+                : 'giorni non impostati';
+
+            let clientsHtml = '';
+            if (!dateRange) {
+                clientsHtml = '<div class="meteo-warn">Imposta <strong>dal</strong> e <strong>al</strong> sulla tappa in Note clienti (giorni 1–31).</div>';
+            } else {
+                const list = (g.clients || []).slice().sort(function(a, b) {
+                    return String(a.nome || '').localeCompare(String(b.nome || ''), 'it');
+                });
+                if (!list.length) {
+                    clientsHtml = '<div class="meteo-warn">Nessun cliente in questa tappa.</div>';
+                } else {
+                    const blocks = [];
+                    for (let ci = 0; ci < list.length; ci++) {
+                        const c = list[ci];
+                        const coords = resolveCoordsLocal(c.localita, c.provincia);
+                        const lat = coords && coords.lat != null ? Number(coords.lat) : (CASAMASSIMA && CASAMASSIMA.lat);
+                        const lng = coords && coords.lng != null ? Number(coords.lng) : (CASAMASSIMA && CASAMASSIMA.lng);
+                        const approx = !coords || coords.approx || coords.fallback;
+                        let dayHtml = '';
+                        try {
+                            const data = await getDailyForCoords(lat, lng, dateRange.start, dateRange.end);
+                            dayHtml = renderDaysHtml(data.daily || {});
+                            if (typeof sleepMs === 'function') await sleepMs(120);
+                        } catch (err) {
+                            dayHtml = '<div class="meteo-warn">Errore: ' + String((err && err.message) || err).replace(/</g, '&lt;') + '</div>';
+                        }
+                        const models = (typeof formatClientModelsText === 'function')
+                            ? formatClientModelsText(c)
+                            : ((c.modelli || []).map(function(m) { return m.nome; }).join(', ') || '—');
+                        blocks.push(
+                            '<div class="meteo-client">' +
+                            '<div class="meteo-client-head">' +
+                            '<div class="meteo-client-name">' + String(c.nome || 'Cliente').replace(/</g, '&lt;') + '</div>' +
+                            '<div class="meteo-client-meta">📍 ' + String(c.localita || '—').replace(/</g, '&lt;') +
+                            (c.provincia ? ' (' + String(c.provincia).replace(/</g, '&lt;') + ')' : '') +
+                            (approx ? ' · <em>posizione approx.</em>' : '') +
+                            '<br>📦 ' + String(models).replace(/</g, '&lt;') +
+                            '</div></div>' +
+                            dayHtml +
+                            '</div>'
+                        );
+                    }
+                    clientsHtml = blocks.join('');
+                }
+            }
+
+            cards.push(
+                '<article class="meteo-card">' +
+                '<div class="meteo-card-head">' +
+                '<div><h2>🚩 ' + String(g.name || '').replace(/</g, '&lt;') + '</h2>' +
+                '<div class="meteo-card-meta">' + rangeLabel + ' · ' + (g.clients || []).length + ' client' +
+                ((g.clients || []).length === 1 ? 'e' : 'i') + '</div></div>' +
+                '</div>' +
+                '<div class="meteo-clients">' + clientsHtml + '</div>' +
+                '</article>'
+            );
+            box.innerHTML = cards.join('') + (gi < groups.length - 1 ? '<div class="meteo-empty">Carico tappa successiva…</div>' : '');
+        }
+        box.innerHTML = cards.join('') || '<div class="meteo-empty">Nessun dato.</div>';
+    };
+
     window.switchView = function(view) {
         currentView = view;
         document.getElementById('viewNote').classList.toggle('active', view === 'note');
         const viewPercorso = document.getElementById('viewPercorso');
         if (viewPercorso) viewPercorso.classList.toggle('active', view === 'percorso');
+        const viewMeteo = document.getElementById('viewMeteo');
+        if (viewMeteo) viewMeteo.classList.toggle('active', view === 'meteo');
         document.getElementById('viewPrep').classList.toggle('active', view === 'prep');
         document.getElementById('viewInstallati').classList.toggle('active', view === 'installati');
         document.getElementById('viewStandby').classList.toggle('active', view === 'standby');
         document.getElementById('navNote').classList.toggle('active', view === 'note');
         const navPercorso = document.getElementById('navPercorso');
         if (navPercorso) navPercorso.classList.toggle('active', view === 'percorso');
+        const navMeteo = document.getElementById('navMeteo');
+        if (navMeteo) navMeteo.classList.toggle('active', view === 'meteo');
         document.getElementById('navPrep').classList.toggle('active', view === 'prep');
         document.getElementById('navInstallati').classList.toggle('active', view === 'installati');
         document.getElementById('navStandby').classList.toggle('active', view === 'standby');
         if (view === 'percorso') { try { populateDistCitiesDatalist(); } catch(e) {} renderPercorsoPage(); }
+        if (view === 'meteo') { try { renderMeteoPage(); } catch(e) { console.error(e); } }
         if (view === 'prep') renderPrepPage();
         if (view === 'installati') renderInstallatiPage();
         if (view === 'standby') renderStandbyPage();
