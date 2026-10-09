@@ -3072,6 +3072,12 @@
             border-color: #f97316 !important;
             background: #fff7ed;
         }
+    
+        .dist-calc-keys-hint {
+            margin: 8px 0 0;
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
     </style>
 </head>
 <body class="locked">
@@ -3256,18 +3262,22 @@
         <div class="dist-calc-grid">
             <div class="form-group">
                 <label for="distFromInput">Da</label>
-                <input type="text" id="distFromInput" class="input-control" list="distCitiesDatalist" placeholder="Es. Casamassima, Monopoli, Roma…" autocomplete="off">
+                <input type="text" id="distFromInput" class="input-control" list="distCitiesDatalist" placeholder="Es. Casamassima, Monopoli, Roma…" autocomplete="off"
+                    onkeydown="onDistCalcKey(event)">
             </div>
             <div class="form-group">
                 <label for="distToInput">A</label>
-                <input type="text" id="distToInput" class="input-control" list="distCitiesDatalist" placeholder="Es. Bari, Lecce, Napoli…" autocomplete="off">
+                <input type="text" id="distToInput" class="input-control" list="distCitiesDatalist" placeholder="Es. Bari, Lecce, Napoli…" autocomplete="off"
+                    onkeydown="onDistCalcKey(event)">
             </div>
             <datalist id="distCitiesDatalist"></datalist>
         </div>
         <div class="dist-calc-actions">
             <button type="button" class="btn btn-primary" id="distCalcBtn" onclick="calcolaDistanzaPaesi()">Calcola percorso in auto</button>
-            <button type="button" class="btn" onclick="scambiaPaesiDistanza()" title="Scambia">⇄</button>
+            <button type="button" class="btn" onclick="scambiaPaesiDistanza()" title="Scambia Da ↔ A">⇄</button>
+            <button type="button" class="btn" onclick="setDistFromCasamassima()" title="Imposta Da = Casamassima">🏠 Da casa</button>
         </div>
+        <p class="dist-calc-keys-hint">Scorciatoie: <strong>Invio</strong> calcola · <strong>⇄</strong> scambia · <strong>🏠</strong> Da = Casamassima</p>
         <div id="distCalcResult" class="dist-calc-result" hidden></div>
     </div>
 
@@ -8840,6 +8850,29 @@
         }
     };
 
+
+    window.onDistCalcKey = function(e) {
+        if (!e) return;
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            // se manca "Da", usa Casamassima
+            const fromEl = document.getElementById('distFromInput');
+            if (fromEl && !fromEl.value.trim()) {
+                fromEl.value = 'Casamassima';
+            }
+            if (typeof calcolaDistanzaPaesi === 'function') calcolaDistanzaPaesi();
+        }
+    };
+
+    window.setDistFromCasamassima = function() {
+        const fromEl = document.getElementById('distFromInput');
+        if (fromEl) {
+            fromEl.value = 'Casamassima';
+            const toEl = document.getElementById('distToInput');
+            if (toEl) toEl.focus();
+        }
+    };
+
     window.calcolaDistanzaPaesi = async function() {
         const fromEl = document.getElementById('distFromInput');
         const toEl = document.getElementById('distToInput');
@@ -8850,12 +8883,16 @@
             return;
         }
 
-        const fromQ = fromEl.value.trim();
+        let fromQ = fromEl.value.trim();
         const toQ = toEl.value.trim();
+        if (!fromQ && toQ) {
+            fromQ = 'Casamassima';
+            fromEl.value = fromQ;
+        }
         if (!fromQ || !toQ) {
             box.hidden = false;
             box.className = 'dist-calc-result error';
-            box.innerHTML = 'Inserisci entrambi i paesi (Da e A).';
+            box.innerHTML = 'Inserisci il paese di destinazione (A). Se "Da" è vuoto usa Casamassima.';
             return;
         }
 
