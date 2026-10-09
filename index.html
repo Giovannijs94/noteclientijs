@@ -2779,6 +2779,67 @@
             margin: -4px 0 12px;
             line-height: 1.4;
         }
+    
+        .tappa-range-fields {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 10px;
+            flex-shrink: 0;
+        }
+        .tappa-range-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: rgba(255,255,255,0.9);
+            text-transform: lowercase;
+            letter-spacing: 0.02em;
+        }
+        .tappa-range-input {
+            width: 48px;
+            min-height: 32px;
+            padding: 4px 6px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.35);
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-align: center;
+        }
+        .tappa-range-input::placeholder {
+            color: rgba(255,255,255,0.45);
+        }
+        .tappa-range-input:focus {
+            outline: none;
+            background: rgba(255,255,255,0.25);
+            border-color: #93c5fd;
+        }
+        /* hide number spinners a bit cleaner */
+        .tappa-range-input::-webkit-outer-spin-button,
+        .tappa-range-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .tappa-range-input[type=number] {
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
+        @media (max-width: 600px) {
+            .tappa-range-fields {
+                margin-left: 0;
+                margin-top: 6px;
+                width: 100%;
+            }
+            .tappa-range-input {
+                min-height: 40px;
+                width: 56px;
+                font-size: 16px;
+            }
+        }
+
     </style>
 </head>
 <body class="locked">
@@ -5110,6 +5171,44 @@
         );
     }
 
+
+    function loadTappaRanges() {
+        try {
+            return JSON.parse(localStorage.getItem('note_clienti_tappa_range') || '{}') || {};
+        } catch (e) { return {}; }
+    }
+    function saveTappaRanges(obj) {
+        try { localStorage.setItem('note_clienti_tappa_range', JSON.stringify(obj || {})); } catch (e) {}
+    }
+    function getTappaRange(tappaName) {
+        const all = loadTappaRanges();
+        const r = all[String(tappaName || '').trim()] || {};
+        return { dal: r.dal || '', al: r.al || '' };
+    }
+    window.updateTappaRange = function(el) {
+        if (!el) return;
+        const tappa = (el.getAttribute('data-tappa') || '').trim();
+        const field = el.getAttribute('data-field');
+        if (!tappa || (field !== 'dal' && field !== 'al')) return;
+        let val = String(el.value || '').trim();
+        if (val !== '') {
+            let n = parseInt(val, 10);
+            if (isNaN(n)) n = '';
+            else {
+                if (n < 1) n = 1;
+                if (n > 31) n = 31;
+            }
+            val = n === '' ? '' : String(n);
+            el.value = val;
+        }
+        const all = loadTappaRanges();
+        if (!all[tappa]) all[tappa] = {};
+        all[tappa][field] = val;
+        // cleanup empty
+        if (!all[tappa].dal && !all[tappa].al) delete all[tappa];
+        saveTappaRanges(all);
+    };
+
     function render() {
         clients.forEach(c => {
             if (c.spedizione === undefined) c.spedizione = '';
@@ -5251,6 +5350,25 @@
             }
 
             const countBadge = `<span class="stage-count-badge">${groupClients.length}</span>`;
+            const tappaRangeHtml = (!isSpedizione && !isAttesa && groupName)
+                ? (() => {
+                    const range = getTappaRange(groupName);
+                    const gn = String(groupName).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                    return `<div class="tappa-range-fields" onclick="event.stopPropagation()">
+                        <label class="tappa-range-label">dal
+                            <input type="number" class="tappa-range-input" min="1" max="31" placeholder="gg"
+                                value="${range.dal || ''}" data-tappa="${gn}" data-field="dal"
+                                onchange="updateTappaRange(this)" onblur="updateTappaRange(this)">
+                        </label>
+                        <label class="tappa-range-label">al
+                            <input type="number" class="tappa-range-input" min="1" max="31" placeholder="gg"
+                                value="${range.al || ''}" data-tappa="${gn}" data-field="al"
+                                onchange="updateTappaRange(this)" onblur="updateTappaRange(this)">
+                        </label>
+                    </div>`;
+                })()
+                : '';
+
             const headerHTML = `
                 <div class="stage-header ${isSpedizione ? 'stage-header-sped' : (isAttesa ? 'stage-header-attesa' : 'stage-header-tappa')}" style="${headerBg}">
                     <div class="stage-header-left">
@@ -5259,6 +5377,7 @@
                             <span class="stage-header-kicker">${headerLabel}</span>
                             <span class="stage-header-name">${isAttesa ? '' : groupName}</span>
                         </div>
+                        ${tappaRangeHtml}
                         ${countBadge}
                     </div>
                     <div class="stage-header-actions">${deleteBtn}</div>
@@ -8314,7 +8433,6 @@
                         <div class="percorso-stop-title">${(c.nome || '').replace(/</g, '&lt;')}</div>
                         <div class="percorso-stop-sub">📍 ${(c.localita || '—')}${(c.provincia ? ' (' + c.provincia + ')' : '')}${approx}</div>
                         <div class="percorso-stop-models" title="${modelsTxt}">📦 ${modelsTxt}</div>
-                        <button type="button" class="percorso-models-btn" data-client-id="${c.id}" onclick="event.stopPropagation(); showPercorsoModelsPopup(event, '${String(c.id).replace(/'/g, "\\'")}')">Vedi modelli</button>
                     </div>
                 </div>`;
             }));
