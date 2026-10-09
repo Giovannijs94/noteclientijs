@@ -3048,6 +3048,18 @@
             }
         }
 
+    
+        .nome-dup-warn {
+            margin-top: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #b45309;
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+            border-radius: 8px;
+            padding: 6px 10px;
+            line-height: 1.35;
+        }
     </style>
 </head>
 <body class="locked">
@@ -3128,7 +3140,8 @@
             <div class="form-grid">
                 <div class="form-group">
                     <label for="nome">Nome Cliente</label>
-                    <input type="text" id="nome" class="input-control" required placeholder="Es. Mario Rossi" oninput="onNomeInput()">
+                    <input type="text" id="nome" class="input-control" required placeholder="Es. Mario Rossi" oninput="onNomeInput()" onblur="onNomeBlurCheck()" onkeydown="if(event.key==='Enter'){event.preventDefault();onNomeBlurCheck();}">
+                    <div id="nomeDuplicateWarn" class="nome-dup-warn" hidden>⚠️ Nome già presente. Puoi proseguire ugualmente al salvataggio.</div>
                 </div>
                 
                 <div class="form-group" style="grid-column: span 2;">
@@ -3511,20 +3524,22 @@
 
 <div id="duplicateClientModal" class="modal-overlay confirm-modal confirm-duplicate">
     <div class="modal">
-        <div class="confirm-icon">👤</div>
+        <div class="confirm-icon">⚠️</div>
         <h3>Cliente già presente</h3>
         <div class="confirm-name" id="duplicateClientName"></div>
         <p class="confirm-desc">
             Questo nome è già registrato in<br>
             <strong id="duplicateClientSection" style="color:#b45309;"></strong>
         </p>
-        <p class="confirm-desc" style="margin-top:-12px; margin-bottom:20px; font-size:0.85rem;">
-            Non è possibile creare doppioni.<br>Cerca il cliente esistente oppure usa un nome diverso.
+        <p class="confirm-desc" style="margin-top:-8px; margin-bottom:16px; font-size:0.85rem;">
+            Vuoi continuare ugualmente con questo nome?
         </p>
-        <div class="confirm-actions">
-            <button type="button" class="btn btn-primary" onclick="closeDuplicateClient()" style="min-width:140px;">Ho capito</button>
+        <div class="confirm-actions" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+            <button type="button" class="btn" onclick="closeDuplicateClient()" style="min-width:120px;">Annulla</button>
+            <button type="button" class="btn btn-primary" onclick="proceedDuplicateClient()" style="min-width:160px;">Prosegui ugualmente</button>
         </div>
     </div>
+</div>
 </div>
 
 <script>
@@ -3865,15 +3880,77 @@
         return 'Note clienti';
     }
 
+    let pendingDuplicateSubmit = false;
+    let duplicateModalMode = 'warn'; // 'warn' = solo avviso sul nome | 'submit' = al salvataggio
+    let lastDuplicatePopupName = '';
+
+    window.onNomeInput = function() {
+        const el = document.getElementById('nome');
+        const warn = document.getElementById('nomeDuplicateWarn');
+        if (!el || !warn) return;
+        const nome = el.value.trim();
+        if (!nome) {
+            warn.hidden = true;
+            lastDuplicatePopupName = '';
+            return;
+        }
+        const existing = (typeof findClientByName === 'function') ? findClientByName(nome) : null;
+        if (existing) {
+            const where = (typeof describeClientLocation === 'function') ? describeClientLocation(existing) : 'archivio';
+            warn.hidden = false;
+            warn.textContent = '⚠️ Nome già presente in «' + where + '». Puoi proseguire ugualmente.';
+        } else {
+            warn.hidden = true;
+            lastDuplicatePopupName = '';
+        }
+    };
+
+    window.onNomeBlurCheck = function() {
+        const el = document.getElementById('nome');
+        if (!el) return;
+        const nome = el.value.trim();
+        if (!nome) return;
+        const existing = (typeof findClientByName === 'function') ? findClientByName(nome) : null;
+        if (!existing) return;
+        // evita popup ripetuti sullo stesso nome
+        if (lastDuplicatePopupName === nome.toLowerCase()) return;
+        lastDuplicatePopupName = nome.toLowerCase();
+        const where = (typeof describeClientLocation === 'function') ? describeClientLocation(existing) : 'archivio';
+        duplicateModalMode = 'warn';
+        showDuplicateClient(nome, where);
+    };
+
     window.showDuplicateClient = function(nome, section) {
         document.getElementById('duplicateClientName').textContent = nome;
         document.getElementById('duplicateClientSection').textContent = '«' + section + '»';
-        document.getElementById('duplicateClientModal').style.display = 'flex';
+        const modal = document.getElementById('duplicateClientModal');
+        if (modal) modal.style.display = 'flex';
     };
 
     window.closeDuplicateClient = function() {
         document.getElementById('duplicateClientModal').style.display = 'none';
+        if (duplicateModalMode === 'submit') {
+            pendingDuplicateSubmit = false;
+        }
+        // in modalità warn: Annulla = l'utente sa del doppione, resta sul form
     };
+
+    window.proceedDuplicateClient = function() {
+        document.getElementById('duplicateClientModal').style.display = 'none';
+        if (duplicateModalMode === 'submit') {
+            pendingDuplicateSubmit = true;
+            const form = document.getElementById('clientForm');
+            if (form) {
+                form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+            }
+        } else {
+            // warn: prosegue compilando il form
+            pendingDuplicateSubmit = true;
+            const next = document.querySelector('#modelsContainer .model-input') || document.getElementById('localita');
+            if (next) try { next.focus(); } catch (e) {}
+        }
+    };
+
 
     function init() {
         populateDropdowns();
@@ -4297,10 +4374,13 @@
         }
 
         const existingNote = findClientByName(nomeVal);
-        if (existingNote) {
+        if (existingNote && !pendingDuplicateSubmit) {
+            duplicateModalMode = 'submit';
+            lastDuplicatePopupName = nomeVal.toLowerCase();
             showDuplicateClient(nomeVal, describeClientLocation(existingNote));
             return;
         }
+        pendingDuplicateSubmit = false;
 
         if (!inAttesa && !dataVal) {
             alert("Inserisci la data, oppure spunta \"In attesa di assegnazione\".");
@@ -4369,6 +4449,9 @@
         clients.push(newClient);
         saveToLocalStorage();
         form.reset();
+        pendingDuplicateSubmit = false;
+        const _ndw = document.getElementById('nomeDuplicateWarn');
+        if (_ndw) _ndw.hidden = true;
         document.getElementById('inAttesaCheck').checked = false;
         window.onInAttesaToggle();
         renderModelSelectRows();
