@@ -3088,6 +3088,76 @@
         .localita-lookup-status.ok { color: #047857; }
         .localita-lookup-status.loading { color: #1d4ed8; }
         .localita-lookup-status.err { color: #b45309; }
+    
+        .meteo-day.meteo-alert {
+            background: #fff7ed;
+            border-color: #fdba74;
+            box-shadow: 0 0 0 1px #fb923c inset;
+        }
+        .meteo-day.meteo-alert-storm {
+            background: #fef2f2;
+            border-color: #fca5a5;
+            box-shadow: 0 0 0 1px #ef4444 inset;
+        }
+        .meteo-day-alert-tag {
+            display: block;
+            font-size: 0.58rem;
+            font-weight: 800;
+            color: #c2410c;
+            margin-top: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .meteo-day.meteo-alert-storm .meteo-day-alert-tag {
+            color: #b91c1c;
+        }
+        .meteo-client-alert-banner {
+            margin: 0 0 8px;
+            padding: 6px 10px;
+            border-radius: 8px;
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+            color: #9a3412;
+            font-size: 0.75rem;
+            font-weight: 700;
+            line-height: 1.35;
+        }
+        .meteo-client-alert-banner.storm {
+            background: #fef2f2;
+            border-color: #fecaca;
+            color: #991b1b;
+        }
+        .backup-reminder-banner {
+            position: sticky;
+            top: 0;
+            z-index: 90;
+            margin: 0 0 12px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #eff6ff, #f0fdf4);
+            border: 1px solid #93c5fd;
+            color: #1e3a8a;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.88rem;
+            line-height: 1.35;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.12);
+        }
+        .backup-reminder-banner strong { font-weight: 800; }
+        .backup-reminder-banner .backup-rem-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-left: auto;
+        }
+        .backup-reminder-banner .btn {
+            min-height: 36px;
+            padding: 6px 12px;
+            font-size: 0.82rem;
+        }
+
     </style>
 </head>
 <body class="locked">
@@ -3133,6 +3203,15 @@
     </button>
 </nav>
 <div class="container main-content">
+    <div id="backupReminderBanner" class="backup-reminder-banner" hidden style="display:none!important">
+        <div>💾 <strong>Backup consigliato</strong> — <span id="backupReminderText">È passato più di una settimana dall'ultimo backup.</span></div>
+        <div class="backup-rem-actions">
+            <button type="button" class="btn btn-primary" onclick="exportBackup(); dismissBackupReminder(false);">Scarica backup ora</button>
+            <button type="button" class="btn" onclick="dismissBackupReminder(true);">Ricorda tra 7 giorni</button>
+            <button type="button" class="btn" onclick="dismissBackupReminder(false);">Nascondi</button>
+        </div>
+    </div>
+
 <div id="viewNote" class="view-panel active">
     <div class="header-bar">
         <div class="header-title-group">
@@ -3152,6 +3231,9 @@
                     <div class="settings-menu-label">Dati</div>
                     <button type="button" class="settings-menu-item" onclick="exportBackup(); closeSettingsMenu();">
                         <span class="icon">💾</span> Scarica Backup
+                    </button>
+                    <button type="button" class="settings-menu-item" onclick="scegliCartellaBackup(); closeSettingsMenu();">
+                        <span class="icon">📁</span> Cartella backup auto
                     </button>
                     <button type="button" class="settings-menu-item" onclick="document.getElementById('importFileInput').click(); closeSettingsMenu();">
                         <span class="icon">📂</span> Ripristina
@@ -3997,6 +4079,7 @@
         renderModelSelectRows();
         try { populateDistCitiesDatalist(); } catch (e) {}
         render();
+        try { updateBackupReminder(); } catch (e) {}
     }
 
     function populateDropdowns() {
@@ -5458,11 +5541,225 @@
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
             }, 200);
+            try {
+                localStorage.setItem('note_clienti_last_backup', new Date().toISOString());
+                localStorage.removeItem('note_clienti_backup_snooze');
+            } catch (e) {}
+            if (typeof updateBackupReminder === 'function') updateBackupReminder();
         } catch (err) {
             console.error(err);
             alert('Errore durante il backup: ' + (err && err.message ? err.message : err));
         }
     };
+
+    function getLastBackupDate() {
+        try {
+            const s = localStorage.getItem('note_clienti_last_backup');
+            if (!s) return null;
+            const d = new Date(s);
+            return isNaN(d.getTime()) ? null : d;
+        } catch (e) { return null; }
+    }
+
+    function isBackupSnoozed() {
+        try {
+            const s = localStorage.getItem('note_clienti_backup_snooze');
+            if (!s) return false;
+            return Date.now() < new Date(s).getTime();
+        } catch (e) { return false; }
+    }
+
+    window.dismissBackupReminder = function(snoozeWeek) {
+        const banner = document.getElementById('backupReminderBanner');
+        if (banner) banner.hidden = true;
+        if (snoozeWeek) {
+            const until = new Date();
+            until.setDate(until.getDate() + 7);
+            try { localStorage.setItem('note_clienti_backup_snooze', until.toISOString()); } catch (e) {}
+        }
+    };
+
+    window.updateBackupReminder = function() {
+        // Nasconde sempre il vecchio banner: backup automatico senza preavviso
+        const banner = document.getElementById('backupReminderBanner');
+        if (banner) banner.hidden = true;
+        tryAutoWeeklyBackup();
+    };
+
+    function daysSinceLastBackup() {
+        const last = getLastBackupDate();
+        if (!last) return 9999;
+        return Math.floor((Date.now() - last.getTime()) / (1000 * 60 * 60 * 24));
+    }
+
+    function isBackupDue() {
+        return daysSinceLastBackup() >= 7;
+    }
+
+    /** Prova scrittura silenziosa in cartella scelta (Chrome/Edge) */
+    async function tryWriteBackupToFolder(jsonStr, filename) {
+        if (!window.showDirectoryPicker && !window.chooseFileSystemEntries) {
+            return false;
+        }
+        try {
+            // recupera handle salvato
+            let handle = null;
+            if (window.indexedDB) {
+                handle = await idbGetBackupDirHandle();
+            }
+            if (!handle) return false;
+            // verifica permesso
+            const opts = { mode: 'readwrite' };
+            if (handle.queryPermission) {
+                let perm = await handle.queryPermission(opts);
+                if (perm !== 'granted' && handle.requestPermission) {
+                    perm = await handle.requestPermission(opts);
+                }
+                if (perm !== 'granted') return false;
+            }
+            const fileHandle = await handle.getFileHandle(filename, { create: true });
+            const writable = await fileHandle.createWritable();
+            await writable.write(jsonStr);
+            await writable.close();
+            return true;
+        } catch (e) {
+            console.warn('Backup cartella non riuscito', e);
+            return false;
+        }
+    }
+
+    function idbGetBackupDirHandle() {
+        return new Promise(function(resolve) {
+            try {
+                const req = indexedDB.open('note_clienti_fs', 1);
+                req.onupgradeneeded = function() {
+                    const db = req.result;
+                    if (!db.objectStoreNames.contains('handles')) db.createObjectStore('handles');
+                };
+                req.onsuccess = function() {
+                    const db = req.result;
+                    try {
+                        const tx = db.transaction('handles', 'readonly');
+                        const get = tx.objectStore('handles').get('backupDir');
+                        get.onsuccess = function() { resolve(get.result || null); };
+                        get.onerror = function() { resolve(null); };
+                    } catch (e) { resolve(null); }
+                };
+                req.onerror = function() { resolve(null); };
+            } catch (e) { resolve(null); }
+        });
+    }
+
+    function idbSetBackupDirHandle(handle) {
+        return new Promise(function(resolve) {
+            try {
+                const req = indexedDB.open('note_clienti_fs', 1);
+                req.onupgradeneeded = function() {
+                    const db = req.result;
+                    if (!db.objectStoreNames.contains('handles')) db.createObjectStore('handles');
+                };
+                req.onsuccess = function() {
+                    const db = req.result;
+                    try {
+                        const tx = db.transaction('handles', 'readwrite');
+                        tx.objectStore('handles').put(handle, 'backupDir');
+                        tx.oncomplete = function() { resolve(true); };
+                        tx.onerror = function() { resolve(false); };
+                    } catch (e) { resolve(false); }
+                };
+                req.onerror = function() { resolve(false); };
+            } catch (e) { resolve(false); }
+        });
+    }
+
+    /** Una tantum: scegli cartella dove salvare i backup automatici */
+    window.scegliCartellaBackup = async function() {
+        try {
+            if (!window.showDirectoryPicker) {
+                alert('Il tuo browser non supporta il salvataggio automatico in una cartella.\nUsa Chrome o Edge, oppure continua con «Scarica Backup» manuale.');
+                return;
+            }
+            const handle = await window.showDirectoryPicker({ mode: 'readwrite', id: 'note-clienti-backup' });
+            await idbSetBackupDirHandle(handle);
+            alert('Cartella impostata. I backup settimanali verranno salvati lì in automatico all\'apertura dell\'app.');
+            // prova subito un backup
+            await tryAutoWeeklyBackup(true);
+        } catch (e) {
+            if (e && e.name === 'AbortError') return;
+            console.error(e);
+            alert('Impossibile impostare la cartella: ' + (e.message || e));
+        }
+    };
+
+    window.tryAutoWeeklyBackup = async function(force) {
+        if (!force && !isBackupDue()) return;
+        // evita doppioni nella stessa sessione
+        if (window._autoBackupDone && !force) return;
+        window._autoBackupDone = true;
+
+        try {
+            const backupData = {
+                version: 18,
+                exportedAt: new Date().toISOString(),
+                auto: true,
+                clients: clients,
+                savedModels: savedModels,
+                savedSpedizioni: (typeof savedSpedizioni !== 'undefined') ? savedSpedizioni : [],
+                prepGroupMode: typeof prepGroupMode !== 'undefined' ? prepGroupMode : (localStorage.getItem('note_clienti_prep_group') || 'regione'),
+                urgentDays: localStorage.getItem('note_clienti_urgent_days') || '10',
+                percorsoOrder: (function() {
+                    try { return JSON.parse(localStorage.getItem('note_clienti_percorso_order') || '{}'); }
+                    catch (e) { return {}; }
+                })(),
+                geoCache: (function() {
+                    try { return JSON.parse(localStorage.getItem('note_clienti_geo_cache') || '{}'); }
+                    catch (e) { return {}; }
+                })(),
+                tappaRange: (function() {
+                    try { return JSON.parse(localStorage.getItem('note_clienti_tappa_range') || '{}'); }
+                    catch (e) { return {}; }
+                })()
+            };
+            const json = JSON.stringify(backupData, null, 2);
+            const day = new Date().toISOString().slice(0, 10);
+            const filename = 'backup_note_clienti_' + day + '.json';
+
+            // 1) Prova cartella automatica (senza popup download)
+            const written = await tryWriteBackupToFolder(json, filename);
+            if (written) {
+                try {
+                    localStorage.setItem('note_clienti_last_backup', new Date().toISOString());
+                    localStorage.removeItem('note_clienti_backup_snooze');
+                } catch (e) {}
+                console.log('Backup automatico salvato in cartella:', filename);
+                return;
+            }
+
+            // 2) Fallback: download automatico (il browser potrebbe chiedere conferma la prima volta)
+            const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function() {
+                try { document.body.removeChild(a); } catch (e) {}
+                URL.revokeObjectURL(url);
+            }, 300);
+            try {
+                localStorage.setItem('note_clienti_last_backup', new Date().toISOString());
+                localStorage.removeItem('note_clienti_backup_snooze');
+            } catch (e) {}
+            console.log('Backup automatico avviato (download):', filename);
+        } catch (err) {
+            console.warn('Backup automatico fallito', err);
+            window._autoBackupDone = false;
+        }
+    };
+
+
 
 
     function parseBackupJson(raw) {
@@ -9488,13 +9785,24 @@
             if (!times.length) {
                 return '<div class="meteo-warn">Nessuna previsione per questo intervallo (max ~16 giorni da oggi).</div>';
             }
-            return '<div class="meteo-days">' + times.map(function(iso, i) {
-                const info = weatherCodeInfo((daily.weathercode || [])[i]);
+            let alertDays = 0;
+            let stormDays = 0;
+            const daysHtml = times.map(function(iso, i) {
+                const code = (daily.weathercode || [])[i];
+                const info = weatherCodeInfo(code);
                 const tmax = (daily.temperature_2m_max || [])[i];
                 const tmin = (daily.temperature_2m_min || [])[i];
                 const rain = (daily.precipitation_sum || [])[i];
                 const prob = (daily.precipitation_probability_max || [])[i];
-                return '<div class="meteo-day">' +
+                const c = Number(code);
+                const isStorm = c >= 95 || (c >= 80 && c <= 86);
+                const isRainAlert = isStorm || (prob != null && prob >= 60) || (rain != null && Number(rain) >= 5) || (c >= 61 && c <= 67);
+                if (isStorm) stormDays++;
+                else if (isRainAlert) alertDays++;
+                const cls = isStorm ? 'meteo-day meteo-alert meteo-alert-storm' : (isRainAlert ? 'meteo-day meteo-alert' : 'meteo-day');
+                const tag = isStorm ? '<span class="meteo-day-alert-tag">⚡ Temporale</span>' :
+                    (isRainAlert ? '<span class="meteo-day-alert-tag">⚠️ Pioggia</span>' : '');
+                return '<div class="' + cls + '">' +
                     '<div class="meteo-day-date">' + formatItDate(iso) + '</div>' +
                     '<div class="meteo-day-icon">' + info.icon + '</div>' +
                     '<div class="meteo-day-desc">' + info.label + '</div>' +
@@ -9505,8 +9813,15 @@
                     '<div class="meteo-day-rain">💧 ' +
                     (rain != null ? Number(rain).toFixed(1) + ' mm' : '—') +
                     (prob != null ? ' · ' + Math.round(prob) + '%' : '') +
-                    '</div></div>';
-            }).join('') + '</div>';
+                    '</div>' + tag + '</div>';
+            }).join('');
+            let banner = '';
+            if (stormDays > 0) {
+                banner = '<div class="meteo-client-alert-banner storm">⚡ Attenzione: ' + stormDays + ' giorno/i con rischio temporale</div>';
+            } else if (alertDays > 0) {
+                banner = '<div class="meteo-client-alert-banner">⚠️ Attenzione: ' + alertDays + ' giorno/i con rischio pioggia elevata</div>';
+            }
+            return banner + '<div class="meteo-days">' + daysHtml + '</div>';
         }
 
         for (let gi = 0; gi < groups.length; gi++) {
