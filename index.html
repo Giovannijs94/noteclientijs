@@ -3078,6 +3078,16 @@
             font-size: 0.75rem;
             color: #94a3b8;
         }
+    
+        .localita-lookup-status {
+            margin-top: 4px;
+            font-size: 0.75rem;
+            color: #64748b;
+            line-height: 1.3;
+        }
+        .localita-lookup-status.ok { color: #047857; }
+        .localita-lookup-status.loading { color: #1d4ed8; }
+        .localita-lookup-status.err { color: #b45309; }
     </style>
 </head>
 <body class="locked">
@@ -3170,7 +3180,9 @@
 
                 <div class="form-group">
                     <label for="localita">Località / Paese</label>
-                    <input type="text" id="localita" class="input-control" required placeholder="Es. Casamassima" oninput="onLocalitaInput(this.value)">
+                    <input type="text" id="localita" class="input-control" required list="distCitiesDatalist" placeholder="Es. Casamassima, Ostuni, Roma…" autocomplete="off"
+                        oninput="onLocalitaInput(this.value)" onblur="onLocalitaBlur(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();onLocalitaBlur(this.value);}">
+                    <div id="localitaLookupStatus" class="localita-lookup-status" hidden></div>
                 </div>
 
                 <div class="form-group">
@@ -3983,6 +3995,7 @@
         updateModelliDatalist();
         updateSpedizioniDatalist();
         renderModelSelectRows();
+        try { populateDistCitiesDatalist(); } catch (e) {}
         render();
     }
 
@@ -4022,11 +4035,299 @@
         return { prov: "", reg: "" };
     }
 
-    window.onLocalitaInput = function(val) {
-        const res = resolveLocationData(val);
-        if (res.prov) provinciaSelect.value = res.prov;
-        if (res.reg) regioneSelect.value = res.reg;
+
+
+    function setLocalitaStatus(msg, cls) {
+        const el = document.getElementById('localitaLookupStatus');
+        if (!el) return;
+        if (!msg) { el.hidden = true; el.textContent = ''; el.className = 'localita-lookup-status'; return; }
+        el.hidden = false;
+        el.className = 'localita-lookup-status' + (cls ? (' ' + cls) : '');
+        el.innerHTML = msg;
     }
+
+    function applyProvReg(prov, reg) {
+        if (prov && provinciaSelect) {
+            const code = String(prov).toUpperCase().trim();
+            const opts = Array.from(provinciaSelect.options).map(function(o) { return o.value; });
+            if (opts.indexOf(code) >= 0) {
+                provinciaSelect.value = code;
+            }
+        }
+        if (reg && regioneSelect) {
+            const want = normalizeRegioneName(reg);
+            for (let i = 0; i < regioneSelect.options.length; i++) {
+                const v = regioneSelect.options[i].value;
+                if (v && (v === want || v.toLowerCase() === String(want).toLowerCase())) {
+                    regioneSelect.value = v;
+                    break;
+                }
+            }
+        }
+    }
+
+    function normalizeRegioneName(name) {
+        if (!name) return '';
+        const n = String(name).trim();
+        const map = {
+            'apulia': 'Puglia', 'puglia': 'Puglia',
+            'sicily': 'Sicilia', 'sicilia': 'Sicilia',
+            'sardinia': 'Sardegna', 'sardegna': 'Sardegna',
+            'tuscany': 'Toscana', 'toscana': 'Toscana',
+            'lombardy': 'Lombardia', 'lombardia': 'Lombardia',
+            'piedmont': 'Piemonte', 'piemonte': 'Piemonte',
+            'latium': 'Lazio', 'lazio': 'Lazio',
+            'campania': 'Campania', 'calabria': 'Calabria', 'basilicata': 'Basilicata',
+            'abruzzo': 'Abruzzo', 'molise': 'Molise', 'marche': 'Marche', 'the marches': 'Marche',
+            'umbria': 'Umbria', 'liguria': 'Liguria', 'veneto': 'Veneto',
+            'friuli-venezia giulia': 'Friuli-Venezia Giulia', 'friuli venezia giulia': 'Friuli-Venezia Giulia',
+            "valle d'aosta": "Valle d'Aosta", 'aosta valley': "Valle d'Aosta", 'valle daosta': "Valle d'Aosta",
+            'trentino-alto adige': 'Trentino-Alto Adige', 'trentino-south tyrol': 'Trentino-Alto Adige',
+            'emilia-romagna': 'Emilia-Romagna', 'emilia romagna': 'Emilia-Romagna'
+        };
+        const low = n.toLowerCase();
+        if (map[low]) return map[low];
+        if (typeof ITALIAN_REGIONS !== 'undefined') {
+            for (let i = 0; i < ITALIAN_REGIONS.length; i++) {
+                if (ITALIAN_REGIONS[i].toLowerCase() === low) return ITALIAN_REGIONS[i];
+            }
+        }
+        return n;
+    }
+
+    function guessProvinciaCode(nameOrCode) {
+        if (!nameOrCode) return '';
+        const s = String(nameOrCode).trim();
+        if (/^[A-Za-z]{2}$/.test(s)) return s.toUpperCase();
+        if (typeof PROVINCE_NAMES !== 'undefined') {
+            const low = s.toLowerCase()
+                .replace(/^provincia di\s+/i, '')
+                .replace(/^città metropolitana di\s+/i, '')
+                .replace(/^citta metropolitana di\s+/i, '')
+                .trim();
+            for (const code of Object.keys(PROVINCE_NAMES)) {
+                if (String(PROVINCE_NAMES[code]).toLowerCase() === low) return code;
+            }
+            // match parziale
+            for (const code of Object.keys(PROVINCE_NAMES)) {
+                const pn = String(PROVINCE_NAMES[code]).toLowerCase();
+                if (low.indexOf(pn) >= 0 || pn.indexOf(low) >= 0) return code;
+            }
+        }
+        return '';
+    }
+
+    function provinceFromCityDb(localita) {
+        const res = (typeof resolveLocationData === 'function') ? resolveLocationData(localita) : {};
+        return { prov: res.prov || '', reg: res.reg || '' };
+    }
+
+    function rememberPlaceCoords(q, prov, lat, lng, label) {
+        try {
+            if (lat == null || lng == null) return;
+            const cache = (typeof loadGeoCache === 'function') ? loadGeoCache() : {};
+            const key = (typeof geoKey === 'function') ? geoKey(q, prov || '') : String(q).toLowerCase();
+            cache[key] = { lat: Number(lat), lng: Number(lng), precise: true, label: label || q };
+            if (typeof saveGeoCache === 'function') saveGeoCache(cache);
+            else localStorage.setItem('note_clienti_geo_cache', JSON.stringify(cache));
+        } catch (e) {}
+    }
+
+    /** Ricerca online comune italiano → { name, prov, reg, lat, lng, source } */
+    async function lookupItalianComuneOnline(query) {
+        const q = (query || '').trim();
+        if (!q) return null;
+
+        // 1) Nominatim con addressdetails (migliore per provincia/regione)
+        try {
+            const params = new URLSearchParams({
+                format: 'json',
+                limit: '5',
+                countrycodes: 'it',
+                addressdetails: '1',
+                q: q + ', Italia'
+            });
+            const controller = new AbortController();
+            const timer = setTimeout(function() { controller.abort(); }, 8000);
+            const r = await fetch('https://nominatim.openstreetmap.org/search?' + params.toString(), {
+                headers: { 'Accept': 'application/json', 'Accept-Language': 'it' },
+                signal: controller.signal
+            });
+            clearTimeout(timer);
+            if (r.ok) {
+                const data = await r.json();
+                if (data && data[0]) {
+                    const hit = data[0];
+                    const addr = hit.address || {};
+                    const reg = normalizeRegioneName(addr.state || addr.region || '');
+                    let prov = '';
+                    // ISO provincia es. IT-BA
+                    const isoKeys = ['ISO3166-2-lvl6', 'ISO3166-2-lvl5', 'ISO3166-2-lvl4'];
+                    for (let i = 0; i < isoKeys.length; i++) {
+                        const iso = addr[isoKeys[i]];
+                        if (iso && String(iso).indexOf('IT-') === 0) {
+                            const code = String(iso).slice(3);
+                            if (code.length === 2) { prov = code.toUpperCase(); break; }
+                        }
+                    }
+                    if (!prov) {
+                        prov = guessProvinciaCode(addr.province || addr.county || addr.state_district || '');
+                    }
+                    // fallback database locale sul nome
+                    if (!prov || !reg) {
+                        const local = provinceFromCityDb(hit.name || q);
+                        if (!prov && local.prov) prov = local.prov;
+                        if (!reg && local.reg) return {
+                            name: hit.name || (hit.display_name || '').split(',')[0] || q,
+                            prov: prov || local.prov,
+                            reg: local.reg,
+                            lat: parseFloat(hit.lat),
+                            lng: parseFloat(hit.lon),
+                            source: 'osm'
+                        };
+                    }
+                    return {
+                        name: (hit.display_name || '').split(',')[0] || hit.name || q,
+                        prov: prov,
+                        reg: reg,
+                        lat: parseFloat(hit.lat),
+                        lng: parseFloat(hit.lon),
+                        source: 'osm'
+                    };
+                }
+            }
+        } catch (e) {
+            console.warn('Nominatim localita', e);
+        }
+
+        // 2) Open-Meteo
+        try {
+            const url = 'https://geocoding-api.open-meteo.com/v1/search?name=' +
+                encodeURIComponent(q) + '&count=5&language=it&format=json&countryCode=IT';
+            const controller = new AbortController();
+            const timer = setTimeout(function() { controller.abort(); }, 8000);
+            const r = await fetch(url, { signal: controller.signal });
+            clearTimeout(timer);
+            if (r.ok) {
+                const data = await r.json();
+                const results = (data && data.results) || [];
+                const hit = results.find(function(x) {
+                    return x && (!x.country_code || String(x.country_code).toUpperCase() === 'IT');
+                }) || results[0];
+                if (hit) {
+                    let reg = normalizeRegioneName(hit.admin1 || '');
+                    let prov = guessProvinciaCode(hit.admin2 || hit.admin1 || '');
+                    const local = provinceFromCityDb(hit.name || q);
+                    if (!prov && local.prov) prov = local.prov;
+                    if (!reg && local.reg) reg = local.reg;
+                    return {
+                        name: hit.name || q,
+                        prov: prov,
+                        reg: reg,
+                        lat: hit.latitude,
+                        lng: hit.longitude,
+                        source: 'open-meteo'
+                    };
+                }
+            }
+        } catch (e) {
+            console.warn('OpenMeteo localita', e);
+        }
+        return null;
+    }
+
+    let _localitaLookupToken = 0;
+    let _localitaDebounce = null;
+
+    window.onLocalitaInput = function(val) {
+        try { populateDistCitiesDatalist(); } catch (e) {}
+        const q = (val || '').trim();
+        if (!q) {
+            setLocalitaStatus('');
+            return;
+        }
+        // Match locale immediato
+        const res = provinceFromCityDb(q);
+        if (res.prov || res.reg) {
+            applyProvReg(res.prov, res.reg);
+            if (res.prov && res.reg) {
+                setLocalitaStatus('✓ Trovato nel database: <strong>' + q.replace(/</g,'&lt;') + '</strong> → ' + res.prov + (res.reg ? (', ' + res.reg) : ''), 'ok');
+                return;
+            }
+        }
+        // Se non in elenco completo → dopo una pausa cerca online
+        if (_localitaDebounce) clearTimeout(_localitaDebounce);
+        setLocalitaStatus('…', '');
+        _localitaDebounce = setTimeout(function() {
+            window.onLocalitaBlur(q);
+        }, 700);
+    };
+
+    window.onLocalitaBlur = async function(val) {
+        if (_localitaDebounce) {
+            clearTimeout(_localitaDebounce);
+            _localitaDebounce = null;
+        }
+        const q = (val || '').trim();
+        if (!q) { setLocalitaStatus(''); return; }
+
+        const local = provinceFromCityDb(q);
+        if (local.prov && local.reg) {
+            applyProvReg(local.prov, local.reg);
+            setLocalitaStatus('✓ Trovato nel database: <strong>' + q.replace(/</g,'&lt;') + '</strong> → ' + local.prov + ', ' + local.reg, 'ok');
+            return;
+        }
+        if (local.prov || local.reg) {
+            applyProvReg(local.prov, local.reg);
+        }
+
+        const token = ++_localitaLookupToken;
+        setLocalitaStatus('🛰️ <strong>Sto cercando su internet…</strong> «' + q.replace(/</g,'&lt;') + '»', 'loading');
+
+        try {
+            const found = await lookupItalianComuneOnline(q);
+            if (token !== _localitaLookupToken) return;
+
+            if (found) {
+                applyProvReg(found.prov, found.reg);
+                // se ancora manca qualcosa, ritenta locale sul nome ufficiale
+                if (!found.prov || !found.reg) {
+                    const again = provinceFromCityDb(found.name || q);
+                    applyProvReg(found.prov || again.prov, found.reg || again.reg);
+                    found.prov = found.prov || again.prov;
+                    found.reg = found.reg || again.reg;
+                }
+                rememberPlaceCoords(q, found.prov, found.lat, found.lng, found.name);
+                const bits = [];
+                if (found.prov) bits.push('Prov. <strong>' + found.prov + '</strong>');
+                if (found.reg) bits.push('<strong>' + String(found.reg).replace(/</g,'&lt;') + '</strong>');
+                setLocalitaStatus(
+                    '✓ Trovato online: <strong>' + String(found.name || q).replace(/</g,'&lt;') + '</strong>' +
+                    (bits.length ? (' → ' + bits.join(', ')) : '') +
+                    ' <span style="opacity:.7">(' + (found.source || 'web') + ')</span>',
+                    'ok'
+                );
+                // se provincia/regione ancora vuote, avvisa
+                if (!provinciaSelect.value || !regioneSelect.value) {
+                    setLocalitaStatus(
+                        (document.getElementById('localitaLookupStatus').innerHTML || '') +
+                        '<br>⚠️ Completa a mano provincia/regione se mancano.',
+                        'err'
+                    );
+                }
+                return;
+            }
+
+            if (local.prov || local.reg) {
+                setLocalitaStatus('✓ Dati parziali da database. Controlla provincia/regione.', 'ok');
+            } else {
+                setLocalitaStatus('❌ Paese non trovato online. Scrivi meglio il nome oppure seleziona <strong>provincia</strong> e <strong>regione</strong> a mano.', 'err');
+            }
+        } catch (err) {
+            if (token !== _localitaLookupToken) return;
+            setLocalitaStatus('❌ Ricerca internet non riuscita. Seleziona provincia e regione a mano.', 'err');
+        }
+    };
 
     function updateModelliDatalist() {
         modelliDatalist.innerHTML = '';
