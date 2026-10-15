@@ -3158,6 +3158,28 @@
             font-size: 0.82rem;
         }
 
+    
+        .percorso-card-focus {
+            outline: 3px solid #7c3aed;
+            box-shadow: 0 0 0 6px rgba(124, 58, 237, 0.25), var(--shadow) !important;
+            transition: outline 0.2s, box-shadow 0.2s;
+        }
+        .info-card-name, .client-info strong {
+            cursor: pointer;
+        }
+        .btn-rename-client {
+            border: none;
+            background: #f1f5f9;
+            border-radius: 8px;
+            padding: 2px 8px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+        .btn-rename-client:hover {
+            background: #e2e8f0;
+        }
     </style>
 </head>
 <body class="locked">
@@ -5958,20 +5980,114 @@
         return !(c.tappa || '').trim() && !(c.spedizione || '').trim();
     }
 
+    
+    window.renameClientName = function(clientId) {
+        const client = clients.find(function(c) { return String(c.id) === String(clientId); });
+        if (!client) {
+            alert('Cliente non trovato.');
+            return;
+        }
+        const current = (client.nome || '').trim();
+        const next = prompt('Nuovo nome cliente:', current);
+        if (next === null) return;
+        const clean = next.trim();
+        if (!clean) {
+            alert('Il nome non può essere vuoto.');
+            return;
+        }
+        if (clean === current) return;
+        // controllo omonimi
+        const other = clients.find(function(c) {
+            return String(c.id) !== String(clientId) &&
+                (c.nome || '').trim().toLowerCase() === clean.toLowerCase();
+        });
+        if (other) {
+            const where = (typeof describeClientLocation === 'function') ? describeClientLocation(other) : '';
+            if (!confirm('Esiste già un cliente chiamato «' + clean + '»' + (where ? (' in ' + where) : '') + '.\\nVuoi usare comunque questo nome?')) {
+                return;
+            }
+        }
+        client.nome = clean;
+        saveToLocalStorage();
+        render();
+        if (typeof currentView !== 'undefined' && currentView === 'percorso' && typeof renderPercorsoPage === 'function') {
+            renderPercorsoPage();
+        }
+    };
+
+    window._focusPercorsoTappa = null;
+
+    window.openPercorsoTappa = function(tappaName) {
+        const name = String(tappaName || '').trim();
+        if (!name) {
+            alert('Tappa non valida.');
+            return;
+        }
+        window._focusPercorsoTappa = name;
+        try {
+            if (typeof switchView === 'function') switchView('percorso');
+            else if (typeof window.switchView === 'function') window.switchView('percorso');
+        } catch (e) {
+            console.error(e);
+            alert('Errore apertura Percorso: ' + (e.message || e));
+        }
+    };
+
+    window.focusPercorsoTappa = function(tappaName) {
+        const name = String(tappaName || window._focusPercorsoTappa || '').trim();
+        if (!name) return false;
+        const container = document.getElementById('percorsoContainer');
+        if (!container) return false;
+        const cards = container.querySelectorAll('.percorso-card');
+        let target = null;
+        cards.forEach(function(card) {
+            const n = (card.getAttribute('data-tappa-name') || '').trim();
+            if (n === name || n.toLowerCase() === name.toLowerCase()) target = card;
+        });
+        // fallback: match titolo h2
+        if (!target) {
+            cards.forEach(function(card) {
+                const h = card.querySelector('h2');
+                if (!h) return;
+                const txt = (h.textContent || '').replace(/^🚩\s*/, '').trim();
+                if (txt === name || txt.toLowerCase() === name.toLowerCase()) target = card;
+            });
+        }
+        if (!target) return false;
+        try { target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+        catch (e) { try { target.scrollIntoView(true); } catch (e2) {} }
+        target.classList.add('percorso-card-focus');
+        setTimeout(function() {
+            try { target.classList.remove('percorso-card-focus'); } catch (e) {}
+        }, 3000);
+        // non cancellare subito: render async può richiamare focus
+        return true;
+    };
+
+    // Click su "Percorso da Casamassima"
+    if (!window._percorsoBtnBound) {
+        window._percorsoBtnBound = true;
+        document.addEventListener('click', function(e) {
+            const btn = e.target && e.target.closest ? e.target.closest('.btn-open-percorso') : null;
+            if (!btn) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const tappa = btn.getAttribute('data-tappa') || '';
+            openPercorsoTappa(tappa);
+        }, true);
+    }
+
+
+    // Apre la sezione Percorso sulla tappa (non più Google Maps esterno)
     window.openRoute = function(stageClients, startFromCasamassima) {
         if (!stageClients || stageClients.length === 0) return;
-        let orderedClients = sortClientsGeographically(stageClients);
-        const locations = orderedClients.map(c => (c.localita || '').trim()).filter(l => l !== '');
-        if (locations.length === 0) return;
-        let origin = startFromCasamassima ? 'Casamassima, BA' : locations[0];
-        let destination = locations[locations.length - 1];
-        let waypoints = startFromCasamassima ? locations.slice(0, -1) : locations.slice(1, -1);
-        let mapUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`;
-        if (waypoints.length > 0) {
-            mapUrl += `&waypoints=${waypoints.map(w => encodeURIComponent(w)).join('|')}`;
+        const t = (stageClients[0].tappa || stageClients[0].spedizione || '').trim();
+        if (t) openPercorsoTappa(t);
+        else {
+            if (typeof switchView === 'function') switchView('percorso');
         }
-        window.open(mapUrl, '_blank');
     };
+
 
     function daysUntilDate(dateStr) {
         if (!dateStr) return null;
@@ -6142,7 +6258,7 @@
         return (
             '<article class="info-card info-card-note" id="client-row-' + client.id + '">' +
               '<div class="info-card-head">' +
-                '<h3 class="info-card-name">' + (client.nome || '').replace(/</g, '&lt;') + '</h3>' +
+                '<h3 class="info-card-name" title="Doppio click per rinominare" ondblclick="renameClientName(\'' + client.id + '\')">' + (client.nome || '').replace(/</g, '&lt;') + '</h3>' +
                 (isSpedizione ? '<span class="info-chip chip-sped">📦 Spedizione</span>' : '<span class="info-chip chip-tappa">🚩 Tappa</span>') +
               '</div>' +
               '<div class="info-card-models">' + (parts.modelsHTML || '<span class="muted-dash">Nessun modello</span>') +
@@ -6401,7 +6517,7 @@
                 const groupDataJSON = JSON.stringify(groupClients).replace(/'/g, "&apos;");
                 cardsHTML += `</div>
                     <div class="stage-footer">
-                        <button class="btn btn-route" onclick='openRoute(${groupDataJSON}, true)'>📍 Percorso da Casamassima (BA)</button>
+                        <button type="button" class="btn btn-route btn-open-percorso" data-tappa="${String(groupName).replace(/"/g, '&quot;')}">📍 Percorso da Casamassima (BA)</button>
                     </div>`;
                 groupEl.innerHTML = cardsHTML;
                 container.appendChild(groupEl);
@@ -6451,7 +6567,7 @@
                 tableHTML += `
                     <tr class="client-row" id="client-row-${client.id}">
                         <td class="client-info" data-label="Cliente">
-                            <strong>${client.nome}</strong>
+                            <strong title="Doppio click per rinominare" ondblclick="renameClientName('${client.id}')" style="cursor:pointer">${client.nome}</strong>
                             <div class="models-list">
                                 ${modelsHTML}
                                 <button class="btn-add-inline" onclick="toggleInlineAddModel('${client.id}')">+ modello</button>
@@ -6548,7 +6664,7 @@
                     </tbody>
                 </table>
                 <div class="stage-footer">
-                    <button class="btn btn-route" onclick='openRoute(${groupDataJSON}, true)'>📍 Percorso da Casamassima (BA)</button>
+                    <button type="button" class="btn btn-route btn-open-percorso" data-tappa="${String(groupName).replace(/"/g, '&quot;')}">📍 Percorso da Casamassima (BA)</button>
                 </div>
             `;
             groupEl.innerHTML = tableHTML;
@@ -9667,6 +9783,20 @@
                 drawTappaOsmMap(mapId, route.ordered);
             });
             bindPercorsoStopDrag(container);
+            if (window._focusPercorsoTappa) {
+                const want = window._focusPercorsoTappa;
+                setTimeout(function() {
+                    if (focusPercorsoTappa(want)) {
+                        window._focusPercorsoTappa = null;
+                    }
+                }, 100);
+                setTimeout(function() {
+                    if (window._focusPercorsoTappa) {
+                        focusPercorsoTappa(window._focusPercorsoTappa);
+                        window._focusPercorsoTappa = null;
+                    }
+                }, 800);
+            }
         });
     }
 
@@ -9910,7 +10040,16 @@
         document.getElementById('navPrep').classList.toggle('active', view === 'prep');
         document.getElementById('navInstallati').classList.toggle('active', view === 'installati');
         document.getElementById('navStandby').classList.toggle('active', view === 'standby');
-        if (view === 'percorso') { try { populateDistCitiesDatalist(); } catch(e) {} renderPercorsoPage(); try { if (placeFindMap) setTimeout(function(){ placeFindMap.invalidateSize(); }, 200); } catch(e) {} }
+        if (view === 'percorso') {
+            try { populateDistCitiesDatalist(); } catch(e) {}
+            Promise.resolve(renderPercorsoPage()).then(function() {
+                if (window._focusPercorsoTappa) {
+                    setTimeout(function() { focusPercorsoTappa(window._focusPercorsoTappa); }, 300);
+                    setTimeout(function() { focusPercorsoTappa(window._focusPercorsoTappa); }, 1500);
+                }
+            }).catch(function() {});
+            try { if (placeFindMap) setTimeout(function(){ placeFindMap.invalidateSize(); }, 200); } catch(e) {}
+        }
         if (view === 'meteo') { try { renderMeteoPage(); } catch(e) { console.error(e); } }
         if (view === 'prep') renderPrepPage();
         if (view === 'installati') renderInstallatiPage();
