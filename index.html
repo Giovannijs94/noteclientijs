@@ -3180,6 +3180,16 @@
         .btn-rename-client:hover {
             background: #e2e8f0;
         }
+    
+        .percorso-stop.fixed-end {
+            opacity: 0.95;
+            background: #fef2f2;
+            border-radius: 10px;
+        }
+        .percorso-stop-num.end {
+            background: #dc2626 !important;
+            color: #fff !important;
+        }
     </style>
 </head>
 <body class="locked">
@@ -8964,6 +8974,7 @@
                         <strong style="display:block;margin-bottom:6px;">${items.length} clienti sul percorso</strong>
                         <div>S · Casamassima (partenza)</div>
                         ${items.map((it, i) => `<div>${i + 1} · ${(it.client.nome || '').replace(/</g, '&lt;')} — ${(it.client.localita || '')}</div>`).join('')}
+                        <div>R · Ritorno a Casamassima</div>
                     </div>
                 </div>`;
             return null;
@@ -9038,7 +9049,7 @@
         });
         L.marker([CASAMASSIMA.lat, CASAMASSIMA.lng], { icon: startIcon, zIndexOffset: 1000 })
             .addTo(map)
-            .bindPopup('<strong>Partenza</strong><br>Casamassima (BA)');
+            .bindPopup('<strong>Partenza e ritorno</strong><br>Casamassima (BA)');
 
         items.forEach((item, idx) => {
             const num = idx + 1;
@@ -9064,19 +9075,31 @@
         });
 
         if (allLatLngs.length >= 2) {
+            // Andata: Casamassima → clienti in ordine
             L.polyline(allLatLngs, {
                 color: '#2563eb',
                 weight: 4,
                 opacity: 0.85,
                 lineJoin: 'round'
             }).addTo(map);
+            // Ritorno: ultimo cliente → Casamassima
+            if (clientLatLngs.length >= 1) {
+                const last = clientLatLngs[clientLatLngs.length - 1];
+                L.polyline([last, [CASAMASSIMA.lat, CASAMASSIMA.lng]], {
+                    color: '#dc2626',
+                    weight: 3.5,
+                    opacity: 0.8,
+                    dashArray: '10 8',
+                    lineJoin: 'round'
+                }).addTo(map);
+            }
         }
 
         const countCtrl = L.control({ position: 'topright' });
         countCtrl.onAdd = function() {
             const d = L.DomUtil.create('div');
-            d.innerHTML = items.length + ' / ' + items.length + ' clienti';
-            d.style.cssText = 'background:#0f172a;color:#fff;padding:6px 10px;border-radius:8px;font-weight:800;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,.25);';
+            d.innerHTML = items.length + ' clienti · <span style="color:#93c5fd">━━</span> andata · <span style="color:#fca5a5">┅┅</span> ritorno';
+            d.style.cssText = 'background:#0f172a;color:#fff;padding:6px 10px;border-radius:8px;font-weight:700;font-size:11px;box-shadow:0 2px 8px rgba(0,0,0,.25);max-width:220px;';
             return d;
         };
         countCtrl.addTo(map);
@@ -9753,7 +9776,15 @@
                         <div class="percorso-stop-models" title="${modelsTxt}">📦 ${modelsTxt}</div>
                     </div>
                 </div>`;
-            }));
+            })).concat([
+                `<div class="percorso-stop fixed-end">
+                    <div class="percorso-stop-num end">R</div>
+                    <div class="percorso-stop-body">
+                        <div class="percorso-stop-title">Casamassima (BA)</div>
+                        <div class="percorso-stop-sub">Ritorno fisso</div>
+                    </div>
+                </div>`
+            ]);
 
             const tappaEsc = String(g.name).replace(/"/g, '&quot;').replace(/</g, '&lt;');
             const tappaAttr = String(g.name).replace(/"/g, '&quot;');
@@ -9762,7 +9793,7 @@
                     <div class="percorso-card-head">
                         <div>
                             <h2>🚩 ${tappaEsc}</h2>
-                            <div class="percorso-card-meta">${route.ordered.length}/${g.clients.length} clienti in mappa · partenza Casamassima · trascina per riordinare</div>
+                            <div class="percorso-card-meta">${route.ordered.length}/${g.clients.length} clienti in mappa · andata + ritorno a Casamassima · trascina per riordinare</div>
                         </div>
                         <button type="button" class="btn" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.25);font-size:0.78rem;" onclick="resetPercorsoOrder('${String(g.name).replace(/'/g, "\'")}')" title="Ripristina ordine geografico automatico">↺ Auto</button>
                     </div>
