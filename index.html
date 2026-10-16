@@ -254,6 +254,25 @@
             display: grid;
             grid-template-columns: minmax(260px, 1.1fr) minmax(220px, 0.9fr);
             gap: 0;
+            align-items: stretch;
+        }
+        .percorso-side {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            max-height: 340px;
+            background: #f8fafc;
+            border-left: 1px solid var(--border);
+        }
+        .percorso-side .percorso-total-bar {
+            margin: 8px 10px 0;
+            flex-shrink: 0;
+        }
+        .percorso-side .percorso-stops {
+            border-left: none;
+            flex: 1;
+            max-height: none;
+            min-height: 0;
         }
         .percorso-map {
             height: 300px;
@@ -3190,6 +3209,74 @@
             background: #dc2626 !important;
             color: #fff !important;
         }
+    
+        #distRouteMap {
+            margin-top: 12px;
+            height: 320px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+            background: #e2e8f0;
+        }
+        #distRouteMap .leaflet-container { width: 100%; height: 100%; }
+        @media (max-width: 600px) {
+            #distRouteMap { height: 260px; }
+        }
+        .dist-route-legend {
+            margin-top: 8px;
+            font-size: 0.78rem;
+            color: #64748b;
+        }
+    
+        .percorso-leg-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 10px;
+            margin: 4px 0 2px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #1d4ed8;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 4px 8px;
+            line-height: 1.3;
+        }
+        .percorso-leg-info.approx {
+            color: #c2410c;
+            background: #fff7ed;
+            border-color: #fed7aa;
+        }
+        .percorso-leg-info .leg-arrow {
+            color: #64748b;
+            font-weight: 600;
+        }
+        .percorso-total-bar {
+            margin: 8px 12px 4px;
+            padding: 8px 12px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #f0fdf4, #eff6ff);
+            border: 1px solid #bbf7d0;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #14532d;
+        }
+    
+        @media (max-width: 800px) {
+            .percorso-body {
+                grid-template-columns: 1fr !important;
+            }
+            .percorso-side {
+                max-height: none;
+                border-left: none;
+                border-top: 1px solid var(--border);
+            }
+            .percorso-map {
+                height: 240px;
+                min-height: 220px;
+            }
+        }
+
     </style>
 </head>
 <body class="locked">
@@ -8739,7 +8826,39 @@
                 try { percorsoMaps[idx].remove(); } catch (e) {}
                 percorsoMaps.splice(idx, 1);
             }
-            drawTappaOsmMap(mapId, ordered);
+            // ricalcola percorsi dettagliati e ridisegna
+            (async function() {
+                let legs = [];
+                try { legs = await buildDetailedTappaLegs(ordered); } catch (e) {}
+                drawTappaOsmMap(mapId, ordered, legs);
+                // aggiorna km/min nell'elenco fermate
+                try {
+                    const listEl = document.querySelector('.percorso-stops[data-map-id="' + mapId + '"]');
+                    if (listEl) {
+                        const drags = listEl.querySelectorAll('.draggable-stop');
+                        drags.forEach(function(node, i) {
+                            let info = node.querySelector('.percorso-leg-info');
+                            if (!info) {
+                                info = document.createElement('div');
+                                const body = node.querySelector('.percorso-stop-body');
+                                if (body) body.insertBefore(info, body.firstChild);
+                            }
+                            if (info && legs[i]) {
+                                info.outerHTML = formatLegLine(legs[i]);
+                            }
+                        });
+                        const end = listEl.querySelector('.fixed-end .percorso-stop-body');
+                        if (end && legs[ordered.length]) {
+                            let info = end.querySelector('.percorso-leg-info');
+                            if (!info) {
+                                info = document.createElement('div');
+                                end.insertBefore(info, end.firstChild);
+                            }
+                            info.outerHTML = formatLegLine(legs[ordered.length]);
+                        }
+                    }
+                } catch (e) {}
+            })();
         }
     }
 
@@ -8938,7 +9057,98 @@
         }).join('');
     }
 
-    function drawTappaOsmMap(mapElId, ordered) {
+
+    async function buildDetailedTappaLegs(ordered) {
+        // Sequenza: Casamassima → clienti → Casamassima
+        const nodes = [{
+            label: 'Casamassima',
+            lat: Number(CASAMASSIMA.lat),
+            lng: Number(CASAMASSIMA.lng)
+        }];
+        (ordered || []).forEach(function(item) {
+            const c = item.client || item;
+            const coords = item.coords || {};
+            nodes.push({
+                label: (c.localita || c.nome || 'Fermata'),
+                lat: Number(coords.lat),
+                lng: Number(coords.lng),
+                clientId: c.id
+            });
+        });
+        nodes.push({
+            label: 'Casamassima',
+            lat: Number(CASAMASSIMA.lat),
+            lng: Number(CASAMASSIMA.lng)
+        });
+
+        const legs = [];
+        for (let i = 0; i < nodes.length - 1; i++) {
+            const a = nodes[i];
+            const b = nodes[i + 1];
+            let leg = {
+                from: a.label,
+                to: b.label,
+                distance: 0,
+                duration: 0,
+                geometry: null,
+                approx: true
+            };
+            if (a.lat && a.lng && b.lat && b.lng) {
+                try {
+                    const r = await routeDrivingOSRM(
+                        { lat: a.lat, lng: a.lng },
+                        { lat: b.lat, lng: b.lng },
+                        true
+                    );
+                    if (r && r.distance != null) {
+                        leg.distance = r.distance;
+                        leg.duration = r.duration;
+                        leg.geometry = r.geometry || null;
+                        leg.approx = false;
+                    }
+                } catch (e) {
+                    try {
+                        const r2 = await routeDrivingOSRM(
+                            { lat: a.lat, lng: a.lng },
+                            { lat: b.lat, lng: b.lng },
+                            false
+                        );
+                        if (r2 && r2.distance != null) {
+                            leg.distance = r2.distance;
+                            leg.duration = r2.duration;
+                            leg.approx = false;
+                        }
+                    } catch (e2) {
+                        const est = estimateDrivingFallback(
+                            { lat: a.lat, lng: a.lng },
+                            { lat: b.lat, lng: b.lng }
+                        );
+                        leg.distance = est.distance;
+                        leg.duration = est.duration;
+                        leg.approx = true;
+                    }
+                }
+                if (typeof sleepMs === 'function') await sleepMs(120);
+            }
+            legs.push(leg);
+        }
+        return legs;
+    }
+
+    function formatLegLine(leg) {
+        if (!leg) return '';
+        const km = (typeof formatDistanceKm === 'function')
+            ? formatDistanceKm(leg.distance)
+            : (Math.round((leg.distance || 0) / 1000) + ' km');
+        const tempo = (typeof formatDriveDuration === 'function')
+            ? formatDriveDuration(leg.duration)
+            : '';
+        const cls = leg.approx ? 'percorso-leg-info approx' : 'percorso-leg-info';
+        const note = leg.approx ? ' · stima' : '';
+        return '<div class="' + cls + '">🚗 ' + km + (tempo ? (' · ⏱ ' + tempo) : '') + note + '</div>';
+    }
+
+    function drawTappaOsmMap(mapElId, ordered, legs) {
         const el = document.getElementById(mapElId);
         if (!el) return null;
 
@@ -9074,15 +9284,38 @@
                 .bindPopup('<strong>' + num + '. ' + nome + '</strong><br>📍 ' + loc + precise + extra + modelsHtml + coordsTxt, { maxWidth: 280 });
         });
 
-        if (allLatLngs.length >= 2) {
-            // Andata: Casamassima → clienti in ordine
+        const legList = legs || [];
+        let drewDetailed = false;
+        if (legList.length) {
+            legList.forEach(function(leg, li) {
+                let latlngs = null;
+                if (leg.geometry && leg.geometry.coordinates && leg.geometry.coordinates.length) {
+                    latlngs = leg.geometry.coordinates.map(function(c) {
+                        return [Number(c[1]), Number(c[0])];
+                    });
+                }
+                const isReturn = (li === legList.length - 1);
+                if (latlngs && latlngs.length >= 2) {
+                    L.polyline(latlngs, {
+                        color: isReturn ? '#dc2626' : '#2563eb',
+                        weight: isReturn ? 4 : 5,
+                        opacity: 0.9,
+                        dashArray: isReturn ? '10 8' : null,
+                        lineJoin: 'round',
+                        lineCap: 'round'
+                    }).addTo(map);
+                    drewDetailed = true;
+                }
+            });
+        }
+        // Fallback linee rette se manca geometria dettagliata
+        if (!drewDetailed && allLatLngs.length >= 2) {
             L.polyline(allLatLngs, {
                 color: '#2563eb',
                 weight: 4,
                 opacity: 0.85,
                 lineJoin: 'round'
             }).addTo(map);
-            // Ritorno: ultimo cliente → Casamassima
             if (clientLatLngs.length >= 1) {
                 const last = clientLatLngs[clientLatLngs.length - 1];
                 L.polyline([last, [CASAMASSIMA.lat, CASAMASSIMA.lng]], {
@@ -9318,13 +9551,16 @@
         return null;
     }
 
-    async function routeDrivingOSRM(from, to) {
+    async function routeDrivingOSRM(from, to, detailed) {
+        const overview = detailed ? 'full' : 'false';
+        const geom = detailed ? '&geometries=geojson' : '';
+        const steps = detailed ? 'true' : 'false';
         const url = 'https://router.project-osrm.org/route/v1/driving/' +
             Number(from.lng) + ',' + Number(from.lat) + ';' +
             Number(to.lng) + ',' + Number(to.lat) +
-            '?overview=false&alternatives=false&steps=false';
+            '?overview=' + overview + geom + '&alternatives=false&steps=' + steps;
         const controller = new AbortController();
-        const timer = setTimeout(function() { controller.abort(); }, 6000);
+        const timer = setTimeout(function() { controller.abort(); }, detailed ? 12000 : 6000);
         try {
             const res = await fetch(url, { signal: controller.signal });
             clearTimeout(timer);
@@ -9337,6 +9573,109 @@
             throw e;
         }
     }
+
+    let distRouteMap = null;
+
+    window.renderDistRouteMap = function(from, to, route) {
+        const mapEl = document.getElementById('distRouteMap');
+        if (!mapEl || typeof L === 'undefined') return;
+        mapEl.hidden = false;
+        mapEl.style.display = 'block';
+
+        let latlngs = [];
+        if (route && route.geometry && route.geometry.coordinates && route.geometry.coordinates.length) {
+            latlngs = route.geometry.coordinates.map(function(c) {
+                return [Number(c[1]), Number(c[0])];
+            });
+        } else {
+            latlngs = [
+                [Number(from.lat), Number(from.lng)],
+                [Number(to.lat), Number(to.lng)]
+            ];
+        }
+
+        if (!distRouteMap) {
+            distRouteMap = L.map(mapEl, {
+                scrollWheelZoom: true,
+                dragging: true,
+                touchZoom: true,
+                doubleClickZoom: true
+            });
+            const providers = [
+                L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
+                    maxZoom: 18,
+                    attribution: '&copy; OpenStreetMap'
+                }),
+                L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+                    maxZoom: 20,
+                    subdomains: 'abc',
+                    attribution: '&copy; OpenStreetMap / OSM-FR'
+                }),
+                L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    subdomains: 'abc',
+                    attribution: '&copy; OpenStreetMap HOT'
+                })
+            ];
+            let ti = 0;
+            providers[0].addTo(distRouteMap);
+            providers[0].on('tileerror', function() {
+                if (ti >= providers.length - 1) return;
+                try { distRouteMap.removeLayer(providers[ti]); } catch (e) {}
+                ti++;
+                providers[ti].addTo(distRouteMap);
+            });
+        } else {
+            distRouteMap.eachLayer(function(layer) {
+                if (layer instanceof L.Polyline || layer instanceof L.Marker) {
+                    try { distRouteMap.removeLayer(layer); } catch (e) {}
+                }
+            });
+        }
+
+        const startIcon = L.divIcon({
+            className: 'dist-route-marker',
+            html: '<div style="background:#16a34a;color:#fff;width:26px;height:26px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;">A</div>',
+            iconSize: [26, 26],
+            iconAnchor: [13, 13]
+        });
+        const endIcon = L.divIcon({
+            className: 'dist-route-marker',
+            html: '<div style="background:#dc2626;color:#fff;width:26px;height:26px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;">B</div>',
+            iconSize: [26, 26],
+            iconAnchor: [13, 13]
+        });
+
+        L.marker([Number(from.lat), Number(from.lng)], { icon: startIcon })
+            .addTo(distRouteMap)
+            .bindPopup('<strong>Da</strong><br>' + String(from.label || '').replace(/</g, '&lt;'));
+        L.marker([Number(to.lat), Number(to.lng)], { icon: endIcon })
+            .addTo(distRouteMap)
+            .bindPopup('<strong>A</strong><br>' + String(to.label || '').replace(/</g, '&lt;'));
+
+        const line = L.polyline(latlngs, {
+            color: '#2563eb',
+            weight: 5,
+            opacity: 0.9,
+            lineJoin: 'round',
+            lineCap: 'round'
+        }).addTo(distRouteMap);
+
+        try {
+            distRouteMap.fitBounds(line.getBounds(), { padding: [40, 40], maxZoom: 15 });
+        } catch (e) {
+            distRouteMap.setView([Number(from.lat), Number(from.lng)], 10);
+        }
+        setTimeout(function() {
+            try {
+                distRouteMap.invalidateSize();
+                distRouteMap.fitBounds(line.getBounds(), { padding: [40, 40], maxZoom: 15 });
+            } catch (e) {}
+        }, 200);
+        setTimeout(function() {
+            try { distRouteMap.invalidateSize(); } catch (e) {}
+        }, 500);
+    };
 
     function estimateDrivingFallback(from, to) {
         const straight = (typeof haversineKm === 'function')
@@ -9650,12 +9989,15 @@
             let route = null;
             let usedApprox = !!(from.approx || to.approx);
             try {
-                route = await routeDrivingOSRM(from, to);
+                route = await routeDrivingOSRM(from, to, true);
             } catch (e) {
-                route = estimateDrivingFallback(from, to);
-                usedApprox = true;
+                try {
+                    route = await routeDrivingOSRM(from, to, false);
+                } catch (e2) {
+                    route = estimateDrivingFallback(from, to);
+                    usedApprox = true;
+                }
             }
-
             const km = (typeof formatDistanceKm === 'function')
                 ? formatDistanceKm(route.distance)
                 : (Math.round((route.distance || 0) / 1000) + ' km');
@@ -9677,11 +10019,22 @@
                 '<div class="dist-sub">' +
                     '<strong>Da:</strong> ' + String(from.label || fromQ).replace(/</g, '&lt;') + '<br>' +
                     '<strong>A:</strong> ' + String(to.label || toQ).replace(/</g, '&lt;') +
-                    '<br>Percorso in auto (OSRM o stima).' +
+                    '<br>Percorso stradale dettagliato (OSRM).' +
                     '<br><span style="font-size:0.75rem;color:#94a3b8;">Posizioni: ' +
                     String(from.source || '?') + ' → ' + String(to.source || '?') + '</span>' +
                     noteApprox +
-                '</div>';
+                '</div>' +
+                '<div id="distRouteMap"></div>' +
+                '<div class="dist-route-legend">Mappa: tracciato stradale preciso · <span style="color:#16a34a;font-weight:700;">A</span> partenza · <span style="color:#dc2626;font-weight:700;">B</span> arrivo</div>';
+
+            // disegna mappa dopo che il DOM ha il container
+            setTimeout(function() {
+                try {
+                    renderDistRouteMap(from, to, route);
+                } catch (e) {
+                    console.warn('Mappa percorso distanza', e);
+                }
+            }, 50);
         } catch (err) {
             console.error(err);
             box.className = 'dist-calc-result error';
@@ -9746,7 +10099,17 @@
                     points.forEach(p => { if (!inOrd.has(String(p.client.id))) ordered.push(p); });
                 }
             }
-            routesData.push({ group: g, route: { ordered, without: [] }, mapId: 'percorso-map-' + gi });
+            if (status) {
+                status.textContent = '🛣️ Percorsi stradali dettagliati: tappa «' + g.name + '» (' + (gi + 1) + '/' + groups.length + ')…';
+            }
+            let legs = [];
+            try {
+                legs = await buildDetailedTappaLegs(ordered);
+            } catch (e) {
+                console.warn('legs tappa', e);
+                legs = [];
+            }
+            routesData.push({ group: g, route: { ordered, without: [], legs: legs }, mapId: 'percorso-map-' + gi });
         }
 
         const statusEl = document.getElementById('percorsoGeoStatus');
@@ -9754,6 +10117,13 @@
 
         container.innerHTML = routesData.map(({ group: g, route, mapId }) => {
             const stops = route.ordered;
+            const legs = route.legs || [];
+            const totalM = legs.reduce(function(s, l) { return s + (Number(l.distance) || 0); }, 0);
+            const totalS = legs.reduce(function(s, l) { return s + (Number(l.duration) || 0); }, 0);
+            const totalBar = legs.length
+                ? ('<div class="percorso-total-bar">Σ Percorso completo (andata + ritorno): ' +
+                   formatDistanceKm(totalM) + ' · ' + formatDriveDuration(totalS) + '</div>')
+                : '';
             const stopsHtml = [
                 `<div class="percorso-stop fixed-start">
                     <div class="percorso-stop-num start">S</div>
@@ -9767,23 +10137,29 @@
                 const approx = s.coords && s.coords.approx ? ' · posizione approssimata (provincia)' : '';
                 const modelsTxt = formatClientModelsText(c).replace(/</g, '&lt;');
                 const modelsHtml = formatClientModelsHtml(c);
+                const legHtml = formatLegLine(legs[i]); // leg i: prev → this client
                 return `<div class="percorso-stop draggable-stop" draggable="true" data-client-id="${c.id}">
                     <span class="percorso-drag-handle" title="Trascina per riordinare">⠿</span>
                     <div class="percorso-stop-num">${i + 1}</div>
                     <div class="percorso-stop-body">
+                        ${legHtml}
                         <div class="percorso-stop-title">${(c.nome || '').replace(/</g, '&lt;')}</div>
                         <div class="percorso-stop-sub">📍 ${(c.localita || '—')}${(c.provincia ? ' (' + c.provincia + ')' : '')}${approx}</div>
                         <div class="percorso-stop-models" title="${modelsTxt}">📦 ${modelsTxt}</div>
                     </div>
                 </div>`;
             })).concat([
-                `<div class="percorso-stop fixed-end">
+                (function() {
+                    const retLeg = formatLegLine(legs[stops.length]); // last → casa
+                    return `<div class="percorso-stop fixed-end">
                     <div class="percorso-stop-num end">R</div>
                     <div class="percorso-stop-body">
+                        ${retLeg}
                         <div class="percorso-stop-title">Casamassima (BA)</div>
                         <div class="percorso-stop-sub">Ritorno fisso</div>
                     </div>
-                </div>`
+                </div>`;
+                })()
             ]);
 
             const tappaEsc = String(g.name).replace(/"/g, '&quot;').replace(/</g, '&lt;');
@@ -9799,9 +10175,12 @@
                     </div>
                     <div class="percorso-body">
                         <div class="percorso-map" id="${mapId}"></div>
-                        <div class="percorso-stops" data-tappa="${tappaAttr}" data-map-id="${mapId}">
-                            <div class="percorso-stops-hint">⠿ Tieni premuto e trascina i clienti per cambiare l'itinerario</div>
-                            ${stopsHtml.join('')}
+                        <div class="percorso-side">
+                            ${totalBar}
+                            <div class="percorso-stops" data-tappa="${tappaAttr}" data-map-id="${mapId}">
+                                <div class="percorso-stops-hint">⠿ Tieni premuto e trascina i clienti per cambiare l'itinerario · km e tempi aggiornati all'ordine</div>
+                                ${stopsHtml.join('')}
+                            </div>
                         </div>
                     </div>
                 </article>
@@ -9811,7 +10190,7 @@
         // Disegna le mappe OSM dopo che il DOM è pronto
         requestAnimationFrame(() => {
             routesData.forEach(({ route, mapId }) => {
-                drawTappaOsmMap(mapId, route.ordered);
+                drawTappaOsmMap(mapId, route.ordered, route.legs || []);
             });
             bindPercorsoStopDrag(container);
             if (window._focusPercorsoTappa) {
