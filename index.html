@@ -3277,6 +3277,92 @@
             }
         }
 
+    
+        .draft-tappa-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px 18px;
+            margin-bottom: 18px;
+            box-shadow: var(--shadow);
+        }
+        .draft-tappa-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        .draft-place-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .draft-place-row .input-control { flex: 1; }
+        .draft-places-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-height: 8px;
+        }
+        .draft-place-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #1e40af;
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .draft-place-chip button {
+            border: none;
+            background: transparent;
+            color: #1e40af;
+            cursor: pointer;
+            font-size: 1rem;
+            line-height: 1;
+            padding: 0 2px;
+        }
+        .draft-tappa-status {
+            margin-top: 10px;
+            font-size: 0.88rem;
+            color: #1d4ed8;
+            font-weight: 600;
+        }
+        .draft-tappa-status.error { color: #b91c1c; }
+        .draft-tappa-result {
+            margin-top: 14px;
+        }
+        .draft-tappa-result .percorso-card {
+            margin-top: 0;
+        }
+        .draft-tappe-saved {
+            margin-top: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .draft-saved-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 4px;
+        }
+        .draft-saved-head h3 {
+            margin: 0;
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        @media (max-width: 600px) {
+            .draft-tappa-form { flex-direction: column; }
+            .draft-place-row .btn { min-height: 44px; }
+        }
+
     </style>
 </head>
 <body class="locked">
@@ -3492,6 +3578,34 @@
         </div>
         <p class="dist-calc-keys-hint">Scorciatoie: <strong>Invio</strong> calcola · <strong>⇄</strong> scambia · <strong>🏠</strong> Da = Casamassima</p>
         <div id="distCalcResult" class="dist-calc-result" hidden></div>
+    </div>
+
+    <div class="draft-tappa-card" id="draftTappaCard">
+        <div class="dist-calc-title">📝 Bozze di tappa (solo paesi)</div>
+        <p class="dist-calc-hint">Inserisci i paesi e crea un percorso di prova partendo sempre da <strong>Casamassima</strong>. Non modifica i clienti in Note.</p>
+        <div class="draft-tappa-form">
+            <div class="form-group" style="flex:1;min-width:140px;">
+                <label for="draftTappaName">Nome bozza</label>
+                <input type="text" id="draftTappaName" class="input-control" placeholder="Es. Bozza Bari sud" autocomplete="off">
+            </div>
+            <div class="form-group" style="flex:2;min-width:180px;">
+                <label for="draftPlaceInput">Aggiungi paese</label>
+                <div class="draft-place-row">
+                    <input type="text" id="draftPlaceInput" class="input-control" list="distCitiesDatalist" placeholder="Es. Monopoli, Ostuni…" autocomplete="off"
+                        onkeydown="if(event.key==='Enter'){event.preventDefault();addDraftPlace();}">
+                    <button type="button" class="btn btn-primary" onclick="addDraftPlace()">+</button>
+                </div>
+            </div>
+        </div>
+        <div id="draftPlacesList" class="draft-places-list"></div>
+        <div class="dist-calc-actions" style="margin-top:10px;">
+            <button type="button" class="btn btn-primary" id="draftCreateBtn" onclick="creaBozzaPercorso()">🗺️ Crea percorso da Casamassima</button>
+            <button type="button" class="btn" onclick="ordinaBozzaGeografica()" title="Riordina i paesi per distanza da Casamassima">📍 Ordine geografico</button>
+            <button type="button" class="btn" onclick="svuotaBozzaPlaces()">Svuota paesi</button>
+        </div>
+        <div id="draftTappaStatus" class="draft-tappa-status" hidden></div>
+        <div id="draftTappaResult" class="draft-tappa-result" hidden></div>
+        <div id="draftTappeSaved" class="draft-tappe-saved"></div>
     </div>
 
     <div id="percorsoContainer" class="percorso-container"></div>
@@ -9949,6 +10063,461 @@
         }
     };
 
+
+    // ===== Bozze di tappa (solo paesi) =====
+    let draftPlaces = [];
+    let draftMaps = [];
+
+    function loadDraftTappe() {
+        try { return JSON.parse(localStorage.getItem('note_clienti_draft_tappe') || '[]'); }
+        catch (e) { return []; }
+    }
+    function saveDraftTappe(list) {
+        try { localStorage.setItem('note_clienti_draft_tappe', JSON.stringify(list || [])); } catch (e) {}
+    }
+
+    function renderDraftPlacesList() {
+        const box = document.getElementById('draftPlacesList');
+        if (!box) return;
+        if (!draftPlaces.length) {
+            box.innerHTML = '<span style="font-size:0.8rem;color:#94a3b8;">Nessun paese aggiunto. Dopo «Crea percorso» potrai riordinarli accanto alla mappa.</span>';
+            return;
+        }
+        box.innerHTML = draftPlaces.map(function(p, i) {
+            return '<span class="draft-place-chip">' + String(p.label || '').replace(/</g, '&lt;') +
+                ' <button type="button" title="Rimuovi" onclick="removeDraftPlace(' + i + ')">×</button></span>';
+        }).join('') +
+        '<p class="draft-order-hint">Per cambiare l\'ordine: crea il percorso e trascina i paesi a destra della mappa.</p>';
+    }
+
+    window.moveDraftPlace = function(idx, delta) {
+        const j = idx + delta;
+        if (j < 0 || j >= draftPlaces.length) return;
+        const tmp = draftPlaces[idx];
+        draftPlaces[idx] = draftPlaces[j];
+        draftPlaces[j] = tmp;
+        renderDraftPlacesList();
+    };
+
+    function bindDraftPlacesDrag() {
+        const list = document.getElementById('draftPlacesSortable');
+        if (!list) return;
+        let dragIdx = null;
+        list.querySelectorAll('.draft-place-row-item').forEach(function(el) {
+            el.addEventListener('dragstart', function(e) {
+                dragIdx = parseInt(el.getAttribute('data-idx'), 10);
+                el.classList.add('dragging');
+                try { e.dataTransfer.setData('text/plain', String(dragIdx)); e.dataTransfer.effectAllowed = 'move'; } catch (err) {}
+            });
+            el.addEventListener('dragend', function() {
+                el.classList.remove('dragging');
+                dragIdx = null;
+            });
+            el.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                el.classList.add('drag-over');
+            });
+            el.addEventListener('dragleave', function() {
+                el.classList.remove('drag-over');
+            });
+            el.addEventListener('drop', function(e) {
+                e.preventDefault();
+                el.classList.remove('drag-over');
+                const toIdx = parseInt(el.getAttribute('data-idx'), 10);
+                let fromIdx = dragIdx;
+                try {
+                    const d = e.dataTransfer.getData('text/plain');
+                    if (d !== '') fromIdx = parseInt(d, 10);
+                } catch (err) {}
+                if (fromIdx == null || isNaN(fromIdx) || isNaN(toIdx) || fromIdx === toIdx) return;
+                const item = draftPlaces.splice(fromIdx, 1)[0];
+                draftPlaces.splice(toIdx, 0, item);
+                renderDraftPlacesList();
+            });
+        });
+    }
+
+
+    window.addDraftPlace = async function() {
+        const input = document.getElementById('draftPlaceInput');
+        const status = document.getElementById('draftTappaStatus');
+        if (!input) return;
+        const q = input.value.trim();
+        if (!q) return;
+        if (status) {
+            status.hidden = false;
+            status.className = 'draft-tappa-status';
+            status.textContent = '🛰️ Cerco «' + q + '»…';
+        }
+        try {
+            const place = await geocodePlaceForDistance(q);
+            if (!place || place.lat == null || place.lng == null) throw new Error('Paese non trovato: ' + q);
+            const label = place.label || q;
+            if (draftPlaces.some(function(p) { return String(p.label).toLowerCase() === String(label).toLowerCase(); })) {
+                if (status) { status.className = 'draft-tappa-status error'; status.textContent = '«' + label + '» è già in elenco.'; }
+                return;
+            }
+            draftPlaces.push({
+                id: 'dp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+                label: label,
+                lat: Number(place.lat),
+                lng: Number(place.lng)
+            });
+            input.value = '';
+            renderDraftPlacesList();
+            if (status) { status.className = 'draft-tappa-status'; status.textContent = '✓ Aggiunto: ' + label; }
+            try { input.focus(); } catch (e) {}
+        } catch (err) {
+            if (status) {
+                status.className = 'draft-tappa-status error';
+                status.textContent = (err && err.message) ? err.message : 'Errore ricerca paese.';
+            }
+        }
+    };
+
+
+    window.ordinaBozzaGeografica = function() {
+        if (!draftPlaces.length) return;
+        draftPlaces = nearestNeighborDraftOrder(CASAMASSIMA, draftPlaces.slice());
+        renderDraftPlacesList();
+        const status = document.getElementById('draftTappaStatus');
+        if (status) {
+            status.hidden = false;
+            status.className = 'draft-tappa-status';
+            status.textContent = '✓ Paesi riordinati per distanza da Casamassima. Crea il percorso per vedere la mappa.';
+        }
+    };
+
+    window.removeDraftPlace = function(idx) {
+        draftPlaces.splice(idx, 1);
+        renderDraftPlacesList();
+    };
+
+    window.svuotaBozzaPlaces = function() {
+        draftPlaces = [];
+        renderDraftPlacesList();
+        const status = document.getElementById('draftTappaStatus');
+        if (status) { status.hidden = true; status.textContent = ''; }
+    };
+
+    function nearestNeighborDraftOrder(start, places) {
+        const remaining = places.slice();
+        const ordered = [];
+        let cur = { lat: start.lat, lng: start.lng };
+        while (remaining.length) {
+            let bestI = 0, bestD = Infinity;
+            for (let i = 0; i < remaining.length; i++) {
+                const d = (typeof haversineKm === 'function')
+                    ? haversineKm(cur.lat, cur.lng, remaining[i].lat, remaining[i].lng)
+                    : Math.hypot(remaining[i].lat - cur.lat, remaining[i].lng - cur.lng);
+                if (d < bestD) { bestD = d; bestI = i; }
+            }
+            const next = remaining.splice(bestI, 1)[0];
+            ordered.push(next);
+            cur = next;
+        }
+        return ordered;
+    }
+
+    async function buildDraftLegs(orderedPlaces) {
+        const fakeOrdered = orderedPlaces.map(function(p) {
+            return {
+                client: { id: p.id, nome: p.label, localita: p.label },
+                coords: { lat: p.lat, lng: p.lng }
+            };
+        });
+        if (typeof buildDetailedTappaLegs === 'function') return await buildDetailedTappaLegs(fakeOrdered);
+        return [];
+    }
+
+    function clearDraftMaps() {
+        (draftMaps || []).forEach(function(m) { try { m.remove(); } catch (e) {} });
+        draftMaps = [];
+    }
+
+
+    window.rebuildDraftRouteFromOrder = async function(ordered) {
+        const status = document.getElementById('draftTappaStatus');
+        const result = document.getElementById('draftTappaResult');
+        const nameEl = document.getElementById('draftTappaName');
+        if (!ordered || !ordered.length || !result) return;
+        if (status) {
+            status.hidden = false;
+            status.className = 'draft-tappa-status';
+            status.textContent = '🛣️ Aggiorno percorso nell\'ordine scelto…';
+        }
+        clearDraftMaps();
+        try {
+            const legs = await buildDraftLegs(ordered);
+            const totalM = legs.reduce(function(s, l) { return s + (Number(l.distance) || 0); }, 0);
+            const totalS = legs.reduce(function(s, l) { return s + (Number(l.duration) || 0); }, 0);
+            const draftName = ((nameEl && nameEl.value.trim()) || 'Bozza');
+            const mapId = 'draft-map-' + Date.now();
+            const stopsHtml = [
+                '<div class="percorso-stop fixed-start"><div class="percorso-stop-num start">S</div><div class="percorso-stop-body"><div class="percorso-stop-title">Casamassima (BA)</div><div class="percorso-stop-sub">Partenza → 1° paese</div></div></div>'
+            ].concat(ordered.map(function(p, i) {
+                const legHtml = (typeof formatLegLine === 'function') ? formatLegLine(legs[i]) : '';
+                const prevLabel = i === 0 ? 'Casamassima' : ordered[i - 1].label;
+                return '<div class="percorso-stop draggable-stop" draggable="true" data-place-id="' + String(p.id).replace(/"/g, '') + '">' +
+                    '<span class="percorso-drag-handle" title="Trascina per cambiare ordine">⠿</span>' +
+                    '<div class="percorso-stop-num">' + (i + 1) + '</div>' +
+                    '<div class="percorso-stop-body">' + legHtml +
+                    '<div class="percorso-stop-title">' + String(p.label).replace(/</g, '&lt;') + '</div>' +
+                    '<div class="percorso-stop-sub">📍 dopo ' + String(prevLabel).replace(/</g, '&lt;') + '</div></div></div>';
+            })).concat([
+                (function() {
+                    const ret = (typeof formatLegLine === 'function') ? formatLegLine(legs[ordered.length]) : '';
+                    return '<div class="percorso-stop fixed-end"><div class="percorso-stop-num end">R</div><div class="percorso-stop-body">' + ret +
+                        '<div class="percorso-stop-title">Casamassima (BA)</div><div class="percorso-stop-sub">Ritorno dall\'ultimo paese</div></div></div>';
+                })()
+            ]);
+            const totalBar = legs.length
+                ? ('<div class="percorso-total-bar">Σ ' + formatDistanceKm(totalM) + ' · ' + formatDriveDuration(totalS) + ' (Casamassima → paesi → Casamassima)</div>')
+                : '';
+            result.hidden = false;
+            result.innerHTML =
+                '<article class="percorso-card">' +
+                '<div class="percorso-card-head"><div><h2>📝 ' + String(draftName).replace(/</g, '&lt;') + '</h2>' +
+                '<div class="percorso-card-meta">' + ordered.length + ' paesi · Casamassima → ordine numerico → ritorno · trascina a destra</div></div></div>' +
+                '<div class="percorso-body">' +
+                '<div class="percorso-map" id="' + mapId + '"></div>' +
+                '<div class="percorso-side">' + totalBar +
+                '<div class="percorso-stops" id="draftResultStops">' + stopsHtml.join('') + '</div></div></div></article>';
+            const orderedForMap = ordered.map(function(p) {
+                return { client: { id: p.id, nome: p.label, localita: p.label }, coords: { lat: p.lat, lng: p.lng } };
+            });
+            setTimeout(function() {
+                try {
+                    const m = drawTappaOsmMap(mapId, orderedForMap, legs);
+                    if (m) draftMaps.push(m);
+                } catch (e) { console.warn(e); }
+                bindDraftResultDrag();
+            }, 80);
+            if (status) {
+                status.className = 'draft-tappa-status';
+                status.textContent = '✓ Percorso aggiornato: Casamassima → 1 → 2 → … → ritorno.';
+            }
+        } catch (err) {
+            console.error(err);
+            if (status) {
+                status.className = 'draft-tappa-status error';
+                status.textContent = (err && err.message) ? err.message : 'Errore aggiornamento percorso.';
+            }
+        }
+    };
+
+    window.bindDraftResultDrag = function() {
+        const list = document.getElementById('draftResultStops') ||
+            (document.getElementById('draftTappaResult') && document.getElementById('draftTappaResult').querySelector('.percorso-stops'));
+        if (!list) return;
+        let dragEl = null;
+        list.querySelectorAll('.draggable-stop').forEach(function(el) {
+            el.ondragstart = function(e) {
+                dragEl = el;
+                el.classList.add('dragging');
+                try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', el.getAttribute('data-place-id') || ''); } catch (err) {}
+            };
+            el.ondragend = function() {
+                el.classList.remove('dragging');
+                dragEl = null;
+            };
+            el.ondragover = function(e) {
+                e.preventDefault();
+                if (!dragEl || dragEl === el) return;
+                const rect = el.getBoundingClientRect();
+                const before = (e.clientY - rect.top) < rect.height / 2;
+                if (before) list.insertBefore(dragEl, el);
+                else list.insertBefore(dragEl, el.nextSibling);
+            };
+            el.ondrop = function(e) {
+                e.preventDefault();
+                // leggi nuovo ordine dai data-place-id
+                const ids = [];
+                list.querySelectorAll('.draggable-stop').forEach(function(n) {
+                    const id = n.getAttribute('data-place-id');
+                    if (id) ids.push(id);
+                });
+                const byId = {};
+                draftPlaces.forEach(function(p) { byId[String(p.id)] = p; });
+                const newOrder = [];
+                ids.forEach(function(id) {
+                    if (byId[id]) newOrder.push(byId[id]);
+                });
+                draftPlaces.forEach(function(p) {
+                    if (!newOrder.some(function(x) { return String(x.id) === String(p.id); })) newOrder.push(p);
+                });
+                draftPlaces = newOrder;
+                renderDraftPlacesList();
+                // ricalcola mappa e km seguendo ordine numerico
+                rebuildDraftRouteFromOrder(draftPlaces.slice());
+            };
+        });
+    };
+
+    window.creaBozzaPercorso = async function() {
+        const status = document.getElementById('draftTappaStatus');
+        const result = document.getElementById('draftTappaResult');
+        const btn = document.getElementById('draftCreateBtn');
+        const nameEl = document.getElementById('draftTappaName');
+        if (!draftPlaces.length) {
+            if (status) {
+                status.hidden = false;
+                status.className = 'draft-tappa-status error';
+                status.textContent = 'Aggiungi almeno un paese.';
+            }
+            return;
+        }
+        if (btn) btn.disabled = true;
+        if (status) {
+            status.hidden = false;
+            status.className = 'draft-tappa-status';
+            status.textContent = '🛣️ Calcolo percorso da Casamassima…';
+        }
+        if (result) { result.hidden = false; result.innerHTML = ''; }
+        clearDraftMaps();
+
+        try {
+            // Rispetta l'ordine scelto dall'utente: Casamassima → 1 → 2 → … → ritorno
+            const ordered = draftPlaces.slice().map(function(p) {
+                return {
+                    id: p.id,
+                    label: p.label,
+                    lat: Number(p.lat),
+                    lng: Number(p.lng)
+                };
+            });
+            const legs = await buildDraftLegs(ordered);
+            const totalM = legs.reduce(function(s, l) { return s + (Number(l.distance) || 0); }, 0);
+            const totalS = legs.reduce(function(s, l) { return s + (Number(l.duration) || 0); }, 0);
+            const draftName = ((nameEl && nameEl.value.trim()) || ('Bozza ' + new Date().toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })));
+            const mapId = 'draft-map-' + Date.now();
+
+            const stopsHtml = [
+                '<div class="percorso-stop fixed-start"><div class="percorso-stop-num start">S</div><div class="percorso-stop-body"><div class="percorso-stop-title">Casamassima (BA)</div><div class="percorso-stop-sub">Partenza → 1° paese</div></div></div>'
+            ].concat(ordered.map(function(p, i) {
+                const legHtml = (typeof formatLegLine === 'function') ? formatLegLine(legs[i]) : '';
+                const prevLabel = i === 0 ? 'Casamassima' : ordered[i - 1].label;
+                return '<div class="percorso-stop draggable-stop" draggable="true" data-place-id="' + String(p.id).replace(/"/g, '') + '">' +
+                    '<span class="percorso-drag-handle" title="Trascina per cambiare ordine">⠿</span>' +
+                    '<div class="percorso-stop-num">' + (i + 1) + '</div>' +
+                    '<div class="percorso-stop-body">' +
+                    legHtml +
+                    '<div class="percorso-stop-title">' + String(p.label).replace(/</g, '&lt;') + '</div>' +
+                    '<div class="percorso-stop-sub">📍 dopo ' + String(prevLabel).replace(/</g, '&lt;') + '</div>' +
+                    '</div></div>';
+            })).concat([
+                (function() {
+                    const ret = (typeof formatLegLine === 'function') ? formatLegLine(legs[ordered.length]) : '';
+                    return '<div class="percorso-stop fixed-end"><div class="percorso-stop-num end">R</div><div class="percorso-stop-body">' +
+                        ret +
+                        '<div class="percorso-stop-title">Casamassima (BA)</div><div class="percorso-stop-sub">Ritorno dall\'ultimo paese</div></div></div>';
+                })()
+            ]);
+
+            const totalBar = legs.length
+                ? ('<div class="percorso-total-bar">Σ ' + formatDistanceKm(totalM) + ' · ' + formatDriveDuration(totalS) + ' (andata + ritorno)</div>')
+                : '';
+
+            if (result) {
+                result.innerHTML =
+                    '<article class="percorso-card">' +
+                    '<div class="percorso-card-head"><div><h2>📝 ' + String(draftName).replace(/</g, '&lt;') + '</h2>' +
+                    '<div class="percorso-card-meta">' + ordered.length + ' paesi · Casamassima → ordine numerico → ritorno · trascina a destra della mappa</div></div></div>' +
+                    '<div class="percorso-body">' +
+                    '<div class="percorso-map" id="' + mapId + '"></div>' +
+                    '<div class="percorso-side">' + totalBar +
+                    '<div class="percorso-stops" id="draftResultStops">' + stopsHtml.join('') + '</div></div></div></article>';
+            }
+
+            const orderedForMap = ordered.map(function(p) {
+                return {
+                    client: { id: p.id, nome: p.label, localita: p.label },
+                    coords: { lat: p.lat, lng: p.lng }
+                };
+            });
+
+            // id lista per drag
+            try {
+                const tmp = document.createElement('div');
+                tmp.innerHTML = result.innerHTML;
+                const stopsEl = tmp.querySelector('.percorso-stops');
+                if (stopsEl) stopsEl.id = 'draftResultStops';
+                result.innerHTML = tmp.innerHTML;
+            } catch (e) {}
+            setTimeout(function() {
+                try {
+                    const m = drawTappaOsmMap(mapId, orderedForMap, legs);
+                    if (m) draftMaps.push(m);
+                } catch (e) { console.warn(e); }
+                try { bindDraftResultDrag(); } catch (e) {}
+            }, 80);
+
+            const saved = loadDraftTappe();
+            saved.unshift({
+                id: 'draft_' + Date.now(),
+                name: draftName,
+                places: ordered.map(function(p) {
+                    return { id: p.id, label: p.label, lat: p.lat, lng: p.lng };
+                }),
+                createdAt: new Date().toISOString()
+            });
+            saveDraftTappe(saved.slice(0, 10));
+            renderSavedDraftTappe();
+
+            if (status) {
+                status.className = 'draft-tappa-status';
+                status.textContent = '✓ Bozza creata e salvata.';
+            }
+        } catch (err) {
+            console.error(err);
+            if (status) {
+                status.className = 'draft-tappa-status error';
+                status.textContent = (err && err.message) ? err.message : 'Errore creazione bozza.';
+            }
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    };
+
+    window.renderSavedDraftTappe = function() {
+        const box = document.getElementById('draftTappeSaved');
+        if (!box) return;
+        const saved = loadDraftTappe();
+        if (!saved.length) { box.innerHTML = ''; return; }
+        box.innerHTML = '<div style="font-weight:800;font-size:0.9rem;margin-bottom:6px;color:#334155;">Bozze salvate</div>' +
+            saved.map(function(d) {
+                const places = (d.places || []).map(function(p) { return p.label; }).join(', ');
+                const when = d.createdAt ? new Date(d.createdAt).toLocaleString('it-IT') : '';
+                return '<div class="draft-saved-head" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px 12px;">' +
+                    '<div><strong>📝 ' + String(d.name || 'Bozza').replace(/</g, '&lt;') + '</strong>' +
+                    '<div style="font-size:0.78rem;color:#64748b;margin-top:2px;">' + String(places).replace(/</g, '&lt;') +
+                    (when ? (' · ' + when) : '') + '</div></div>' +
+                    '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+                    '<button type="button" class="btn btn-primary" style="min-height:36px;padding:6px 10px;font-size:0.8rem;" onclick="ricalcolaBozzaSalvata(\'' + d.id + '\')">Apri percorso</button>' +
+                    '<button type="button" class="btn" style="min-height:36px;padding:6px 10px;font-size:0.8rem;" onclick="eliminaBozzaSalvata(\'' + d.id + '\')">Elimina</button>' +
+                    '</div></div>';
+            }).join('');
+    };
+
+    window.eliminaBozzaSalvata = function(id) {
+        saveDraftTappe(loadDraftTappe().filter(function(d) { return d.id !== id; }));
+        renderSavedDraftTappe();
+    };
+
+    window.ricalcolaBozzaSalvata = async function(id) {
+        const d = loadDraftTappe().find(function(x) { return x.id === id; });
+        if (!d || !d.places || !d.places.length) return;
+        draftPlaces = d.places.map(function(p) {
+            return { id: p.id || ('dp_' + Math.random().toString(36).slice(2)), label: p.label, lat: p.lat, lng: p.lng };
+        });
+        const nameEl = document.getElementById('draftTappaName');
+        if (nameEl) nameEl.value = d.name || '';
+        renderDraftPlacesList();
+        await creaBozzaPercorso();
+        const card = document.getElementById('draftTappaCard');
+        if (card) try { card.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
+    };
+
     window.calcolaDistanzaPaesi = async function() {
         const fromEl = document.getElementById('distFromInput');
         const toEl = document.getElementById('distToInput');
@@ -10452,6 +11021,7 @@
         document.getElementById('navStandby').classList.toggle('active', view === 'standby');
         if (view === 'percorso') {
             try { populateDistCitiesDatalist(); } catch(e) {}
+            try { renderDraftPlacesList(); renderSavedDraftTappe(); } catch(e) {}
             Promise.resolve(renderPercorsoPage()).then(function() {
                 if (window._focusPercorsoTappa) {
                     setTimeout(function() { focusPercorsoTappa(window._focusPercorsoTappa); }, 300);
