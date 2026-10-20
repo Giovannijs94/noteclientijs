@@ -3645,16 +3645,22 @@
                 </div>
                 <div class="form-group">
                     <label for="prepLocalita">Paese</label>
-                    <input type="text" id="prepLocalita" class="input-control" required placeholder="Es. Monopoli" oninput="onPrepLocalitaInput(this.value)" autocomplete="off">
+                    <input type="text" id="prepLocalita" class="input-control" required list="distCitiesDatalist" placeholder="Es. Monopoli, Palermo, Roma…" autocomplete="off"
+                        oninput="onPrepLocalitaInput(this.value)" onblur="onPrepLocalitaBlur(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();onPrepLocalitaBlur(this.value);}">
+                    <div id="prepLocalitaLookupStatus" class="localita-lookup-status" hidden></div>
+                </div>
+                <div class="form-group">
+                    <label for="prepProvinciaDisplay">Provincia <span style="font-weight:500;color:var(--text-muted);">(automatica dal paese)</span></label>
+                    <input type="text" id="prepProvinciaDisplay" class="input-control" readonly placeholder="Es. PA — Palermo" tabindex="-1" style="background:#f1f5f9;cursor:default;" title="Si compila automaticamente dal paese, utile per tecnico di zona">
+                    <select id="prepProvincia" class="select-control" hidden>
+                        <option value="">Seleziona provincia...</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label for="prepRegione">Regione <span style="font-weight:500;color:var(--text-muted);">(automatica)</span></label>
                     <input type="text" id="prepRegioneDisplay" class="input-control" readonly placeholder="Si compila dal paese" tabindex="-1" style="background:#f1f5f9;cursor:default;">
                     <select id="prepRegione" class="select-control" required hidden>
                         <option value="">Seleziona regione...</option>
-                    </select>
-                    <select id="prepProvincia" class="select-control" hidden>
-                        <option value="">Seleziona provincia...</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -6976,31 +6982,181 @@
         }
     }
 
-    window.onPrepLocalitaInput = function(val) {
-        const res = resolveLocationData(val);
+    function setPrepLocalitaStatus(msg, cls) {
+        const el = document.getElementById('prepLocalitaLookupStatus');
+        if (!el) return;
+        if (!msg) { el.hidden = true; el.textContent = ''; el.className = 'localita-lookup-status'; return; }
+        el.hidden = false;
+        el.className = 'localita-lookup-status' + (cls ? (' ' + cls) : '');
+        el.innerHTML = msg;
+    }
+
+    function applyPrepProvReg(prov, reg) {
         const prepProv = document.getElementById('prepProvincia');
+        const prepProvDisp = document.getElementById('prepProvinciaDisplay');
         const prepReg = document.getElementById('prepRegione');
         const prepRegDisp = document.getElementById('prepRegioneDisplay');
-        if (res.prov && prepProv) prepProv.value = res.prov;
-        if (res.reg && prepReg) prepReg.value = res.reg;
-        if (prepRegDisp) prepRegDisp.value = res.reg || '';
+        if (prov) {
+            const code = String(prov).toUpperCase().trim();
+            if (prepProv) {
+                const opts = Array.from(prepProv.options || []).map(function(o) { return o.value; });
+                if (opts.indexOf(code) >= 0) prepProv.value = code;
+                else prepProv.value = code;
+            }
+            if (prepProvDisp) {
+                let label = code;
+                try {
+                    if (typeof provinceLabel === 'function') label = provinceLabel(code) || code;
+                    else if (typeof PROVINCE_NAMES !== 'undefined' && PROVINCE_NAMES[code]) label = code + ' — ' + PROVINCE_NAMES[code];
+                } catch (e) {}
+                // se provinceLabel già include codice, usalo; altrimenti "PA — Palermo"
+                if (label && label !== code && String(label).indexOf(code) < 0) {
+                    prepProvDisp.value = code + ' — ' + label;
+                } else {
+                    prepProvDisp.value = label || code;
+                }
+            }
+        }
+        if (reg) {
+            const want = (typeof normalizeRegioneName === 'function') ? normalizeRegioneName(reg) : reg;
+            if (prepReg) {
+                let matched = false;
+                for (let i = 0; i < (prepReg.options || []).length; i++) {
+                    const v = prepReg.options[i].value;
+                    if (v && (v === want || String(v).toLowerCase() === String(want).toLowerCase())) {
+                        prepReg.value = v;
+                        matched = true;
+                        break;
+                    }
+                }
+                if (!matched) prepReg.value = want;
+            }
+            if (prepRegDisp) prepRegDisp.value = want || reg || '';
+        }
+    }
+
+    let _prepLocalitaLookupToken = 0;
+    let _prepLocalitaDebounce = null;
+
+    window.onPrepLocalitaInput = function(val) {
+        try { populateDistCitiesDatalist(); } catch (e) {}
+        const q = (val || '').trim();
+        if (!q) {
+            setPrepLocalitaStatus('');
+            const pd = document.getElementById('prepProvinciaDisplay');
+            const rd = document.getElementById('prepRegioneDisplay');
+            const ps = document.getElementById('prepProvincia');
+            const rs = document.getElementById('prepRegione');
+            if (pd) pd.value = '';
+            if (rd) rd.value = '';
+            if (ps) ps.value = '';
+            if (rs) rs.value = '';
+            return;
+        }
+        const res = (typeof resolveLocationData === 'function') ? resolveLocationData(q) : { prov: '', reg: '' };
+        if (res.prov || res.reg) {
+            applyPrepProvReg(res.prov, res.reg);
+            if (res.prov && res.reg) {
+                setPrepLocalitaStatus('✓ Trovato nel database: <strong>' + q.replace(/</g, '&lt;') + '</strong> → ' + res.prov + ', ' + res.reg, 'ok');
+                return;
+            }
+        }
+        if (_prepLocalitaDebounce) clearTimeout(_prepLocalitaDebounce);
+        setPrepLocalitaStatus('…', '');
+        _prepLocalitaDebounce = setTimeout(function() {
+            window.onPrepLocalitaBlur(q);
+        }, 700);
     };
+
+    window.onPrepLocalitaBlur = async function(val) {
+        if (_prepLocalitaDebounce) {
+            clearTimeout(_prepLocalitaDebounce);
+            _prepLocalitaDebounce = null;
+        }
+        const q = (val || '').trim();
+        if (!q) { setPrepLocalitaStatus(''); return; }
+
+        const local = (typeof resolveLocationData === 'function') ? resolveLocationData(q) : { prov: '', reg: '' };
+        if (local.prov && local.reg) {
+            applyPrepProvReg(local.prov, local.reg);
+            setPrepLocalitaStatus('✓ Trovato nel database: <strong>' + q.replace(/</g, '&lt;') + '</strong> → ' + local.prov + ', ' + local.reg, 'ok');
+            return;
+        }
+        if (local.prov || local.reg) applyPrepProvReg(local.prov, local.reg);
+
+        const token = ++_prepLocalitaLookupToken;
+        setPrepLocalitaStatus('🛰️ <strong>Sto cercando su internet…</strong> «' + q.replace(/</g, '&lt;') + '»', 'loading');
+
+        try {
+            let found = null;
+            if (typeof lookupItalianComuneOnline === 'function') {
+                found = await lookupItalianComuneOnline(q);
+            }
+            if (token !== _prepLocalitaLookupToken) return;
+
+            if (found) {
+                applyPrepProvReg(found.prov, found.reg);
+                if ((!found.prov || !found.reg) && typeof resolveLocationData === 'function') {
+                    const again = resolveLocationData(found.name || q);
+                    applyPrepProvReg(found.prov || again.prov, found.reg || again.reg);
+                    found.prov = found.prov || again.prov;
+                    found.reg = found.reg || again.reg;
+                }
+                try {
+                    if (typeof rememberPlaceCoords === 'function') {
+                        rememberPlaceCoords(q, found.prov, found.lat, found.lng, found.name);
+                    }
+                } catch (e) {}
+                const bits = [];
+                if (found.prov) bits.push('Prov. <strong>' + found.prov + '</strong>');
+                if (found.reg) bits.push('<strong>' + String(found.reg).replace(/</g, '&lt;') + '</strong>');
+                setPrepLocalitaStatus(
+                    '✓ Trovato online: <strong>' + String(found.name || q).replace(/</g, '&lt;') + '</strong>' +
+                    (bits.length ? (' → ' + bits.join(', ')) : '') +
+                    ' <span style="opacity:.7">(' + (found.source || 'web') + ')</span>',
+                    'ok'
+                );
+                return;
+            }
+
+            if (local.prov || local.reg) {
+                setPrepLocalitaStatus('✓ Dati parziali da database. Controlla provincia/regione.', 'ok');
+            } else {
+                setPrepLocalitaStatus('❌ Paese non trovato online. Completa provincia/regione a mano se serve.', 'err');
+            }
+        } catch (err) {
+            if (token !== _prepLocalitaLookupToken) return;
+            setPrepLocalitaStatus('❌ Ricerca internet non riuscita.', 'err');
+        }
+    };
+
 
     (function setupPrepForm() {
         const prepForm = document.getElementById('prepClientForm');
         if (!prepForm || prepForm.dataset.bound) return;
         prepForm.dataset.bound = '1';
-        prepForm.addEventListener('submit', function(e) {
+        prepForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             const nomeVal = document.getElementById('prepNome').value.trim();
             const scadenzaVal = document.getElementById('prepScadenza')?.value || '';
             const localitaVal = document.getElementById('prepLocalita').value.trim();
-            // ricalcola regione/provincia dal paese
+            // ricalcola regione/provincia dal paese (locale + eventuale online già fatta su blur)
             const res = resolveLocationData(localitaVal);
             let provinciaVal = document.getElementById('prepProvincia')?.value || res.prov || '';
             let regioneVal = document.getElementById('prepRegione')?.value || res.reg || '';
             if (res.prov) provinciaVal = res.prov;
             if (res.reg) regioneVal = res.reg;
+            // se ancora manca, prova online prima di salvare
+            if ((!provinciaVal || !regioneVal) && localitaVal && typeof lookupItalianComuneOnline === 'function') {
+                try {
+                    const found = await lookupItalianComuneOnline(localitaVal);
+                    if (found) {
+                        if (found.prov) provinciaVal = found.prov;
+                        if (found.reg) regioneVal = found.reg;
+                        applyPrepProvReg(found.prov, found.reg);
+                    }
+                } catch (e) {}
+            }
             const modelloVal = document.getElementById('prepModello').value.trim();
             if (!nomeVal || !localitaVal) {
                 alert('Compila almeno Nome e Paese.');
@@ -11423,7 +11579,7 @@
             try { if (placeFindMap) setTimeout(function(){ placeFindMap.invalidateSize(); }, 200); } catch(e) {}
         }
         if (view === 'meteo') { try { renderMeteoPage(); } catch(e) { console.error(e); } }
-        if (view === 'prep') renderPrepPage();
+        if (view === 'prep') { try { populateDistCitiesDatalist(); } catch(e) {} renderPrepPage(); }
         if (view === 'installati') renderInstallatiPage();
         if (view === 'standby') renderStandbyPage();
     };
