@@ -7188,6 +7188,122 @@
         renderPrepSuggestions(allPrep, true);
     };
 
+
+    /** Regole automatiche spedizione tecnici (Pre-pianificazione) */
+    function clientHasOutdoorModel(c) {
+        const mods = (c && c.modelli) ? c.modelli : [];
+        return mods.some(function(m) {
+            const n = String((m && m.nome) || m || '').toLowerCase();
+            return n.indexOf('outdoor') >= 0;
+        });
+    }
+
+    function normalizeProvinciaCode(c) {
+        if (!c) return '';
+        let p = String(c.provincia || '').trim().toUpperCase();
+        if (p.length === 2) return p;
+        if (typeof PROVINCE_NAMES !== 'undefined') {
+            const low = p.toLowerCase();
+            for (const code of Object.keys(PROVINCE_NAMES)) {
+                if (String(PROVINCE_NAMES[code]).toLowerCase() === low) return code;
+            }
+        }
+        const loc = String(c.localita || '').toLowerCase();
+        const reg = String(c.regione || '').toLowerCase();
+        const blob = (p + ' ' + loc + ' ' + reg).toLowerCase();
+        if (blob.indexOf('palermo') >= 0) return 'PA';
+        if (blob.indexOf('ragusa') >= 0) return 'RG';
+        if (blob.indexOf('agrigento') >= 0) return 'AG';
+        if (blob.indexOf('roma') >= 0 || blob.indexOf('rome') >= 0) return 'RM';
+        const paTowns = ['bagheria','monreale','carini','partinico','termini imerese','cefalù','cefalu','misilmeri','villabate','ficarazzi','capaci','cinisi','casteldaccia'];
+        const rgTowns = ['modica','scicli','vittoria','comiso','pozallo','ispica','acate','santa croce camerina'];
+        const agTowns = ['sciacca','licata','canicattì','canicatti','favara','porto empedocle','ribera','raffadali'];
+        const rmTowns = ['guidonia','fiumicino','tivoli','velletri','civitavecchia','pomezia','anzio','nettuno','monterotondo','frascati','ciampino','ostia'];
+        if (paTowns.some(function(t) { return loc.indexOf(t) >= 0; })) return 'PA';
+        if (rgTowns.some(function(t) { return loc.indexOf(t) >= 0; })) return 'RG';
+        if (agTowns.some(function(t) { return loc.indexOf(t) >= 0; })) return 'AG';
+        if (rmTowns.some(function(t) { return loc.indexOf(t) >= 0; })) return 'RM';
+        return p;
+    }
+
+    function getAutoSpedizioneTecnico(c) {
+        if (!c) return null;
+        const prov = normalizeProvinciaCode(c);
+        if (prov === 'PA') {
+            return { tecnico: 'Candela', reason: 'Palermo e provincia → spedizione al tecnico Candela' };
+        }
+        if (prov === 'RG' || prov === 'AG') {
+            return {
+                tecnico: 'Alario',
+                reason: (prov === 'RG' ? 'Ragusa' : 'Agrigento') + ' e provincia → spedizione al tecnico Alario'
+            };
+        }
+        if (prov === 'RM' && clientHasOutdoorModel(c)) {
+            return { tecnico: 'Aleandro', reason: 'Roma e provincia + modello outdoor → spedizione al tecnico Aleandro' };
+        }
+        return null;
+    }
+
+    function groupPrepByAutoSpedizione(allPrep) {
+        const groups = {
+            Candela: { tecnico: 'Candela', clients: [], reason: 'Palermo e provincia' },
+            Alario: { tecnico: 'Alario', clients: [], reason: 'Ragusa e Agrigento (province)' },
+            Aleandro: { tecnico: 'Aleandro', clients: [], reason: 'Roma e provincia con modello outdoor' }
+        };
+        (allPrep || []).forEach(function(c) {
+            const rule = getAutoSpedizioneTecnico(c);
+            if (rule && groups[rule.tecnico]) groups[rule.tecnico].clients.push(c);
+        });
+        return ['Candela', 'Alario', 'Aleandro']
+            .map(function(k) { return groups[k]; })
+            .filter(function(g) { return g.clients.length > 0; });
+    }
+
+    window.applyPrepSuggestedSpedizione = function(ids, tecnico) {
+        const name = String(tecnico || '').trim();
+        if (!name) return;
+        const idSet = new Set((ids || []).map(String));
+        let n = 0;
+        clients.forEach(function(c) {
+            if (!idSet.has(String(c.id))) return;
+            c.spedizione = name;
+            c.tappa = '';
+            c.inPrep = false;
+            n++;
+        });
+        try {
+            if (typeof window.autoSaveNewSpedizione === 'function') window.autoSaveNewSpedizione(name);
+        } catch (e) {}
+        saveToLocalStorage();
+        render();
+        if (typeof renderPrepPage === 'function') renderPrepPage();
+        alert('Assegnati ' + n + ' clienti come spedizione al tecnico «' + name + '». Li trovi in Note (gruppo spedizione).');
+    };
+
+    function renderPrepAutoSpedizione(allPrep) {
+        const groups = groupPrepByAutoSpedizione(allPrep);
+        if (!groups.length) return '';
+        return '<div class="prep-auto-sped">' +
+            '<div class="prep-auto-sped-title">📦 Classificazione automatica tecnici</div>' +
+            '<div style="font-size:0.78rem;color:#6b21a8;margin-bottom:4px;">Regole: Palermo→Candela · Ragusa/Agrigento→Alario · Roma+outdoor→Aleandro</div>' +
+            groups.map(function(g) {
+                const ids = g.clients.map(function(c) { return c.id; });
+                const names = g.clients.map(function(c) {
+                    return (c.nome || '?') + (c.localita ? (' (' + c.localita + ')') : '');
+                }).join(', ');
+                return '<div class="prep-auto-sped-item">' +
+                    '<strong>📦 Tecnico ' + g.tecnico + '</strong>' +
+                    '<span style="font-size:0.8rem;font-weight:700;color:#7c3aed;">' + g.clients.length + ' client' + (g.clients.length === 1 ? 'e' : 'i') + '</span>' +
+                    '<button type="button" class="btn btn-primary" style="min-height:36px;padding:6px 12px;font-size:0.8rem;margin-left:auto;" ' +
+                    'onclick=\'applyPrepSuggestedSpedizione(' + JSON.stringify(ids) + ', ' + JSON.stringify(g.tecnico) + ')\'>' +
+                    'Assegna spedizione</button>' +
+                    '<div class="prep-auto-sped-meta">' + g.reason + '</div>' +
+                    '<div class="prep-auto-sped-names">' + names.replace(/</g, '&lt;') + '</div>' +
+                    '</div>';
+            }).join('') +
+            '</div>';
+    }
+
     async function renderPrepSuggestions(allPrep, forceRoute) {
         const card = document.getElementById('prepSuggestionsCard');
         const listEl = document.getElementById('prepSuggestionsList');
@@ -7200,6 +7316,8 @@
             return;
         }
         card.style.display = 'block';
+
+        const autoHtml = renderPrepAutoSpedizione(allPrep);
 
         let nUrgent = 0, nMedium = 0, nOk = 0, nNone = 0;
         allPrep.forEach(function(c) {
@@ -7224,7 +7342,7 @@
             const clusters = clusterPrepClients(allPrep).slice(0, 8);
             if (myToken !== _prepAiToken) return;
             if (!clusters.length) {
-                listEl.innerHTML = '<div class="prep-sug-empty">Nessun consiglio. Aggiungi clienti con paese e scadenza.</div>';
+                listEl.innerHTML = (autoHtml || '') + '<div class="prep-sug-empty">Nessun consiglio. Aggiungi clienti con paese e scadenza.</div>';
                 return;
             }
 
@@ -7300,13 +7418,13 @@
 
                 // Aggiorna progressivamente l'UI
                 if (myToken === _prepAiToken) {
-                    listEl.innerHTML = blocks.join('') +
+                    listEl.innerHTML = (autoHtml || '') + blocks.join('') +
                         (ci < clusters.length - 1 ? '<div class="prep-sug-empty">Calcolo proposta ' + (ci + 2) + '…</div>' : '');
                 }
             }
 
             if (myToken !== _prepAiToken) return;
-            listEl.innerHTML = blocks.join('') || '<div class="prep-sug-empty">Nessuna proposta generata.</div>';
+            listEl.innerHTML = (autoHtml || '') + (blocks.join('') || '<div class="prep-sug-empty">Nessuna proposta generata.</div>');
             listEl.querySelectorAll('.prep-ai-apply').forEach(function(btn) {
                 btn.addEventListener('click', function() {
                     const ids = (btn.getAttribute('data-ids') || '').split(',').filter(Boolean);
@@ -7317,7 +7435,7 @@
         } catch (err) {
             console.error('Prep AI error', err);
             if (myToken === _prepAiToken) {
-                listEl.innerHTML = '<div class="prep-sug-empty">Errore consulente: ' +
+                listEl.innerHTML = (autoHtml || '') + '<div class="prep-sug-empty">Errore consulente: ' +
                     String((err && err.message) || err).replace(/</g, '&lt;') +
                     '<br><button type="button" class="btn" onclick="refreshPrepAiAdvice()">Riprova</button></div>';
             }
@@ -9665,22 +9783,24 @@
         return null;
     }
 
-    async function routeDrivingOSRM(from, to, detailed) {
+    async function routeDrivingOSRM(from, to, detailed, withAlternatives) {
         const overview = detailed ? 'full' : 'false';
         const geom = detailed ? '&geometries=geojson' : '';
         const steps = detailed ? 'true' : 'false';
+        const alts = withAlternatives ? '&alternatives=true' : '&alternatives=false';
         const url = 'https://router.project-osrm.org/route/v1/driving/' +
             Number(from.lng) + ',' + Number(from.lat) + ';' +
             Number(to.lng) + ',' + Number(to.lat) +
-            '?overview=' + overview + geom + '&alternatives=false&steps=' + steps;
+            '?overview=' + overview + geom + alts + '&steps=' + steps;
         const controller = new AbortController();
-        const timer = setTimeout(function() { controller.abort(); }, detailed ? 12000 : 6000);
+        const timer = setTimeout(function() { controller.abort(); }, detailed ? 14000 : 6000);
         try {
             const res = await fetch(url, { signal: controller.signal });
             clearTimeout(timer);
             if (!res.ok) throw new Error('Servizio percorsi non disponibile');
             const data = await res.json();
             if (!data.routes || !data.routes[0]) throw new Error('Percorso non trovato');
+            if (withAlternatives) return data.routes;
             return data.routes[0];
         } catch (e) {
             clearTimeout(timer);
@@ -9688,7 +9808,117 @@
         }
     }
 
+
+    function rankRouteAlternatives(routes) {
+        if (!routes || !routes.length) return [];
+        const scored = routes.map(function(r, idx) {
+            return { route: r, index: idx, distance: Number(r.distance) || 0, duration: Number(r.duration) || 0 };
+        });
+        scored.sort(function(a, b) {
+            const dDur = a.duration - b.duration;
+            if (Math.abs(dDur) > 180) return dDur;
+            return a.distance - b.distance;
+        });
+        const best = scored[0];
+        return scored.map(function(s, rank) {
+            const vsBestMin = Math.round((s.duration - best.duration) / 60);
+            const vsBestKm = ((s.distance - best.distance) / 1000);
+            let advice = '';
+            let label = 'Alternativa ' + (rank + 1);
+            let badge = 'Alt. ' + (rank + 1);
+            if (rank === 0) {
+                label = 'Consigliato';
+                badge = 'Consigliato';
+                const others = scored.slice(1);
+                if (!others.length) advice = 'Unico percorso trovato.';
+                else {
+                    const faster = others.every(function(o) { return s.duration <= o.duration; });
+                    const shorter = others.every(function(o) { return s.distance <= o.distance; });
+                    if (faster && shorter) advice = 'Il più veloce e il più corto: scegli questo.';
+                    else if (faster) advice = 'Il più veloce in auto: consigliato in giornata lavorativa.';
+                    else if (shorter) advice = 'Tra i più corti in km con tempo simile.';
+                    else advice = 'Miglior bilanciamento tempo e distanza.';
+                }
+            } else if (vsBestMin > 0 && vsBestKm < -2) {
+                label = 'Più corto, più lento';
+                advice = '+' + vsBestMin + ' min vs consigliato, ma circa ' + Math.abs(vsBestKm).toFixed(1).replace('.', ',') + ' km in meno.';
+            } else if (vsBestMin > 0) {
+                label = 'Più lungo in tempo';
+                advice = '+' + vsBestMin + ' min e ' + (vsBestKm >= 0 ? '+' : '') + vsBestKm.toFixed(1).replace('.', ',') + ' km vs consigliato.';
+            } else {
+                advice = 'Alternativa valida, differenza limitata.';
+            }
+            return {
+                index: s.index, rank: rank, distance: s.distance, duration: s.duration,
+                geometry: s.route.geometry, label: label, badge: badge, advice: advice,
+                recommended: rank === 0, route: s.route
+            };
+        });
+    }
+
+    function renderRouteAlternativesHtml(alts, selectedRank, onSelectName) {
+        if (!alts || alts.length < 2) return '';
+        return '<div class="route-alts">' + alts.map(function(a) {
+            const km = formatDistanceKm(a.distance);
+            const tempo = formatDriveDuration(a.duration);
+            const sel = (a.rank === selectedRank) ? ' selected' : '';
+            const rec = a.recommended ? ' recommended' : '';
+            return '<button type="button" class="route-alt-option' + sel + rec + '" data-rank="' + a.rank + '" onclick="' + (onSelectName || 'selectDistRouteAlt') + '(' + a.rank + ')">' +
+                '<span class="route-alt-badge' + (a.recommended ? ' best' : '') + '">' + a.badge + '</span>' +
+                '<span class="route-alt-main"><div class="route-alt-title">' + a.label + '</div>' +
+                '<div class="route-alt-meta">🚗 ' + km + ' · ⏱ ' + tempo + '</div>' +
+                (a.advice ? ('<div class="route-alt-advice">' + a.advice + '</div>') : '') +
+                '</span></button>';
+        }).join('') + '</div>';
+    }
+
+    async function routeDrivingOSRMWaypoints(points, withAlternatives) {
+        if (!points || points.length < 2) throw new Error('Servono almeno 2 punti');
+        const coords = points.map(function(p) {
+            return Number(p.lng) + ',' + Number(p.lat);
+        }).join(';');
+        const alts = withAlternatives ? '&alternatives=true' : '&alternatives=false';
+        const url = 'https://router.project-osrm.org/route/v1/driving/' + coords +
+            '?overview=full&geometries=geojson' + alts + '&steps=false';
+        const controller = new AbortController();
+        const timer = setTimeout(function() { controller.abort(); }, 16000);
+        try {
+            const res = await fetch(url, { signal: controller.signal });
+            clearTimeout(timer);
+            if (!res.ok) throw new Error('Servizio percorsi non disponibile');
+            const data = await res.json();
+            if (!data.routes || !data.routes[0]) throw new Error('Percorso non trovato');
+            return withAlternatives ? data.routes : data.routes[0];
+        } catch (e) {
+            clearTimeout(timer);
+            throw e;
+        }
+    }
+
     let distRouteMap = null;
+
+
+    window.selectDistRouteAlt = function(rank) {
+        const list = window._distAltList || [];
+        const alt = list.find(function(a) { return a.rank === rank; }) || list[rank];
+        if (!alt || !window._distAltFrom || !window._distAltTo) return;
+        window._distAltSelected = rank;
+        // aggiorna km/tempo
+        const box = document.getElementById('distCalcResult');
+        if (box) {
+            const kmEl = box.querySelector('.dist-km');
+            const timeEl = box.querySelector('.dist-time');
+            if (kmEl) kmEl.textContent = '🚗 ' + formatDistanceKm(alt.distance);
+            if (timeEl) timeEl.textContent = '⏱ ' + formatDriveDuration(alt.duration);
+            box.querySelectorAll('.route-alt-option').forEach(function(btn) {
+                const r = parseInt(btn.getAttribute('data-rank'), 10);
+                btn.classList.toggle('selected', r === rank);
+            });
+        }
+        try {
+            renderDistRouteMap(window._distAltFrom, window._distAltTo, alt.route);
+        } catch (e) { console.warn(e); }
+    };
 
     window.renderDistRouteMap = function(from, to, route) {
         const mapEl = document.getElementById('distRouteMap');
@@ -10236,6 +10466,121 @@
     }
 
 
+
+    window._draftAltList = [];
+    window._draftAltOrdered = [];
+    window._draftAltSelected = 0;
+
+    async function fetchDraftRouteAlternatives(orderedPlaces) {
+        const points = [{ lat: CASAMASSIMA.lat, lng: CASAMASSIMA.lng }];
+        orderedPlaces.forEach(function(p) {
+            points.push({ lat: Number(p.lat), lng: Number(p.lng) });
+        });
+        points.push({ lat: CASAMASSIMA.lat, lng: CASAMASSIMA.lng });
+        try {
+            const routes = await routeDrivingOSRMWaypoints(points, true);
+            const arr = Array.isArray(routes) ? routes : [routes];
+            return rankRouteAlternatives(arr);
+        } catch (e) {
+            console.warn('alt draft', e);
+            return [];
+        }
+    }
+
+    window.selectDraftRouteAlt = async function(rank) {
+        const list = window._draftAltList || [];
+        const alt = list.find(function(a) { return a.rank === rank; }) || list[rank];
+        if (!alt) return;
+        window._draftAltSelected = rank;
+        // Ridisegna con geometria scelta; km totali dall'alternativa
+        // Per le singole tratte manteniamo il dettaglio a leg se possibile, altrimenti totale
+        const ordered = window._draftAltOrdered || draftPlaces.slice();
+        let legs = [];
+        try {
+            legs = await buildDraftLegs(ordered);
+        } catch (e) {}
+        // se abbiamo geometria intera, usala sulla mappa come unica polyline "scelta"
+        const result = document.getElementById('draftTappaResult');
+        const status = document.getElementById('draftTappaStatus');
+        const nameEl = document.getElementById('draftTappaName');
+        const draftName = ((nameEl && nameEl.value.trim()) || 'Bozza');
+        const mapId = 'draft-map-' + Date.now();
+        clearDraftMaps();
+        const totalM = alt.distance;
+        const totalS = alt.duration;
+        const altsHtml = renderRouteAlternativesHtml(list, rank, 'selectDraftRouteAlt');
+        const totalBar = '<div class="percorso-total-bar">Σ ' + formatDistanceKm(totalM) + ' · ' + formatDriveDuration(totalS) +
+            ' (percorso selezionato, andata + ritorno)</div>';
+        // legs info still from sequential for display between stops
+        const stopsHtml = [
+            '<div class="percorso-stop fixed-start"><div class="percorso-stop-num start">S</div><div class="percorso-stop-body"><div class="percorso-stop-title">Casamassima (BA)</div><div class="percorso-stop-sub">Partenza → 1° paese</div></div></div>'
+        ].concat(ordered.map(function(p, i) {
+            const legHtml = (typeof formatLegLine === 'function') ? formatLegLine(legs[i]) : '';
+            const prevLabel = i === 0 ? 'Casamassima' : ordered[i - 1].label;
+            return '<div class="percorso-stop draggable-stop" draggable="true" data-place-id="' + String(p.id).replace(/"/g, '') + '">' +
+                '<span class="percorso-drag-handle" title="Trascina per cambiare ordine">⠿</span>' +
+                '<div class="percorso-stop-num">' + (i + 1) + '</div>' +
+                '<div class="percorso-stop-body">' + legHtml +
+                '<div class="percorso-stop-title">' + String(p.label).replace(/</g, '&lt;') + '</div>' +
+                '<div class="percorso-stop-sub">📍 dopo ' + String(prevLabel).replace(/</g, '&lt;') + '</div></div></div>';
+        })).concat([
+            (function() {
+                const ret = (typeof formatLegLine === 'function') ? formatLegLine(legs[ordered.length]) : '';
+                return '<div class="percorso-stop fixed-end"><div class="percorso-stop-num end">R</div><div class="percorso-stop-body">' + ret +
+                    '<div class="percorso-stop-title">Casamassima (BA)</div><div class="percorso-stop-sub">Ritorno</div></div></div>';
+            })()
+        ]);
+        if (result) {
+            result.hidden = false;
+            result.innerHTML =
+                '<article class="percorso-card">' +
+                '<div class="percorso-card-head"><div><h2>📝 ' + String(draftName).replace(/</g, '&lt;') + '</h2>' +
+                '<div class="percorso-card-meta">' + ordered.length + ' paesi · scegli alternativa · trascina a destra</div></div></div>' +
+                '<div style="padding:10px 14px 0;">' + altsHtml + '</div>' +
+                '<div class="percorso-body">' +
+                '<div class="percorso-map" id="' + mapId + '"></div>' +
+                '<div class="percorso-side">' + totalBar +
+                '<div class="percorso-stops" id="draftResultStops">' + stopsHtml.join('') + '</div></div></div></article>';
+        }
+        // Disegna geometria alternativa intera + markers
+        setTimeout(function() {
+            try {
+                const orderedForMap = ordered.map(function(p) {
+                    return { client: { id: p.id, nome: p.label, localita: p.label }, coords: { lat: p.lat, lng: p.lng } };
+                });
+                // legs con geometria solo sul percorso scelto come unico tratto se rank geometry
+                const customLegs = [{
+                    distance: alt.distance,
+                    duration: alt.duration,
+                    geometry: alt.geometry,
+                    approx: false
+                }];
+                // Preferisci dettagli per tratte + overlay full alt: draw with sequential legs for accuracy of segments
+                const m = drawTappaOsmMap(mapId, orderedForMap, legs);
+                if (m && alt.geometry && alt.geometry.coordinates) {
+                    const latlngs = alt.geometry.coordinates.map(function(c) {
+                        return [Number(c[1]), Number(c[0])];
+                    });
+                    L.polyline(latlngs, {
+                        color: '#16a34a',
+                        weight: 6,
+                        opacity: 0.55,
+                        lineJoin: 'round'
+                    }).addTo(m);
+                    try { m.fitBounds(latlngs, { padding: [40, 40], maxZoom: 15 }); } catch (e) {}
+                }
+                if (m) draftMaps.push(m);
+            } catch (e) { console.warn(e); }
+            bindDraftResultDrag();
+        }, 80);
+        if (status) {
+            status.className = 'draft-tappa-status';
+            status.textContent = alt.recommended
+                ? '✓ Percorso consigliato selezionato.'
+                : '✓ Alternativa selezionata. Il consiglio resta sul percorso verde «Consigliato».';
+        }
+    };
+
     window.rebuildDraftRouteFromOrder = async function(ordered) {
         const status = document.getElementById('draftTappaStatus');
         const result = document.getElementById('draftTappaResult');
@@ -10249,8 +10594,23 @@
         clearDraftMaps();
         try {
             const legs = await buildDraftLegs(ordered);
-            const totalM = legs.reduce(function(s, l) { return s + (Number(l.distance) || 0); }, 0);
-            const totalS = legs.reduce(function(s, l) { return s + (Number(l.duration) || 0); }, 0);
+            let draftAlts = [];
+            try {
+                draftAlts = await fetchDraftRouteAlternatives(ordered);
+            } catch (e) { draftAlts = []; }
+            window._draftAltList = draftAlts;
+            window._draftAltOrdered = ordered.slice();
+            window._draftAltSelected = 0;
+            let totalM = legs.reduce(function(s, l) { return s + (Number(l.distance) || 0); }, 0);
+            let totalS = legs.reduce(function(s, l) { return s + (Number(l.duration) || 0); }, 0);
+            if (draftAlts[0]) {
+                totalM = draftAlts[0].distance;
+                totalS = draftAlts[0].duration;
+            }
+            const altsHtml = (draftAlts.length > 1)
+                ? ('<div style="padding:10px 14px 0;"><div style="font-weight:800;font-size:0.85rem;margin-bottom:6px;">Percorsi alternativi</div>' +
+                   renderRouteAlternativesHtml(draftAlts, 0, 'selectDraftRouteAlt') + '</div>')
+                : '';
             const draftName = ((nameEl && nameEl.value.trim()) || 'Bozza');
             const mapId = 'draft-map-' + Date.now();
             const stopsHtml = [
@@ -10279,6 +10639,7 @@
                 '<article class="percorso-card">' +
                 '<div class="percorso-card-head"><div><h2>📝 ' + String(draftName).replace(/</g, '&lt;') + '</h2>' +
                 '<div class="percorso-card-meta">' + ordered.length + ' paesi · Casamassima → ordine numerico → ritorno · trascina a destra</div></div></div>' +
+                altsHtml +
                 '<div class="percorso-body">' +
                 '<div class="percorso-map" id="' + mapId + '"></div>' +
                 '<div class="percorso-side">' + totalBar +
@@ -10387,8 +10748,21 @@
                 };
             });
             const legs = await buildDraftLegs(ordered);
-            const totalM = legs.reduce(function(s, l) { return s + (Number(l.distance) || 0); }, 0);
-            const totalS = legs.reduce(function(s, l) { return s + (Number(l.duration) || 0); }, 0);
+            let draftAlts = [];
+            try { draftAlts = await fetchDraftRouteAlternatives(ordered); } catch (e) { draftAlts = []; }
+            window._draftAltList = draftAlts;
+            window._draftAltOrdered = ordered.slice();
+            window._draftAltSelected = 0;
+            let totalM = legs.reduce(function(s, l) { return s + (Number(l.distance) || 0); }, 0);
+            let totalS = legs.reduce(function(s, l) { return s + (Number(l.duration) || 0); }, 0);
+            if (draftAlts[0]) {
+                totalM = draftAlts[0].distance;
+                totalS = draftAlts[0].duration;
+            }
+            const altsHtml = (draftAlts.length > 1)
+                ? ('<div style="padding:10px 14px 0;"><div style="font-weight:800;font-size:0.85rem;margin-bottom:6px;">Percorsi alternativi</div>' +
+                   renderRouteAlternativesHtml(draftAlts, 0, 'selectDraftRouteAlt') + '</div>')
+                : '';
             const draftName = ((nameEl && nameEl.value.trim()) || ('Bozza ' + new Date().toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })));
             const mapId = 'draft-map-' + Date.now();
 
@@ -10423,6 +10797,7 @@
                     '<article class="percorso-card">' +
                     '<div class="percorso-card-head"><div><h2>📝 ' + String(draftName).replace(/</g, '&lt;') + '</h2>' +
                     '<div class="percorso-card-meta">' + ordered.length + ' paesi · Casamassima → ordine numerico → ritorno · trascina a destra della mappa</div></div></div>' +
+                    altsHtml +
                     '<div class="percorso-body">' +
                     '<div class="percorso-map" id="' + mapId + '"></div>' +
                     '<div class="percorso-side">' + totalBar +
@@ -10557,14 +10932,27 @@
 
             let route = null;
             let usedApprox = !!(from.approx || to.approx);
+            let distAlts = [];
+            window._distAltFrom = from;
+            window._distAltTo = to;
+            window._distAltList = [];
+            window._distAltSelected = 0;
             try {
-                route = await routeDrivingOSRM(from, to, true);
+                const routes = await routeDrivingOSRM(from, to, true, true);
+                const arr = Array.isArray(routes) ? routes : [routes];
+                distAlts = rankRouteAlternatives(arr);
+                window._distAltList = distAlts;
+                route = distAlts[0] ? distAlts[0].route : arr[0];
             } catch (e) {
                 try {
-                    route = await routeDrivingOSRM(from, to, false);
+                    route = await routeDrivingOSRM(from, to, true, false);
                 } catch (e2) {
-                    route = estimateDrivingFallback(from, to);
-                    usedApprox = true;
+                    try {
+                        route = await routeDrivingOSRM(from, to, false, false);
+                    } catch (e3) {
+                        route = estimateDrivingFallback(from, to);
+                        usedApprox = true;
+                    }
                 }
             }
             const km = (typeof formatDistanceKm === 'function')
@@ -10593,6 +10981,10 @@
                     String(from.source || '?') + ' → ' + String(to.source || '?') + '</span>' +
                     noteApprox +
                 '</div>' +
+                (distAlts && distAlts.length > 1
+                    ? ('<div style="margin-top:10px;font-weight:800;font-size:0.85rem;color:#0f172a;">Percorsi alternativi</div>' +
+                       renderRouteAlternativesHtml(distAlts, 0, 'selectDistRouteAlt'))
+                    : '') +
                 '<div id="distRouteMap"></div>' +
                 '<div class="dist-route-legend">Mappa: tracciato stradale preciso · <span style="color:#16a34a;font-weight:700;">A</span> partenza · <span style="color:#dc2626;font-weight:700;">B</span> arrivo</div>';
 
