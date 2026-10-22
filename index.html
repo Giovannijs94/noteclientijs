@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <title>Gestione Note Clienti</title>
-    <meta name="note-clienti-build" content="2026-10-22-no-prep-ai-proposals">
+    <meta name="note-clienti-build" content="2026-10-22-upper-qta-prep">
     <style>
         /* APP LOCK: no horizontal page scroll; vertical wheel OK */
         html {
@@ -3446,6 +3446,13 @@
             font-size: 0.78rem;
             white-space: nowrap;
         }
+        /* Nomi cliente / tappa / spedizione sempre in maiuscolo (visuale + salvataggio) */
+        #nome,
+        #tappaInput,
+        #spedizioneInput,
+        #prepNome {
+            text-transform: uppercase;
+        }
         .prep-auto-sped {
             background: linear-gradient(135deg, #faf5ff, #f8fafc);
             border: 1px solid #e9d5ff;
@@ -3779,7 +3786,21 @@
                 </div>
                 <div class="form-group">
                     <label for="prepModello">Modello</label>
-                    <input type="text" id="prepModello" class="input-control" list="modelliDatalist" placeholder="Es. Modello X" autocomplete="off">
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="text" id="prepModello" class="input-control" list="modelliDatalist" placeholder="Es. Modello X" autocomplete="off" style="flex:1; min-width:0;">
+                        <select id="prepModelloQta" class="select-control model-qta-select" style="width:90px; flex-shrink:0;" title="Quantità">
+                            <option value="1">1 pz</option>
+                            <option value="2">2 pz</option>
+                            <option value="3">3 pz</option>
+                            <option value="4">4 pz</option>
+                            <option value="5">5 pz</option>
+                            <option value="6">6 pz</option>
+                            <option value="7">7 pz</option>
+                            <option value="8">8 pz</option>
+                            <option value="9">9 pz</option>
+                            <option value="10">10 pz</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="prepLocalita">Paese</label>
@@ -4346,7 +4367,26 @@
     const stagesNavBar = document.getElementById('stagesNavBar');
     const spedizioniNavBar = document.getElementById('spedizioniNavBar');
 
+    /** Maiuscolo automatico (IT) per nomi clienti, tappe, spedizioni e tecnici */
+    function toAppUpper(s) {
+        return String(s == null ? '' : s).trim().toLocaleUpperCase('it-IT');
+    }
+
+    function normalizeClientUpperFields(c) {
+        if (!c || typeof c !== 'object') return c;
+        if (c.nome != null && String(c.nome).trim()) c.nome = toAppUpper(c.nome);
+        if (c.tappa != null && String(c.tappa).trim()) c.tappa = toAppUpper(c.tappa);
+        if (c.spedizione != null && String(c.spedizione).trim()) {
+            const sp = String(c.spedizione).trim();
+            if (sp.toLowerCase() !== 'cliente stesso') c.spedizione = toAppUpper(sp);
+        }
+        return c;
+    }
+
     function saveToLocalStorage() {
+        try {
+            (clients || []).forEach(normalizeClientUpperFields);
+        } catch (e) {}
         localStorage.setItem('note_clienti_data', JSON.stringify(clients));
     }
 
@@ -4440,6 +4480,15 @@
 
 
     function init() {
+        try {
+            (clients || []).forEach(normalizeClientUpperFields);
+            if (Array.isArray(savedSpedizioni)) {
+                savedSpedizioni = Array.from(new Set(savedSpedizioni.map(toAppUpper).filter(Boolean)))
+                    .sort(function(a, b) { return a.localeCompare(b, 'it'); });
+                localStorage.setItem('note_clienti_spedizioni', JSON.stringify(savedSpedizioni));
+            }
+            saveToLocalStorage();
+        } catch (e) {}
         populateDropdowns();
         updateModelliDatalist();
         updateSpedizioniDatalist();
@@ -4805,10 +4854,14 @@
     }
 
     window.autoSaveNewSpedizione = function(val) {
-        const clean = val.trim();
-        if (clean && clean !== 'Cliente stesso' && !savedSpedizioni.includes(clean)) {
+        let clean = String(val || '').trim();
+        if (!clean || clean === 'Cliente stesso') return;
+        clean = toAppUpper(clean);
+        const exists = savedSpedizioni.some(function(s) { return toAppUpper(s) === clean; });
+        if (!exists) {
             savedSpedizioni.push(clean);
-            savedSpedizioni.sort();
+            savedSpedizioni = Array.from(new Set(savedSpedizioni.map(toAppUpper).filter(Boolean)))
+                .sort(function(a, b) { return a.localeCompare(b, 'it'); });
             localStorage.setItem('note_clienti_spedizioni', JSON.stringify(savedSpedizioni));
             updateSpedizioniDatalist();
         }
@@ -5167,11 +5220,11 @@
     form.addEventListener('submit', (e) => {
         e.preventDefault();
         
-        const nomeVal = document.getElementById('nome').value.trim();
+        const nomeVal = toAppUpper(document.getElementById('nome').value);
         const localitaVal = document.getElementById('localita').value.trim();
         const provinciaVal = provinciaSelect.value;
         const regioneVal = regioneSelect.value;
-        let tappaVal = tappaInput.value.trim();
+        let tappaVal = toAppUpper(tappaInput.value);
         let spedizioneVal = spedizioneInput.value.trim();
         const dataVal = document.getElementById('data').value;
 
@@ -5180,6 +5233,8 @@
             spedizioneVal = nomeVal;
             spedizioneInput.value = nomeVal;
             spedizioneFromClienteStesso = true;
+        } else if (spedizioneVal) {
+            spedizioneVal = toAppUpper(spedizioneVal);
         }
 
         const inAttesa = document.getElementById('inAttesaCheck').checked;
@@ -5406,7 +5461,7 @@
     window.updateStageInPrep = function(id, value) {
         const client = clients.find(c => String(c.id) === String(id));
         if (!client) return;
-        client.tappa = (value || '').trim();
+        client.tappa = toAppUpper(value || '');
         if (client.tappa) client.spedizione = '';
         client.inPrep = true;
         saveToLocalStorage();
@@ -5419,7 +5474,7 @@
         if (!client) return;
         const val = prompt('Nome tappa per ' + (client.nome || '') + ':', client.tappa || '');
         if (val === null) return;
-        client.tappa = val.trim();
+        client.tappa = toAppUpper(val);
         if (client.tappa) client.spedizione = '';
         saveToLocalStorage();
         render();
@@ -5587,7 +5642,7 @@
     window.updateStage = function(id, newStage) {
         const client = clients.find(c => String(c.id) === String(id));
         if (client) {
-            const val = newStage.trim();
+            const val = toAppUpper(newStage);
             client.tappa = val;
             if (val) {
                 client.spedizione = ''; // solo una delle due
@@ -5601,12 +5656,14 @@
     window.updateSpedizione = function(id, newSped) {
         const client = clients.find(c => c.id === id);
         if (client) {
-            let val = newSped.trim();
+            let val = String(newSped || '').trim();
             let fromClienteStesso = false;
             // Se ha scelto "Cliente stesso", usa il nome del cliente (senza salvarlo)
             if (val === 'Cliente stesso') {
-                val = client.nome;
+                val = toAppUpper(client.nome);
                 fromClienteStesso = true;
+            } else {
+                val = toAppUpper(val);
             }
             client.spedizione = val;
             if (val) {
@@ -6335,12 +6392,12 @@
         const current = (client.nome || '').trim();
         const next = prompt('Nuovo nome cliente:', current);
         if (next === null) return;
-        const clean = next.trim();
+        const clean = toAppUpper(next);
         if (!clean) {
             alert('Il nome non può essere vuoto.');
             return;
         }
-        if (clean === current) return;
+        if (clean === toAppUpper(current)) return;
         // controllo omonimi
         const other = clients.find(function(c) {
             return String(c.id) !== String(clientId) &&
@@ -6348,7 +6405,7 @@
         });
         if (other) {
             const where = (typeof describeClientLocation === 'function') ? describeClientLocation(other) : '';
-            if (!confirm('Esiste già un cliente chiamato «' + clean + '»' + (where ? (' in ' + where) : '') + '.\\nVuoi usare comunque questo nome?')) {
+            if (!confirm('Esiste già un cliente chiamato «' + clean + '»' + (where ? (' in ' + where) : '') + '.\nVuoi usare comunque questo nome?')) {
                 return;
             }
         }
@@ -7265,7 +7322,7 @@
         prepForm.dataset.bound = '1';
         prepForm.addEventListener('submit', async function(e) {
             e.preventDefault();
-            const nomeVal = document.getElementById('prepNome').value.trim();
+            const nomeVal = toAppUpper(document.getElementById('prepNome').value);
             const scadenzaVal = document.getElementById('prepScadenza')?.value || '';
             const localitaVal = document.getElementById('prepLocalita').value.trim();
             // ricalcola regione/provincia dal paese (locale + eventuale online già fatta su blur)
@@ -7286,6 +7343,8 @@
                 } catch (e) {}
             }
             const modelloVal = document.getElementById('prepModello').value.trim();
+            const qtaEl = document.getElementById('prepModelloQta');
+            const qtaVal = qtaEl ? (parseInt(qtaEl.value, 10) || 1) : 1;
             if (!nomeVal || !localitaVal) {
                 alert('Compila almeno Nome e Paese.');
                 return;
@@ -7304,7 +7363,7 @@
             }
             const modelli = [];
             if (modelloVal) {
-                modelli.push({ nome: modelloVal, qta: 1 });
+                modelli.push({ nome: modelloVal, qta: qtaVal });
                 if (typeof window.autoSaveNewTypedModel === 'function') window.autoSaveNewTypedModel(modelloVal);
             }
             clients.push({
@@ -7316,6 +7375,8 @@
             });
             saveToLocalStorage();
             prepForm.reset();
+            const qtaReset = document.getElementById('prepModelloQta');
+            if (qtaReset) qtaReset.value = '1';
             const disp = document.getElementById('prepRegioneDisplay');
             if (disp) disp.value = '';
             render();
@@ -7602,7 +7663,7 @@
     }
 
     window.applyPrepSuggestedSpedizione = function(ids, tecnico) {
-        const name = String(tecnico || '').trim();
+        const name = toAppUpper(tecnico || '');
         if (!name) return;
         const idSet = new Set((ids || []).map(String));
         let n = 0;
@@ -7684,7 +7745,7 @@
         let name = tappaName || ('Tappa ' + new Date().toLocaleDateString('it-IT'));
         const custom = prompt('Nome tappa da assegnare:', name);
         if (custom === null) return;
-        name = (custom || name).trim();
+        name = toAppUpper(custom || name);
         if (!name) return;
         const idSet = new Set((ids || []).map(String));
         clients.forEach(c => {
@@ -7707,7 +7768,7 @@
         const suggested = (client.localita || client.nome || 'Tappa').trim();
         const name = prompt('Nome tappa per portare il cliente in Note clienti:', suggested);
         if (name === null) return;
-        const tappa = (name || suggested).trim();
+        const tappa = toAppUpper(name || suggested);
         if (!tappa) return;
         client.tappa = tappa;
         client.spedizione = '';
