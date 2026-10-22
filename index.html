@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <title>Gestione Note Clienti</title>
-    <meta name="note-clienti-build" content="2026-10-06-iphone-app-lock">
+    <meta name="note-clienti-build" content="2026-10-22-no-prep-ai-proposals">
     <style>
         /* APP LOCK: no horizontal page scroll; vertical wheel OK */
         html {
@@ -3363,6 +3363,144 @@
             .draft-place-row .btn { min-height: 44px; }
         }
 
+    
+        .prep-reg-group {
+            margin-bottom: 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            overflow: hidden;
+            background: #fff;
+        }
+        .prep-reg-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding: 10px 12px;
+            background: linear-gradient(135deg, #f8fafc, #eff6ff);
+            border-bottom: 1px solid #e2e8f0;
+            font-weight: 800;
+            font-size: 0.92rem;
+            color: #0f172a;
+        }
+        .prep-reg-count {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #64748b;
+            background: #e2e8f0;
+            padding: 2px 8px;
+            border-radius: 999px;
+        }
+        .prep-reg-clients {
+            display: flex;
+            flex-direction: column;
+        }
+        .prep-mini-row {
+            align-items: flex-start;
+            padding: 10px 12px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .prep-mini-row:last-child { border-bottom: none; }
+        .prep-mini-name {
+            font-weight: 800;
+            font-size: 0.92rem;
+            color: #0f172a;
+        }
+        .prep-mini-meta {
+            font-size: 0.78rem;
+            color: #475569;
+            line-height: 1.45;
+            margin-top: 3px;
+        }
+        .prep-mini-tech {
+            margin-top: 6px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+        }
+        .prep-tech-badge {
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 8px;
+            background: #f5f3ff;
+            color: #5b21b6;
+            border: 1px solid #ddd6fe;
+        }
+        .prep-tech-badge.candela { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+        .prep-tech-badge.alario { background: #fff7ed; color: #9a3412; border-color: #fed7aa; }
+        .prep-tech-badge.aleandro { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
+        .prep-tech-badge.russo { background: #fdf4ff; color: #86198f; border-color: #f0abfc; }
+        .prep-tech-badge.dilonardo { background: #fefce8; color: #854d0e; border-color: #fde047; }
+        .prep-mini-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .prep-mini-actions .btn {
+            min-height: 34px;
+            padding: 6px 10px;
+            font-size: 0.78rem;
+            white-space: nowrap;
+        }
+        .prep-auto-sped {
+            background: linear-gradient(135deg, #faf5ff, #f8fafc);
+            border: 1px solid #e9d5ff;
+            border-radius: 14px;
+            padding: 14px 16px;
+            margin-bottom: 14px;
+        }
+        .prep-auto-sped-title {
+            font-weight: 800;
+            font-size: 0.95rem;
+            color: #5b21b6;
+            margin-bottom: 6px;
+        }
+        .prep-auto-sped-rules {
+            font-size: 0.75rem;
+            color: #6b21a8;
+            margin-bottom: 10px;
+            line-height: 1.45;
+        }
+        .prep-auto-sped-item {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 12px;
+            background: #fff;
+            border: 1px solid #e9d5ff;
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+        }
+        .prep-auto-sped-item:last-child { margin-bottom: 0; }
+        .prep-auto-sped-meta {
+            width: 100%;
+            font-size: 0.78rem;
+            color: #64748b;
+            margin-top: 2px;
+        }
+        .prep-auto-sped-names {
+            width: 100%;
+            font-size: 0.8rem;
+            color: #334155;
+            margin-top: 4px;
+        }
+        .prep-auto-sped-btns {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-left: auto;
+        }
+        .prep-auto-sped-btns .btn {
+            min-height: 36px;
+            padding: 6px 12px;
+            font-size: 0.8rem;
+        }
+
     </style>
 </head>
 <body class="locked">
@@ -3677,24 +3815,14 @@
         <input type="text" id="prepSearchInput" class="search-input" placeholder="Filtra per cliente, località, provincia, regione, modello, nota o tappa..." oninput="renderPrepPage()">
     </div>
 
-    <!-- Consigli abbinamento intelligenti -->
+    <!-- Consigli zona (tappa o tecnico) — senza proposte IA -->
     <div id="prepSuggestionsCard" class="card prep-suggestions-card" style="display:none; margin-bottom:16px;">
-        <div class="card-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-            <span>🤖 Consulente tappe IA</span>
-            <span id="prepUrgencyStats" style="display:flex; gap:8px; flex-wrap:wrap; font-size:0.78rem; font-weight:600;"></span>
-        </div>
-        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:12px; line-height:1.45;">
-            Analizza <strong>scadenze</strong> e <strong>distanze in auto</strong> tra i paesi per proporti le tappe migliori, con km e tempi di percorrenza.
-        </p>
-        <div style="margin-bottom:12px;">
-            <button type="button" class="btn btn-primary" id="prepAiRefreshBtn" onclick="refreshPrepAiAdvice()">🔄 Aggiorna consigli IA</button>
-        </div>
         <div id="prepSuggestionsList" class="prep-suggestions-list"></div>
     </div>
 
     <div class="card prep-mini-list-card" id="prepMiniListCard" style="margin-bottom:16px; display:none;">
-        <div class="card-title" style="margin-bottom:8px;">Clienti in coda</div>
-        <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:10px;">Solo spostamento in Note clienti (assegna una tappa).</p>
+        <div class="card-title" style="margin-bottom:8px;">Clienti per regione</div>
+        <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:10px;">Raggruppati per regione · modello, paese e scadenza · per le zone (Palermo, Roma, Benevento/Avellino, Ragusa/Agrigento, Pescara/Teramo) ti consiglio se creare una <strong>tappa</strong> o una <strong>spedizione</strong> al tecnico di zona.</p>
         <div id="prepMiniList"></div>
     </div>
 </div><!-- /#viewPrep -->
@@ -7341,7 +7469,7 @@
 
     window.refreshPrepAiAdvice = function() {
         const allPrep = clients.filter(function(c) { return isInPrep(c); });
-        renderPrepSuggestions(allPrep, true);
+        if (typeof renderPrepSuggestions === 'function') renderPrepSuggestions(allPrep);
     };
 
 
@@ -7371,48 +7499,106 @@
         if (blob.indexOf('ragusa') >= 0) return 'RG';
         if (blob.indexOf('agrigento') >= 0) return 'AG';
         if (blob.indexOf('roma') >= 0 || blob.indexOf('rome') >= 0) return 'RM';
+        if (blob.indexOf('benevento') >= 0) return 'BN';
+        if (blob.indexOf('avellino') >= 0) return 'AV';
+        if (blob.indexOf('pescara') >= 0) return 'PE';
+        if (blob.indexOf('teramo') >= 0) return 'TE';
         const paTowns = ['bagheria','monreale','carini','partinico','termini imerese','cefalù','cefalu','misilmeri','villabate','ficarazzi','capaci','cinisi','casteldaccia'];
         const rgTowns = ['modica','scicli','vittoria','comiso','pozallo','ispica','acate','santa croce camerina'];
         const agTowns = ['sciacca','licata','canicattì','canicatti','favara','porto empedocle','ribera','raffadali'];
         const rmTowns = ['guidonia','fiumicino','tivoli','velletri','civitavecchia','pomezia','anzio','nettuno','monterotondo','frascati','ciampino','ostia'];
+        const bnTowns = ['montesarchio',"sant'agata de' goti",'san giorgio del sannio','apice','airola','morcone','guardia sanframondi'];
+        const avTowns = ['ariano irpino','solofra','merogliano','atripalda','montoro','cervinara','grottaminarda','bisaccia','lacedonia'];
+        const peTowns = ['montesilvano',"città sant'angelo",'penne','spoltore','cepagatti','pineto'];
+        const teTowns = ['giulianova','roseto degli abruzzi','martinsicuro','alba adriatica','tortoreto','silvi','atri','castelli'];
         if (paTowns.some(function(t) { return loc.indexOf(t) >= 0; })) return 'PA';
         if (rgTowns.some(function(t) { return loc.indexOf(t) >= 0; })) return 'RG';
         if (agTowns.some(function(t) { return loc.indexOf(t) >= 0; })) return 'AG';
         if (rmTowns.some(function(t) { return loc.indexOf(t) >= 0; })) return 'RM';
+        if (bnTowns.some(function(t) { return loc.indexOf(t) >= 0; })) return 'BN';
+        if (avTowns.some(function(t) { return loc.indexOf(t) >= 0; })) return 'AV';
+        if (peTowns.some(function(t) { return loc.indexOf(t) >= 0; })) return 'PE';
+        if (teTowns.some(function(t) { return loc.indexOf(t) >= 0; })) return 'TE';
         return p;
     }
 
-    function getAutoSpedizioneTecnico(c) {
+    /** Consiglio zona: tappa locale OPPURE spedizione al tecnico di zona */
+    function getZoneRecommendation(c) {
         if (!c) return null;
         const prov = normalizeProvinciaCode(c);
         if (prov === 'PA') {
-            return { tecnico: 'Candela', reason: 'Palermo e provincia → spedizione al tecnico Candela' };
+            return {
+                zoneKey: 'palermo',
+                tappaName: 'Palermo',
+                tecnico: 'Candela',
+                badgeClass: 'candela',
+                reason: 'Palermo e provincia → tappa «Palermo» oppure spedizione al tecnico Candela'
+            };
+        }
+        if (prov === 'RM') {
+            return {
+                zoneKey: 'roma',
+                tappaName: 'Roma',
+                tecnico: 'Aleandro',
+                badgeClass: 'aleandro',
+                reason: 'Roma e provincia → tappa «Roma» oppure spedizione al tecnico Aleandro'
+            };
+        }
+        if (prov === 'BN' || prov === 'AV') {
+            return {
+                zoneKey: 'benevento_avellino',
+                tappaName: 'Benevento / Avellino',
+                tecnico: 'Wood Metal Russo',
+                badgeClass: 'russo',
+                reason: 'Benevento, Avellino e provincia → tappa «Benevento / Avellino» oppure spedizione al tecnico Wood Metal Russo'
+            };
         }
         if (prov === 'RG' || prov === 'AG') {
             return {
-                tecnico: 'Alario',
-                reason: (prov === 'RG' ? 'Ragusa' : 'Agrigento') + ' e provincia → spedizione al tecnico Alario'
+                zoneKey: 'ragusa_agrigento',
+                tappaName: 'Ragusa / Agrigento',
+                tecnico: 'Alario Maurizio',
+                badgeClass: 'alario',
+                reason: (prov === 'RG' ? 'Ragusa' : 'Agrigento') + ' e provincia → tappa «Ragusa / Agrigento» oppure spedizione al tecnico Alario Maurizio'
             };
         }
-        if (prov === 'RM' && clientHasOutdoorModel(c)) {
-            return { tecnico: 'Aleandro', reason: 'Roma e provincia + modello outdoor → spedizione al tecnico Aleandro' };
+        if (prov === 'PE' || prov === 'TE') {
+            return {
+                zoneKey: 'pescara_teramo',
+                tappaName: 'Pescara / Teramo',
+                tecnico: 'Di Lonardo Raffaele',
+                badgeClass: 'dilonardo',
+                reason: 'Pescara, Teramo e provincia → tappa «Pescara / Teramo» oppure spedizione al tecnico Di Lonardo Raffaele'
+            };
         }
         return null;
     }
 
-    function groupPrepByAutoSpedizione(allPrep) {
-        const groups = {
-            Candela: { tecnico: 'Candela', clients: [], reason: 'Palermo e provincia' },
-            Alario: { tecnico: 'Alario', clients: [], reason: 'Ragusa e Agrigento (province)' },
-            Aleandro: { tecnico: 'Aleandro', clients: [], reason: 'Roma e provincia con modello outdoor' }
-        };
+    // Compatibilità: vecchio nome usato altrove
+    function getAutoSpedizioneTecnico(c) {
+        return getZoneRecommendation(c);
+    }
+
+    function groupPrepByZone(allPrep) {
+        const order = ['palermo', 'roma', 'benevento_avellino', 'ragusa_agrigento', 'pescara_teramo'];
+        const groups = {};
+        order.forEach(function(k) { groups[k] = null; });
         (allPrep || []).forEach(function(c) {
-            const rule = getAutoSpedizioneTecnico(c);
-            if (rule && groups[rule.tecnico]) groups[rule.tecnico].clients.push(c);
+            const rule = getZoneRecommendation(c);
+            if (!rule) return;
+            if (!groups[rule.zoneKey]) {
+                groups[rule.zoneKey] = {
+                    zoneKey: rule.zoneKey,
+                    tappaName: rule.tappaName,
+                    tecnico: rule.tecnico,
+                    badgeClass: rule.badgeClass,
+                    reason: rule.reason,
+                    clients: []
+                };
+            }
+            groups[rule.zoneKey].clients.push(c);
         });
-        return ['Candela', 'Alario', 'Aleandro']
-            .map(function(k) { return groups[k]; })
-            .filter(function(g) { return g.clients.length > 0; });
+        return order.map(function(k) { return groups[k]; }).filter(Boolean);
     }
 
     window.applyPrepSuggestedSpedizione = function(ids, tecnico) {
@@ -7437,33 +7623,45 @@
     };
 
     function renderPrepAutoSpedizione(allPrep) {
-        const groups = groupPrepByAutoSpedizione(allPrep);
+        const groups = groupPrepByZone(allPrep);
         if (!groups.length) return '';
         return '<div class="prep-auto-sped">' +
-            '<div class="prep-auto-sped-title">📦 Classificazione automatica tecnici</div>' +
-            '<div style="font-size:0.78rem;color:#6b21a8;margin-bottom:4px;">Regole: Palermo→Candela · Ragusa/Agrigento→Alario · Roma+outdoor→Aleandro</div>' +
+            '<div class="prep-auto-sped-title">💡 Consigli zona: tappa o tecnico</div>' +
+            '<div class="prep-auto-sped-rules">' +
+            'Palermo → tappa «Palermo» o tecnico Candela · ' +
+            'Roma → tappa «Roma» o tecnico Aleandro · ' +
+            'Benevento/Avellino → tappa o Wood Metal Russo · ' +
+            'Ragusa/Agrigento → tappa o Alario Maurizio · ' +
+            'Pescara/Teramo → tappa o Di Lonardo Raffaele' +
+            '</div>' +
             groups.map(function(g) {
                 const ids = g.clients.map(function(c) { return c.id; });
                 const names = g.clients.map(function(c) {
                     return (c.nome || '?') + (c.localita ? (' (' + c.localita + ')') : '');
                 }).join(', ');
+                const idsJson = JSON.stringify(ids);
+                const tappaJson = JSON.stringify(g.tappaName);
+                const techJson = JSON.stringify(g.tecnico);
                 return '<div class="prep-auto-sped-item">' +
-                    '<strong>📦 Tecnico ' + g.tecnico + '</strong>' +
+                    '<strong>🗺️ ' + String(g.tappaName).replace(/</g, '&lt;') + '</strong>' +
                     '<span style="font-size:0.8rem;font-weight:700;color:#7c3aed;">' + g.clients.length + ' client' + (g.clients.length === 1 ? 'e' : 'i') + '</span>' +
-                    '<button type="button" class="btn btn-primary" style="min-height:36px;padding:6px 12px;font-size:0.8rem;margin-left:auto;" ' +
-                    'onclick=\'applyPrepSuggestedSpedizione(' + JSON.stringify(ids) + ', ' + JSON.stringify(g.tecnico) + ')\'>' +
-                    'Assegna spedizione</button>' +
-                    '<div class="prep-auto-sped-meta">' + g.reason + '</div>' +
+                    '<div class="prep-auto-sped-btns">' +
+                    '<button type="button" class="btn btn-primary" onclick=\'applyPrepSuggestedTappa(' + idsJson + ', ' + tappaJson + ')\'>' +
+                    '🚩 Tappa «' + String(g.tappaName).replace(/</g, '&lt;') + '»</button>' +
+                    '<button type="button" class="btn" onclick=\'applyPrepSuggestedSpedizione(' + idsJson + ', ' + techJson + ')\'>' +
+                    '📦 Spedizione «' + String(g.tecnico).replace(/</g, '&lt;') + '»</button>' +
+                    '</div>' +
+                    '<div class="prep-auto-sped-meta">' + String(g.reason).replace(/</g, '&lt;') + '</div>' +
                     '<div class="prep-auto-sped-names">' + names.replace(/</g, '&lt;') + '</div>' +
                     '</div>';
             }).join('') +
             '</div>';
     }
 
-    async function renderPrepSuggestions(allPrep, forceRoute) {
+    /** Solo consigli zona (tappa/tecnico). Proposte IA rimosse. */
+    function renderPrepSuggestions(allPrep) {
         const card = document.getElementById('prepSuggestionsCard');
         const listEl = document.getElementById('prepSuggestionsList');
-        const statsEl = document.getElementById('prepUrgencyStats');
         if (!card || !listEl) return;
 
         if (!allPrep || allPrep.length === 0) {
@@ -7471,130 +7669,14 @@
             listEl.innerHTML = '';
             return;
         }
-        card.style.display = 'block';
 
-        const autoHtml = renderPrepAutoSpedizione(allPrep);
-
-        let nUrgent = 0, nMedium = 0, nOk = 0, nNone = 0;
-        allPrep.forEach(function(c) {
-            const d = daysUntilDate(c.scadenza);
-            if (d === null) nNone++;
-            else if (d <= 14) nUrgent++;
-            else if (d <= 30) nMedium++;
-            else nOk++;
-        });
-        if (statsEl) {
-            statsEl.innerHTML =
-                '<span class="prep-urgency-pill u-urgent">🔴 ' + nUrgent + ' urgenti</span>' +
-                '<span class="prep-urgency-pill u-medium">🟠 ' + nMedium + ' ≤30gg</span>' +
-                '<span class="prep-urgency-pill u-ok">🟢 ' + nOk + ' ok</span>' +
-                '<span class="prep-urgency-pill u-none">⚪ ' + nNone + ' senza scad.</span>';
-        }
-
-        const myToken = ++_prepAiToken;
-        listEl.innerHTML = '<div class="prep-sug-empty">🤖 Analisi scadenze e percorsi in corso…</div>';
-
-        try {
-            const clusters = clusterPrepClients(allPrep).slice(0, 8);
-            if (myToken !== _prepAiToken) return;
-            if (!clusters.length) {
-                listEl.innerHTML = (autoHtml || '') + '<div class="prep-sug-empty">Nessun consiglio. Aggiungi clienti con paese e scadenza.</div>';
-                return;
-            }
-
-            // Prima mostra le proposte in modo sincron (stima km), poi affina
-            const blocks = [];
-            for (let ci = 0; ci < clusters.length; ci++) {
-                if (myToken !== _prepAiToken) return;
-                const cl = clusters[ci];
-                const names = cl.items.map(function(x) { return x.client.nome || ''; }).join(', ');
-                const ids = cl.items.map(function(x) { return String(x.client.id); });
-                const scadInfo = cl.items.map(function(x) {
-                    const d = x.days;
-                    if (d === null) return (x.client.nome || '') + ' (no scad.)';
-                    if (d < 0) return (x.client.nome || '') + ' (scaduta)';
-                    if (d === 0) return (x.client.nome || '') + ' (oggi)';
-                    return (x.client.nome || '') + ' (tra ' + d + ' gg)';
-                }).join(' · ');
-
-                let route;
-                try {
-                    route = await buildRouteLegsForCluster(cl.items);
-                } catch (e) {
-                    route = { legs: [], totalM: 0, totalS: 0 };
-                }
-                if (myToken !== _prepAiToken) return;
-
-                let routeHtml = '';
-                if (route.legs && route.legs.length) {
-                    const legsTxt = route.legs.map(function(leg, i) {
-                        const km = (typeof formatDistanceKm === 'function')
-                            ? formatDistanceKm(leg.km)
-                            : (Math.round((leg.km || 0) / 1000) + ' km');
-                        const tm = (typeof formatDriveDuration === 'function')
-                            ? formatDriveDuration(leg.time)
-                            : '';
-                        return '<div class="prep-ai-leg">' + (i === 0 ? 'S' : String(i)) + '→' + (i + 1) + ': <strong>' +
-                            String(leg.from || '').replace(/</g, '&lt;') + '</strong> → <strong>' +
-                            String(leg.to || '').replace(/</g, '&lt;') + '</strong> · 🚗 ' + km + ' · ⏱ ' + tm +
-                            (leg.approx ? ' <em>(stima)</em>' : '') + '</div>';
-                    }).join('');
-                    const totKm = (typeof formatDistanceKm === 'function') ? formatDistanceKm(route.totalM) : '';
-                    const totT = (typeof formatDriveDuration === 'function') ? formatDriveDuration(route.totalS) : '';
-                    routeHtml =
-                        '<div class="prep-ai-route">' +
-                        '<div class="prep-ai-route-title">Percorso consigliato da Casamassima</div>' +
-                        legsTxt +
-                        '<div class="prep-ai-total">Totale tappa: <strong>' + totKm + '</strong> · <strong>' + totT + '</strong></div>' +
-                        '</div>';
-                } else {
-                    routeHtml = '<div class="prep-ai-route"><em>Percorso non calcolabile per questa proposta.</em></div>';
-                }
-
-                const tappaName = 'Tappa ' + cl.reg + (cl.urgent ? ' urgente' : '');
-                const urgencyLabel = cl.urgent ? '🔴 Priorità alta (scadenze vicine)' :
-                    (cl.medium ? '🟠 Da pianificare entro 30 giorni' : '🟢 Finestra comoda');
-
-                blocks.push(
-                    '<article class="prep-ai-card">' +
-                    '<div class="prep-ai-head">' +
-                    '<div><strong>💡 Proposta ' + (ci + 1) + '</strong> · ' + String(cl.reg).replace(/</g, '&lt;') +
-                    '<div class="prep-ai-urgency">' + urgencyLabel + '</div></div>' +
-                    '<span class="prep-ai-count">' + cl.items.length + ' client' + (cl.items.length === 1 ? 'e' : 'i') + '</span>' +
-                    '</div>' +
-                    '<div class="prep-ai-names">' + names.replace(/</g, '&lt;') + '</div>' +
-                    '<div class="prep-ai-scad">' + scadInfo.replace(/</g, '&lt;') + '</div>' +
-                    routeHtml +
-                    '<div class="prep-ai-actions">' +
-                    '<button type="button" class="btn btn-primary prep-ai-apply" data-ids="' + ids.join(',') + '" data-tappa="' +
-                    String(tappaName).replace(/"/g, '&quot;').replace(/</g, '&lt;') +
-                    '">🚩 Crea tappa da questa proposta</button>' +
-                    '</div></article>'
-                );
-
-                // Aggiorna progressivamente l'UI
-                if (myToken === _prepAiToken) {
-                    listEl.innerHTML = (autoHtml || '') + blocks.join('') +
-                        (ci < clusters.length - 1 ? '<div class="prep-sug-empty">Calcolo proposta ' + (ci + 2) + '…</div>' : '');
-                }
-            }
-
-            if (myToken !== _prepAiToken) return;
-            listEl.innerHTML = (autoHtml || '') + (blocks.join('') || '<div class="prep-sug-empty">Nessuna proposta generata.</div>');
-            listEl.querySelectorAll('.prep-ai-apply').forEach(function(btn) {
-                btn.addEventListener('click', function() {
-                    const ids = (btn.getAttribute('data-ids') || '').split(',').filter(Boolean);
-                    const tappa = btn.getAttribute('data-tappa') || 'Tappa';
-                    if (typeof applyPrepSuggestedTappa === 'function') applyPrepSuggestedTappa(ids, tappa);
-                });
-            });
-        } catch (err) {
-            console.error('Prep AI error', err);
-            if (myToken === _prepAiToken) {
-                listEl.innerHTML = (autoHtml || '') + '<div class="prep-sug-empty">Errore consulente: ' +
-                    String((err && err.message) || err).replace(/</g, '&lt;') +
-                    '<br><button type="button" class="btn" onclick="refreshPrepAiAdvice()">Riprova</button></div>';
-            }
+        const autoHtml = (typeof renderPrepAutoSpedizione === 'function') ? renderPrepAutoSpedizione(allPrep) : '';
+        if (autoHtml) {
+            card.style.display = 'block';
+            listEl.innerHTML = autoHtml;
+        } else {
+            card.style.display = 'none';
+            listEl.innerHTML = '';
         }
     }
 
@@ -7641,11 +7723,14 @@
         if (!card || !box) return;
 
         const searchTerm = (document.getElementById('prepSearchInput')?.value || '').toLowerCase().trim();
-        const list = searchTerm ? allPrep.filter(c => {
-            const matchModels = (c.modelli || []).some(m => (m.nome || '').toLowerCase().includes(searchTerm));
+        const list = searchTerm ? allPrep.filter(function(c) {
+            const matchModels = (c.modelli || []).some(function(m) {
+                return (m.nome || '').toLowerCase().includes(searchTerm);
+            });
             return (c.nome || '').toLowerCase().includes(searchTerm) || matchModels ||
                 (c.localita || '').toLowerCase().includes(searchTerm) ||
                 (c.regione || '').toLowerCase().includes(searchTerm) ||
+                (c.provincia || '').toLowerCase().includes(searchTerm) ||
                 (c.scadenza || '').includes(searchTerm);
         }) : allPrep;
 
@@ -7655,25 +7740,113 @@
             return;
         }
         card.style.display = 'block';
-        box.innerHTML = list.map(c => {
-            const d = daysUntilDate(c.scadenza);
-            let scad = '—';
-            if (d !== null) {
-                if (d < 0) scad = 'scaduta';
-                else if (d === 0) scad = 'oggi';
-                else scad = 'tra ' + d + ' gg';
+
+        // Raggruppa per regione
+        const byReg = {};
+        list.forEach(function(c) {
+            let reg = (c.regione || '').trim();
+            if (!reg) {
+                // prova da provincia/paese
+                try {
+                    const code = (typeof normalizeProvinciaCode === 'function') ? normalizeProvinciaCode(c) : (c.provincia || '');
+                    if (code && typeof PROVINCE_TO_REGION !== 'undefined' && PROVINCE_TO_REGION[code]) {
+                        reg = PROVINCE_TO_REGION[code];
+                    } else if (code && typeof PROVINCE_NAMES !== 'undefined') {
+                        // fallback regione da resolve
+                        const res = (typeof resolveLocationData === 'function') ? resolveLocationData(c.localita || '') : null;
+                        reg = (res && res.reg) ? res.reg : '';
+                    }
+                } catch (e) {}
             }
-            const models = (c.modelli || []).map(m => m.nome).filter(Boolean).join(', ');
-            return '<div class="prep-mini-row">' +
-                '<div class="prep-mini-info">' +
-                '<div class="prep-mini-name">' + String(c.nome || '').replace(/</g, '&lt;') + '</div>' +
-                '<div class="prep-mini-meta">📍 ' + String(c.localita || '—').replace(/</g, '&lt;') +
-                (c.regione ? ' · ' + String(c.regione).replace(/</g, '&lt;') : '') +
-                (models ? ' · ' + models.replace(/</g, '&lt;') : '') +
-                ' · 📅 ' + scad + '</div>' +
-                '</div>' +
-                '<button type="button" class="btn btn-primary prep-mini-btn" onclick="movePrepClientToNote(\'' + c.id + '\')">→ Note clienti</button>' +
-                '</div>';
+            if (!reg) reg = 'Senza regione';
+            if (!byReg[reg]) byReg[reg] = [];
+            byReg[reg].push(c);
+        });
+
+        // Ordina regioni: Sicilia/Lazio prima se hanno tecnici, poi alfabetico
+        const regNames = Object.keys(byReg).sort(function(a, b) {
+            const prio = function(r) {
+                const x = r.toLowerCase();
+                if (x.indexOf('sicilia') >= 0) return 0;
+                if (x.indexOf('lazio') >= 0) return 1;
+                if (r === 'Senza regione') return 99;
+                return 50;
+            };
+            const pa = prio(a), pb = prio(b);
+            if (pa !== pb) return pa - pb;
+            return a.localeCompare(b, 'it');
+        });
+
+        // Dentro regione: ordina per scadenza
+        regNames.forEach(function(r) {
+            byReg[r].sort(function(a, b) {
+                const da = daysUntilDate(a.scadenza);
+                const db = daysUntilDate(b.scadenza);
+                if (da === null && db === null) return 0;
+                if (da === null) return 1;
+                if (db === null) return -1;
+                return da - db;
+            });
+        });
+
+        box.innerHTML = regNames.map(function(reg) {
+            const clients = byReg[reg];
+            const rows = clients.map(function(c) {
+                const d = daysUntilDate(c.scadenza);
+                let scadTxt = '—';
+                let scadCls = '';
+                if (d !== null) {
+                    if (d < 0) { scadTxt = 'scaduta (' + (c.scadenza || '') + ')'; scadCls = 'color:#b91c1c;font-weight:700;'; }
+                    else if (d === 0) { scadTxt = 'oggi'; scadCls = 'color:#c2410c;font-weight:700;'; }
+                    else if (d <= 14) { scadTxt = 'tra ' + d + ' gg (' + (c.scadenza || '') + ')'; scadCls = 'color:#c2410c;font-weight:700;'; }
+                    else { scadTxt = 'tra ' + d + ' gg (' + (c.scadenza || '') + ')'; }
+                } else if (c.scadenza) {
+                    scadTxt = c.scadenza;
+                }
+                const models = (c.modelli || []).map(function(m) { return m.nome; }).filter(Boolean).join(', ') || '—';
+                const paese = (c.localita || '—') + (c.provincia ? (' (' + c.provincia + ')') : '');
+                const rule = (typeof getZoneRecommendation === 'function')
+                    ? getZoneRecommendation(c)
+                    : ((typeof getAutoSpedizioneTecnico === 'function') ? getAutoSpedizioneTecnico(c) : null);
+
+                let techHtml = '';
+                let actions = '';
+                if (rule) {
+                    const cls = rule.badgeClass || 'candela';
+                    const techLabel = rule.tecnico || '';
+                    const tappaLabel = rule.tappaName || '';
+                    techHtml = '<div class="prep-mini-tech">' +
+                        '<span class="prep-tech-badge ' + cls + '">💡 Zona: tappa «' + String(tappaLabel).replace(/</g, '&lt;') + '» o tecnico ' + String(techLabel).replace(/</g, '&lt;') + '</span>' +
+                        '<span style="font-size:0.7rem;color:#64748b;">' + String(rule.reason || '').replace(/</g, '&lt;') + '</span>' +
+                        '</div>';
+                    actions =
+                        '<button type="button" class="btn btn-primary" onclick=\'applyPrepSuggestedTappa(' +
+                        JSON.stringify([c.id]) + ', ' + JSON.stringify(tappaLabel) + ')\'>🚩 Tappa «' + String(tappaLabel).replace(/</g, '&lt;') + '»</button>' +
+                        '<button type="button" class="btn" onclick=\'applyPrepSuggestedSpedizione(' +
+                        JSON.stringify([c.id]) + ', ' + JSON.stringify(techLabel) + ')\'>📦 Sped. «' + String(techLabel).replace(/</g, '&lt;') + '»</button>' +
+                        '<button type="button" class="btn" onclick="movePrepClientToNote(\'' + String(c.id).replace(/'/g, "\\'") + '\')">→ Note (altro)</button>';
+                } else {
+                    actions = '<button type="button" class="btn btn-primary prep-mini-btn" onclick="movePrepClientToNote(\'' + String(c.id).replace(/'/g, "\\'") + '\')">→ Note</button>';
+                }
+
+                return '<div class="prep-mini-row" style="display:flex;gap:10px;justify-content:space-between;">' +
+                    '<div class="prep-mini-info" style="min-width:0;flex:1;">' +
+                    '<div class="prep-mini-name">' + String(c.nome || '').replace(/</g, '&lt;') + '</div>' +
+                    '<div class="prep-mini-meta">' +
+                    '📦 <strong>Modello:</strong> ' + String(models).replace(/</g, '&lt;') + '<br>' +
+                    '📍 <strong>Paese:</strong> ' + String(paese).replace(/</g, '&lt;') + '<br>' +
+                    '📅 <strong>Scadenza:</strong> <span style="' + scadCls + '">' + String(scadTxt).replace(/</g, '&lt;') + '</span>' +
+                    '</div>' +
+                    techHtml +
+                    '</div>' +
+                    '<div class="prep-mini-actions">' + actions + '</div>' +
+                    '</div>';
+            }).join('');
+
+            return '<div class="prep-reg-group">' +
+                '<div class="prep-reg-head"><span>🗺️ ' + String(reg).replace(/</g, '&lt;') + '</span>' +
+                '<span class="prep-reg-count">' + clients.length + '</span></div>' +
+                '<div class="prep-reg-clients">' + rows + '</div></div>';
         }).join('');
     }
 
