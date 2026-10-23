@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <title>Gestione Note Clienti</title>
-    <meta name="note-clienti-build" content="2026-10-22-upper-qta-prep">
+    <meta name="note-clienti-build" content="2026-10-22-prep-azioni-cliente">
     <style>
         /* APP LOCK: no horizontal page scroll; vertical wheel OK */
         html {
@@ -3611,6 +3611,20 @@
                 </div>
 
                 <div class="form-group">
+                    <label for="montaggio">Montaggio</label>
+                    <select id="montaggio" class="select-control">
+                        <option value="">— Seleziona —</option>
+                        <option value="Piantana">Piantana</option>
+                        <option value="Carrello">Carrello</option>
+                        <option value="Appesa">Appesa</option>
+                        <option value="Bandiera">Bandiera</option>
+                        <option value="Parete">Parete</option>
+                        <option value="Su palo">Su palo</option>
+                        <option value="Altro">Altro</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
                     <label for="localita">Località / Paese</label>
                     <input type="text" id="localita" class="input-control" required list="distCitiesDatalist" placeholder="Es. Casamassima, Ostuni, Roma…" autocomplete="off"
                         oninput="onLocalitaInput(this.value)" onblur="onLocalitaBlur(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();onLocalitaBlur(this.value);}">
@@ -3803,6 +3817,19 @@
                     </div>
                 </div>
                 <div class="form-group">
+                    <label for="prepMontaggio">Montaggio</label>
+                    <select id="prepMontaggio" class="select-control">
+                        <option value="">— Seleziona —</option>
+                        <option value="Piantana">Piantana</option>
+                        <option value="Carrello">Carrello</option>
+                        <option value="Appesa">Appesa</option>
+                        <option value="Bandiera">Bandiera</option>
+                        <option value="Parete">Parete</option>
+                        <option value="Su palo">Su palo</option>
+                        <option value="Altro">Altro</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label for="prepLocalita">Paese</label>
                     <input type="text" id="prepLocalita" class="input-control" required list="distCitiesDatalist" placeholder="Es. Monopoli, Palermo, Roma…" autocomplete="off"
                         oninput="onPrepLocalitaInput(this.value)" onblur="onPrepLocalitaBlur(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();onPrepLocalitaBlur(this.value);}">
@@ -3836,14 +3863,9 @@
         <input type="text" id="prepSearchInput" class="search-input" placeholder="Filtra per cliente, località, provincia, regione, modello, nota o tappa..." oninput="renderPrepPage()">
     </div>
 
-    <!-- Consigli zona (tappa o tecnico) — senza proposte IA -->
-    <div id="prepSuggestionsCard" class="card prep-suggestions-card" style="display:none; margin-bottom:16px;">
-        <div id="prepSuggestionsList" class="prep-suggestions-list"></div>
-    </div>
-
     <div class="card prep-mini-list-card" id="prepMiniListCard" style="margin-bottom:16px; display:none;">
         <div class="card-title" style="margin-bottom:8px;">Clienti per regione</div>
-        <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:10px;">Raggruppati per regione · modello, paese e scadenza · per le zone (Palermo, Roma, Benevento/Avellino, Ragusa/Agrigento, Pescara/Teramo) ti consiglio se creare una <strong>tappa</strong> o una <strong>spedizione</strong> al tecnico di zona.</p>
+        <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:10px;">Raggruppati per regione. Su ogni cliente: <strong>→ Note</strong>, spedizione al <strong>tecnico di zona</strong> (se copre la zona), spedizione al <strong>cliente stesso</strong> se montaggio Piantana/Carrello.</p>
         <div id="prepMiniList"></div>
     </div>
 </div><!-- /#viewPrep -->
@@ -4078,6 +4100,28 @@
     const ITALIAN_PROVINCES = [
         "AG", "AL", "AN", "AO", "AP", "AQ", "AR", "AT", "AV", "BA", "BG", "BI", "BL", "BN", "BO", "BR", "BS", "BT", "BZ", "CA", "CB", "CE", "CH", "CL", "CN", "CO", "CR", "CS", "CT", "CZ", "EN", "FC", "FE", "FG", "FI", "FM", "FR", "GE", "GO", "GR", "IM", "IS", "KR", "LC", "LE", "LI", "LO", "LT", "LU", "MB", "MC", "ME", "MI", "MN", "MO", "MS", "MT", "NA", "NO", "NU", "OR", "PA", "PC", "PD", "PE", "PG", "PI", "PN", "PO", "PR", "PT", "PU", "PV", "PZ", "RA", "RC", "RE", "RG", "RI", "RM", "RN", "RO", "SA", "SI", "SO", "SP", "SR", "SS", "SU", "SV", "TA", "TE", "TN", "TO", "TP", "TR", "TS", "TV", "UD", "VA", "VB", "VC", "VE", "VI", "VR", "VT", "VV"
     ];
+
+    const MONTAGGIO_OPTIONS = ['Piantana', 'Carrello', 'Appesa', 'Bandiera', 'Parete', 'Su palo', 'Altro'];
+
+    function montaggioSelectHTML(selected, clientId) {
+        const sel = String(selected || '');
+        const opts = '<option value="">—</option>' + MONTAGGIO_OPTIONS.map(function(o) {
+            return '<option value="' + o + '"' + (o === sel ? ' selected' : '') + '>' + o + '</option>';
+        }).join('');
+        if (clientId) {
+            return '<select class="edit-select compact-select" onchange="updateMontaggio(\'' + String(clientId).replace(/'/g, "\\'") + '\', this.value)">' + opts + '</select>';
+        }
+        return opts;
+    }
+
+    window.updateMontaggio = function(id, value) {
+        const client = clients.find(function(c) { return String(c.id) === String(id); });
+        if (!client) return;
+        client.montaggio = String(value || '').trim();
+        saveToLocalStorage();
+        render();
+        if (typeof renderPrepPage === 'function' && currentView === 'prep') renderPrepPage();
+    };
 
     // Sigla -> nome completo provincia (elenco completo)
     const PROVINCE_NAMES = {
@@ -4481,7 +4525,10 @@
 
     function init() {
         try {
-            (clients || []).forEach(normalizeClientUpperFields);
+            (clients || []).forEach(function(c) {
+                if (c.montaggio === undefined) c.montaggio = '';
+                normalizeClientUpperFields(c);
+            });
             if (Array.isArray(savedSpedizioni)) {
                 savedSpedizioni = Array.from(new Set(savedSpedizioni.map(toAppUpper).filter(Boolean)))
                     .sort(function(a, b) { return a.localeCompare(b, 'it'); });
@@ -5312,10 +5359,12 @@
             return;
         }
 
+        const montaggioVal = (document.getElementById('montaggio') || {}).value || '';
         const newClient = {
             id: 'id_' + Date.now() + Math.random().toString(36).substring(2, 7),
             nome: nomeVal,
             modelli: modelli,
+            montaggio: montaggioVal,
             localita: localitaVal,
             provincia: provinciaVal,
             regione: regioneVal,
@@ -6230,6 +6279,7 @@
             if (c.notaPrep === undefined) c.notaPrep = '';
             if (c.scadenza === undefined) c.scadenza = '';
             if (c.notaDisponibilita === undefined) c.notaDisponibilita = '';
+            if (c.montaggio === undefined) c.montaggio = '';
             if (c.localita === undefined) c.localita = '';
             if (c.provincia === undefined) c.provincia = '';
             if (c.regione === undefined) c.regione = '';
@@ -6673,6 +6723,9 @@
                   ITALIAN_PROVINCES.map(function(prov) {
                     return '<option value="' + prov + '"' + (prov === client.provincia ? ' selected' : '') + '>' + provinceLabel(prov) + '</option>';
                   }).join('') + '</select></span></div>' +
+                '<div class="info-item"><span class="info-label">Montaggio</span><span class="info-value">' +
+                  montaggioSelectHTML(client.montaggio, client.id) +
+                '</span></div>' +
                 '<div class="info-item"><span class="info-label">Data</span><span class="info-value">' +
                   '<input type="date" class="edit-input edit-input-date compact-date" value="' + (client.data || '') + '" onchange="updateDate(\'' + client.id + '\', this.value, false)" onblur="updateDate(\'' + client.id + '\', this.value, true)">' +
                 '</span></div>' +
@@ -6819,6 +6872,7 @@
                 (c.regione || '').toLowerCase().includes(searchTerm) ||
                 (c.tappa || '').toLowerCase().includes(searchTerm) ||
                 (c.spedizione || '').toLowerCase().includes(searchTerm) ||
+                (c.montaggio || '').toLowerCase().includes(searchTerm) ||
                 (c.notaDisponibilita || '').toLowerCase().includes(searchTerm)
             );
         });
@@ -6862,7 +6916,8 @@
             let headerIcon = '🚩';
             let headerLabel = 'Tappa';
             let headerBg = '';
-            let deleteBtn = `<button class="btn btn-icon danger" style="color:white; border-color:transparent; background:rgba(255,255,255,0.2)" onclick="deleteStage('${String(groupName).replace(/'/g, "\\'")}')">🗑️ Cancella Tappa</button>`;
+            let deleteBtn = `<button type="button" class="btn" style="color:white; border-color:transparent; background:rgba(255,255,255,0.2); margin-right:6px;" onclick="renameStage('${String(groupName).replace(/'/g, "\\'")}')" title="Rinomina tappa">✏️ Rinomina</button>` +
+                            `<button class="btn btn-icon danger" style="color:white; border-color:transparent; background:rgba(255,255,255,0.2)" onclick="deleteStage('${String(groupName).replace(/'/g, "\\'")}')">🗑️ Cancella Tappa</button>`;
             if (isSpedizione) {
                 headerIcon = '📦';
                 headerLabel = 'Spedizione';
@@ -7345,6 +7400,7 @@
             const modelloVal = document.getElementById('prepModello').value.trim();
             const qtaEl = document.getElementById('prepModelloQta');
             const qtaVal = qtaEl ? (parseInt(qtaEl.value, 10) || 1) : 1;
+            const montaggioVal = (document.getElementById('prepMontaggio') || {}).value || '';
             if (!nomeVal || !localitaVal) {
                 alert('Compila almeno Nome e Paese.');
                 return;
@@ -7368,7 +7424,8 @@
             }
             clients.push({
                 id: 'id_' + Date.now() + Math.random().toString(36).substring(2, 7),
-                nome: nomeVal, modelli, localita: localitaVal, provincia: provinciaVal, regione: regioneVal,
+                nome: nomeVal, modelli, montaggio: montaggioVal,
+                localita: localitaVal, provincia: provinciaVal, regione: regioneVal,
                 tappa: '', spedizione: '', data: '', calendarizzato: false, preavviso: false, disponibilita: false,
                 spedito: false, consegnato: false, notaDisponibilita: '', notaPrep: '', scadenza: scadenzaVal,
                 inLavorazione: false, installato: false, standby: false, inPrep: true
@@ -7377,6 +7434,8 @@
             prepForm.reset();
             const qtaReset = document.getElementById('prepModelloQta');
             if (qtaReset) qtaReset.value = '1';
+            const montReset = document.getElementById('prepMontaggio');
+            if (montReset) montReset.value = '';
             const disp = document.getElementById('prepRegioneDisplay');
             if (disp) disp.value = '';
             render();
@@ -7529,8 +7588,7 @@
     let _prepAiToken = 0;
 
     window.refreshPrepAiAdvice = function() {
-        const allPrep = clients.filter(function(c) { return isInPrep(c); });
-        if (typeof renderPrepSuggestions === 'function') renderPrepSuggestions(allPrep);
+        if (typeof renderPrepPage === 'function') renderPrepPage();
     };
 
 
@@ -7719,7 +7777,54 @@
             '</div>';
     }
 
-    /** Solo consigli zona (tappa/tecnico). Proposte IA rimosse. */
+    function isMontaggioCarrelloOrPiantana(c) {
+        const m = String((c && c.montaggio) || '').trim().toLowerCase();
+        return m === 'carrello' || m === 'piantana';
+    }
+
+    /** Consiglio per montaggio Carrello/Piantana: spedizione al cliente stesso oppure tecnico di zona */
+    function renderPrepMontaggioAdvice(allPrep) {
+        const list = (allPrep || []).filter(isMontaggioCarrelloOrPiantana);
+        if (!list.length) return '';
+        const items = list.map(function(c) {
+            const mont = String(c.montaggio || '').trim();
+            const zone = (typeof getZoneRecommendation === 'function') ? getZoneRecommendation(c) : null;
+            const idsJson = JSON.stringify([c.id]);
+            const nomeJson = JSON.stringify(toAppUpper(c.nome || ''));
+            let btns =
+                '<button type="button" class="btn btn-primary" onclick=\'applyPrepSuggestedSpedizione(' + idsJson + ', ' + nomeJson + ')\'>' +
+                '📦 Spedizione al cliente stesso</button>';
+            if (zone && zone.tecnico) {
+                btns +=
+                    '<button type="button" class="btn" onclick=\'applyPrepSuggestedSpedizione(' + idsJson + ', ' + JSON.stringify(zone.tecnico) + ')\'>' +
+                    '📦 Spedizione «' + String(zone.tecnico).replace(/</g, '&lt;') + '»</button>';
+                if (zone.tappaName) {
+                    btns +=
+                        '<button type="button" class="btn" onclick=\'applyPrepSuggestedTappa(' + idsJson + ', ' + JSON.stringify(zone.tappaName) + ')\'>' +
+                        '🚩 Tappa «' + String(zone.tappaName).replace(/</g, '&lt;') + '»</button>';
+                }
+            }
+            return '<div class="prep-auto-sped-item">' +
+                '<strong>🔧 ' + String(c.nome || '?').replace(/</g, '&lt;') + '</strong>' +
+                '<span style="font-size:0.78rem;font-weight:700;color:#b45309;">Montaggio: ' + String(mont).replace(/</g, '&lt;') + '</span>' +
+                '<div class="prep-auto-sped-btns">' + btns + '</div>' +
+                '<div class="prep-auto-sped-meta">' +
+                (zone
+                    ? ('Carrello/Piantana → spedisci al cliente stesso oppure al tecnico di zona «' + String(zone.tecnico).replace(/</g, '&lt;') + '»')
+                    : 'Carrello/Piantana → consigliata spedizione al cliente stesso') +
+                '</div>' +
+                '<div class="prep-auto-sped-names">📍 ' + String(c.localita || '—').replace(/</g, '&lt;') +
+                (c.provincia ? (' (' + String(c.provincia).replace(/</g, '&lt;') + ')') : '') +
+                '</div></div>';
+        }).join('');
+        return '<div class="prep-auto-sped" style="background:linear-gradient(135deg,#fffbeb,#f8fafc);border-color:#fde68a;">' +
+            '<div class="prep-auto-sped-title" style="color:#b45309;">🔧 Montaggio Carrello / Piantana</div>' +
+            '<div class="prep-auto-sped-rules" style="color:#92400e;">Per questi montaggi conviene spedire al <strong>cliente stesso</strong>' +
+            ' oppure, se in zona, al <strong>tecnico di zona</strong>.</div>' +
+            items + '</div>';
+    }
+
+    /** Consigli zona + montaggio. Proposte IA rimosse. */
     function renderPrepSuggestions(allPrep) {
         const card = document.getElementById('prepSuggestionsCard');
         const listEl = document.getElementById('prepSuggestionsList');
@@ -7731,10 +7836,12 @@
             return;
         }
 
+        const montHtml = (typeof renderPrepMontaggioAdvice === 'function') ? renderPrepMontaggioAdvice(allPrep) : '';
         const autoHtml = (typeof renderPrepAutoSpedizione === 'function') ? renderPrepAutoSpedizione(allPrep) : '';
-        if (autoHtml) {
+        const combined = (montHtml || '') + (autoHtml || '');
+        if (combined) {
             card.style.display = 'block';
-            listEl.innerHTML = autoHtml;
+            listEl.innerHTML = combined;
         } else {
             card.style.display = 'none';
             listEl.innerHTML = '';
@@ -7792,6 +7899,7 @@
                 (c.localita || '').toLowerCase().includes(searchTerm) ||
                 (c.regione || '').toLowerCase().includes(searchTerm) ||
                 (c.provincia || '').toLowerCase().includes(searchTerm) ||
+                (c.montaggio || '').toLowerCase().includes(searchTerm) ||
                 (c.scadenza || '').includes(searchTerm);
         }) : allPrep;
 
@@ -7864,41 +7972,57 @@
                 } else if (c.scadenza) {
                     scadTxt = c.scadenza;
                 }
-                const models = (c.modelli || []).map(function(m) { return m.nome; }).filter(Boolean).join(', ') || '—';
+                const models = (c.modelli || []).map(function(m) {
+                    return (m.nome || '') + (m.qta ? (' ×' + m.qta) : '');
+                }).filter(Boolean).join(', ') || '—';
                 const paese = (c.localita || '—') + (c.provincia ? (' (' + c.provincia + ')') : '');
-                const rule = (typeof getZoneRecommendation === 'function')
-                    ? getZoneRecommendation(c)
-                    : ((typeof getAutoSpedizioneTecnico === 'function') ? getAutoSpedizioneTecnico(c) : null);
+                const mont = String(c.montaggio || '').trim();
+                const zone = (typeof getZoneRecommendation === 'function') ? getZoneRecommendation(c) : null;
+                const montSpecial = (typeof isMontaggioCarrelloOrPiantana === 'function') && isMontaggioCarrelloOrPiantana(c);
+                const idsJson = JSON.stringify([c.id]);
+                const safeId = String(c.id).replace(/'/g, "\\'");
 
-                let techHtml = '';
+                // Azioni sulla barra cliente (per ogni cliente):
+                // - → Note (sempre)
+                // - 📦 Tecnico di zona (se in zona: Palermo/Candela, Roma/Aleandro, …)
+                // - 📦 Cliente stesso (se montaggio Piantana o Carrello)
+                // - se Piantana/Carrello + zona: entrambi i pulsanti spedizione
+                let hint = '';
                 let actions = '';
-                if (rule) {
-                    const cls = rule.badgeClass || 'candela';
-                    const techLabel = rule.tecnico || '';
-                    const tappaLabel = rule.tappaName || '';
-                    techHtml = '<div class="prep-mini-tech">' +
-                        '<span class="prep-tech-badge ' + cls + '">💡 Zona: tappa «' + String(tappaLabel).replace(/</g, '&lt;') + '» o tecnico ' + String(techLabel).replace(/</g, '&lt;') + '</span>' +
-                        '<span style="font-size:0.7rem;color:#64748b;">' + String(rule.reason || '').replace(/</g, '&lt;') + '</span>' +
-                        '</div>';
-                    actions =
-                        '<button type="button" class="btn btn-primary" onclick=\'applyPrepSuggestedTappa(' +
-                        JSON.stringify([c.id]) + ', ' + JSON.stringify(tappaLabel) + ')\'>🚩 Tappa «' + String(tappaLabel).replace(/</g, '&lt;') + '»</button>' +
-                        '<button type="button" class="btn" onclick=\'applyPrepSuggestedSpedizione(' +
-                        JSON.stringify([c.id]) + ', ' + JSON.stringify(techLabel) + ')\'>📦 Sped. «' + String(techLabel).replace(/</g, '&lt;') + '»</button>' +
-                        '<button type="button" class="btn" onclick="movePrepClientToNote(\'' + String(c.id).replace(/'/g, "\\'") + '\')">→ Note (altro)</button>';
-                } else {
-                    actions = '<button type="button" class="btn btn-primary prep-mini-btn" onclick="movePrepClientToNote(\'' + String(c.id).replace(/'/g, "\\'") + '\')">→ Note</button>';
+
+                if (montSpecial) {
+                    actions +=
+                        '<button type="button" class="btn btn-primary" style="background:#b45309;border:none;" title="Spedizione al cliente stesso (montaggio ' + String(mont).replace(/"/g, '') + ')" onclick=\'applyPrepSuggestedSpedizione(' +
+                        idsJson + ', ' + JSON.stringify(toAppUpper(c.nome || '')) + ')\'>📦 Cliente stesso</button>';
+                    hint += '<span class="prep-tech-badge" style="background:#fffbeb;color:#b45309;border-color:#fde68a;">🔧 Montaggio ' +
+                        String(mont).replace(/</g, '&lt;') + '</span>';
                 }
+                if (zone && zone.tecnico) {
+                    actions +=
+                        '<button type="button" class="btn btn-primary" title="Spedizione al tecnico di zona" onclick=\'applyPrepSuggestedSpedizione(' +
+                        idsJson + ', ' + JSON.stringify(zone.tecnico) + ')\'>📦 Tecnico «' +
+                        String(zone.tecnico).replace(/</g, '&lt;') + '»</button>';
+                    hint += '<span class="prep-tech-badge ' + (zone.badgeClass || '') + '">🗺️ Zona ' +
+                        String(zone.tappaName || zone.tecnico).replace(/</g, '&lt;') + '</span>';
+                }
+                actions +=
+                    '<button type="button" class="btn' + ((montSpecial || (zone && zone.tecnico)) ? '' : ' btn-primary') +
+                    ' prep-mini-btn" onclick="movePrepClientToNote(\'' + safeId + '\')">→ Note</button>';
+
+                const hintHtml = hint
+                    ? ('<div class="prep-mini-tech" style="margin-top:6px;">' + hint + '</div>')
+                    : '';
 
                 return '<div class="prep-mini-row" style="display:flex;gap:10px;justify-content:space-between;">' +
                     '<div class="prep-mini-info" style="min-width:0;flex:1;">' +
                     '<div class="prep-mini-name">' + String(c.nome || '').replace(/</g, '&lt;') + '</div>' +
                     '<div class="prep-mini-meta">' +
                     '📦 <strong>Modello:</strong> ' + String(models).replace(/</g, '&lt;') + '<br>' +
+                    '🔧 <strong>Montaggio:</strong> ' + (mont ? String(mont).replace(/</g, '&lt;') : '—') + '<br>' +
                     '📍 <strong>Paese:</strong> ' + String(paese).replace(/</g, '&lt;') + '<br>' +
                     '📅 <strong>Scadenza:</strong> <span style="' + scadCls + '">' + String(scadTxt).replace(/</g, '&lt;') + '</span>' +
                     '</div>' +
-                    techHtml +
+                    hintHtml +
                     '</div>' +
                     '<div class="prep-mini-actions">' + actions + '</div>' +
                     '</div>';
@@ -7916,7 +8040,7 @@
         const countEl = document.getElementById('navPrepCount');
         const allPrep = clients.filter(c => isInPrep(c));
         if (countEl) countEl.textContent = allPrep.length;
-        renderPrepSuggestions(allPrep);
+        // Solo lista clienti per regione (niente consigli zona / montaggio)
         renderPrepMiniList(allPrep);
     }
 
