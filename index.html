@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <title>Gestione Note Clienti</title>
-    <meta name="note-clienti-build" content="2026-10-22-prep-azioni-cliente">
+    <meta name="note-clienti-build" content="2026-10-23-note-hover">
     <style>
         /* APP LOCK: no horizontal page scroll; vertical wheel OK */
         html {
@@ -1010,6 +1010,35 @@
         }
         .note-input::placeholder { color: transparent; }
         .note-input:focus { outline: none; }
+        /* Anteprima nota al passaggio del mouse */
+        #noteHoverPreview {
+            display: none;
+            position: fixed;
+            z-index: 9000;
+            max-width: min(420px, calc(100vw - 24px));
+            max-height: min(280px, 50vh);
+            overflow: auto;
+            padding: 14px 16px;
+            background: #fffbeb;
+            border: 1px solid #f59e0b;
+            border-radius: 12px;
+            box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18), 0 2px 8px rgba(180, 83, 9, 0.12);
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: #0f172a;
+            white-space: pre-wrap;
+            word-break: break-word;
+            pointer-events: none;
+        }
+        #noteHoverPreview.visible { display: block; }
+        #noteHoverPreview .nhp-label {
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #b45309;
+            margin-bottom: 6px;
+        }
         .inline-add-box { margin-top: 8px; padding: 10px; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(4px); display: none; justify-content: center; align-items: center; z-index: 1000; }
         .modal { background: white; border-radius: var(--radius); padding: 24px; max-width: 500px; width: 90%; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
@@ -2395,6 +2424,22 @@
             padding: 4px 8px;
             border-radius: 999px;
             white-space: nowrap;
+        }
+        .chip-montaggio {
+            background: #fff7ed;
+            color: #9a3412;
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 999px;
+            white-space: nowrap;
+            border: 1px solid #fed7aa;
+        }
+        .info-card-head-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
         }
         .info-card-note .info-card-models {
             display: flex;
@@ -5552,6 +5597,70 @@
         }
     });
 
+    // Anteprima nota al passaggio del mouse (testo completo)
+    (function setupNoteHoverPreview() {
+        let preview = document.getElementById('noteHoverPreview');
+        if (!preview) {
+            preview = document.createElement('div');
+            preview.id = 'noteHoverPreview';
+            preview.setAttribute('aria-hidden', 'true');
+            document.body.appendChild(preview);
+        }
+        let hideTimer = null;
+        function hidePreview() {
+            preview.classList.remove('visible');
+            preview.innerHTML = '';
+        }
+        function showPreview(fieldEl, inputEl) {
+            const text = (inputEl && inputEl.value != null) ? String(inputEl.value).trim() : '';
+            if (!text) {
+                hidePreview();
+                return;
+            }
+            // non mostrare se l'utente sta digitando
+            if (document.activeElement === inputEl) {
+                hidePreview();
+                return;
+            }
+            preview.innerHTML = '<div class="nhp-label">📝 Nota completa</div>' +
+                text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            preview.classList.add('visible');
+            const rect = fieldEl.getBoundingClientRect();
+            const pad = 10;
+            let top = rect.bottom + 8;
+            let left = rect.left;
+            // misura dopo display
+            const pw = preview.offsetWidth || 320;
+            const ph = preview.offsetHeight || 80;
+            if (left + pw > window.innerWidth - pad) left = Math.max(pad, window.innerWidth - pw - pad);
+            if (left < pad) left = pad;
+            if (top + ph > window.innerHeight - pad) {
+                top = Math.max(pad, rect.top - ph - 8);
+            }
+            preview.style.top = top + 'px';
+            preview.style.left = left + 'px';
+        }
+        document.addEventListener('mouseover', function(e) {
+            const field = e.target.closest && e.target.closest('.note-field, .note-field-card');
+            if (!field) return;
+            const input = field.querySelector('.note-input');
+            if (!input) return;
+            if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+            showPreview(field, input);
+        });
+        document.addEventListener('mouseout', function(e) {
+            const field = e.target.closest && e.target.closest('.note-field, .note-field-card');
+            if (!field) return;
+            const related = e.relatedTarget;
+            if (related && field.contains(related)) return;
+            hideTimer = setTimeout(hidePreview, 80);
+        });
+        document.addEventListener('focusin', function(e) {
+            if (e.target && e.target.classList && e.target.classList.contains('note-input')) hidePreview();
+        });
+        document.addEventListener('scroll', hidePreview, true);
+    })();
+
     window.toggleInlineAddModel = function(id) {
         const sid = String(id);
         activeInlineAddId = (String(activeInlineAddId) === sid) ? null : sid;
@@ -6711,7 +6820,12 @@
             '<article class="info-card info-card-note" id="client-row-' + client.id + '">' +
               '<div class="info-card-head">' +
                 '<h3 class="info-card-name" title="Doppio click per rinominare" ondblclick="renameClientName(\'' + client.id + '\')">' + (client.nome || '').replace(/</g, '&lt;') + '</h3>' +
+                '<div class="info-card-head-chips">' +
                 (isSpedizione ? '<span class="info-chip chip-sped">📦 Spedizione</span>' : '<span class="info-chip chip-tappa">🚩 Tappa</span>') +
+                ((client.montaggio || '').trim()
+                    ? ('<span class="info-chip chip-montaggio">🔧 ' + String(client.montaggio).replace(/</g, '&lt;') + '</span>')
+                    : '') +
+                '</div>' +
               '</div>' +
               '<div class="info-card-models">' + (parts.modelsHTML || '<span class="muted-dash">Nessun modello</span>') +
                 '<button class="btn-add-inline" onclick="toggleInlineAddModel(\'' + client.id + '\')">+ modello</button></div>' +
@@ -7021,10 +7135,14 @@
                 const provinciaOptionsHTML = ITALIAN_PROVINCES.map(prov => `<option value="${prov}" ${prov === client.provincia ? 'selected' : ''}>${provinceLabel(prov)}</option>`).join('');
                 const regionOptionsHTML = ITALIAN_REGIONS.map(reg => `<option value="${reg}" ${reg === client.regione ? 'selected' : ''}>${reg}</option>`).join('');
 
+                const montChip = (client.montaggio || '').trim()
+                    ? `<span class="info-chip chip-montaggio" style="display:inline-block;margin-top:4px;">🔧 ${String(client.montaggio).replace(/</g, '&lt;')}</span>`
+                    : '';
                 tableHTML += `
                     <tr class="client-row" id="client-row-${client.id}">
                         <td class="client-info" data-label="Cliente">
                             <strong title="Doppio click per rinominare" ondblclick="renameClientName('${client.id}')" style="cursor:pointer">${client.nome}</strong>
+                            ${montChip}
                             <div class="models-list">
                                 ${modelsHTML}
                                 <button class="btn-add-inline" onclick="toggleInlineAddModel('${client.id}')">+ modello</button>
