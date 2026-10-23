@@ -1,16 +1,22 @@
 {
-  "name": "Gestione Note Clienti",
+  "name": "JS Insegne Digitali — Note Clienti",
   "short_name": "Note Clienti",
-  "description": "Portale per gestione note clienti, tappe, spedizioni e pre-pianificazione",
+  "description": "Portale gestione note clienti, tappe, spedizioni e pre-pianificazione — JS Insegne Digitali",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "background_color": "#2e1065",
+  "theme_color": "#2e1065",
   "lang": "it",
   "categories": ["business", "productivity"],
   "icons": [
+    {
+      "src": "logo-js.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
     {
       "src": "icon-192.png",
       "sizes": "192x192",
