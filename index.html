@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <title>JS Insegne Digitali — Note Clienti</title>
-    <meta name="note-clienti-build" content="2026-10-28-logo-rgb-brand">
+    <meta name="note-clienti-build" content="2026-10-28-fix-rename-stage">
     <style>
         /* APP LOCK: no horizontal page scroll; vertical wheel OK */
         html {
@@ -1829,36 +1829,139 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 12px;
             user-select: none;
         }
         .portal-nav .portal-brand-js {
-            font-size: 2.65rem;
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            font-size: 2.75rem;
             font-weight: 900;
-            letter-spacing: -0.04em;
+            letter-spacing: -0.05em;
             line-height: 1;
-            color: #ffffff;
-            text-shadow:
-                0 2px 12px rgba(0, 0, 0, 0.45),
-                0 0 28px rgba(255, 255, 255, 0.15);
             font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        .portal-nav .portal-brand-js .js-letter {
+            display: inline-block;
+            color: #ffffff;
+            -webkit-text-fill-color: #ffffff;
+            background: none;
+            position: relative;
+            transition: none;
+        }
+        /* Alone colorato RGB che ruota piano sulle lettere */
+        .portal-nav .portal-brand-js .js-j {
+            animation: jsGlowJ 4.5s ease-in-out infinite;
+        }
+        .portal-nav .portal-brand-js .js-s {
+            animation: jsGlowS 4.5s ease-in-out infinite;
+        }
+        @keyframes jsGlowJ {
+            0%, 100% {
+                text-shadow:
+                    0 2px 10px rgba(0,0,0,0.45),
+                    0 0 18px rgba(255,255,255,0.15),
+                    0 0 28px rgba(216, 41, 38, 0.35);
+            }
+            33% {
+                text-shadow:
+                    0 2px 10px rgba(0,0,0,0.45),
+                    0 0 22px rgba(255,255,255,0.2),
+                    0 0 34px rgba(17, 155, 69, 0.4);
+            }
+            66% {
+                text-shadow:
+                    0 2px 10px rgba(0,0,0,0.45),
+                    0 0 22px rgba(255,255,255,0.2),
+                    0 0 34px rgba(71, 140, 220, 0.4);
+            }
+        }
+        @keyframes jsGlowS {
+            0%, 100% {
+                text-shadow:
+                    0 2px 10px rgba(0,0,0,0.45),
+                    0 0 18px rgba(255,255,255,0.15),
+                    0 0 28px rgba(71, 140, 220, 0.35);
+            }
+            33% {
+                text-shadow:
+                    0 2px 10px rgba(0,0,0,0.45),
+                    0 0 22px rgba(255,255,255,0.2),
+                    0 0 34px rgba(216, 41, 38, 0.4);
+            }
+            66% {
+                text-shadow:
+                    0 2px 10px rgba(0,0,0,0.45),
+                    0 0 22px rgba(255,255,255,0.2),
+                    0 0 34px rgba(17, 155, 69, 0.4);
+            }
         }
         .portal-nav .portal-brand-rgb {
             display: flex;
             flex-direction: column;
-            gap: 5px;
-            padding-top: 2px;
+            gap: 6px;
+            padding-top: 3px;
         }
         .portal-nav .portal-brand-rgb i {
             display: block;
-            width: 28px;
+            width: 30px;
             height: 5px;
-            border-radius: 2px;
+            border-radius: 3px;
+            position: relative;
+            transform-origin: left center;
+            opacity: 0.55;
             box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
         }
-        .portal-nav .portal-brand-rgb i.r { background: var(--brand-red); }
-        .portal-nav .portal-brand-rgb i.g { background: var(--brand-green); }
-        .portal-nav .portal-brand-rgb i.b { background: var(--brand-blue); }
+        .portal-nav .portal-brand-rgb i::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 4px;
+            opacity: 0;
+            filter: blur(4px);
+            pointer-events: none;
+        }
+        .portal-nav .portal-brand-rgb i.r {
+            background: linear-gradient(90deg, #ff4d4a, var(--brand-red), #a01512);
+            animation: brandBarPulse 2.4s ease-in-out infinite;
+        }
+        .portal-nav .portal-brand-rgb i.r::after {
+            background: var(--brand-red);
+            animation: brandBarGlow 2.4s ease-in-out infinite;
+        }
+        .portal-nav .portal-brand-rgb i.g {
+            background: linear-gradient(90deg, #2ee06a, var(--brand-green), #0a6b2e);
+            animation: brandBarPulse 2.4s ease-in-out 0.35s infinite;
+        }
+        .portal-nav .portal-brand-rgb i.g::after {
+            background: var(--brand-green);
+            animation: brandBarGlow 2.4s ease-in-out 0.35s infinite;
+        }
+        .portal-nav .portal-brand-rgb i.b {
+            background: linear-gradient(90deg, #6eb4ff, var(--brand-blue), #1a5a9e);
+            animation: brandBarPulse 2.4s ease-in-out 0.7s infinite;
+        }
+        .portal-nav .portal-brand-rgb i.b::after {
+            background: var(--brand-blue);
+            animation: brandBarGlow 2.4s ease-in-out 0.7s infinite;
+        }
+        @keyframes brandBarPulse {
+            0%, 100% {
+                opacity: 0.5;
+                transform: scaleX(0.92);
+                filter: brightness(0.85);
+            }
+            40%, 55% {
+                opacity: 1;
+                transform: scaleX(1.08);
+                filter: brightness(1.25);
+            }
+        }
+        @keyframes brandBarGlow {
+            0%, 100% { opacity: 0; }
+            40%, 55% { opacity: 0.7; }
+        }
         .portal-nav .portal-brand-title {
             position: relative;
             z-index: 1;
@@ -1882,13 +1985,16 @@
         .portal-nav .portal-brand-bar {
             position: relative;
             z-index: 1;
-            width: 96px;
+            width: 100px;
             height: 4px;
             border-radius: 999px;
             background: linear-gradient(90deg, var(--brand-red), var(--brand-green), var(--brand-blue), var(--brand-red));
             background-size: 200% 100%;
-            animation: brandBarFlow 2.8s linear infinite;
-            box-shadow: 0 0 14px rgba(216, 41, 38, 0.35), 0 0 10px rgba(17, 155, 69, 0.25);
+            animation: brandBarFlow 2.4s linear infinite;
+            box-shadow:
+                0 0 12px rgba(216, 41, 38, 0.4),
+                0 0 18px rgba(17, 155, 69, 0.25),
+                0 0 14px rgba(71, 140, 220, 0.25);
         }
         @keyframes brandBarFlow {
             0% { background-position: 0% 50%; }
@@ -1896,9 +2002,25 @@
         }
         @media (prefers-reduced-motion: reduce) {
             .portal-nav .portal-brand::before,
+            .portal-nav .portal-brand-js .js-letter,
+            .portal-nav .portal-brand-rgb i,
+            .portal-nav .portal-brand-rgb i::after,
             .portal-nav .portal-brand-title,
             .portal-nav .portal-brand-bar {
                 animation: none !important;
+            }
+            .portal-nav .portal-brand-js .js-letter {
+                transform: none;
+                filter: none;
+                -webkit-text-fill-color: #ffffff;
+                background: none;
+                color: #ffffff;
+                text-shadow: 0 2px 10px rgba(0,0,0,0.45);
+            }
+            .portal-nav .portal-brand-rgb i {
+                opacity: 1;
+                transform: none;
+                filter: none;
             }
             .portal-nav .portal-brand-title {
                 -webkit-text-fill-color: #fdf2f8;
@@ -4281,7 +4403,9 @@
     <div class="portal-nav-inner">
         <div class="portal-brand">
             <div class="portal-brand-mark" aria-label="JS Insegne Digitali">
-                <span class="portal-brand-js">JS</span>
+                <span class="portal-brand-js" aria-label="JS">
+                    <span class="js-letter js-j">J</span><span class="js-letter js-s">S</span>
+                </span>
                 <span class="portal-brand-rgb" aria-hidden="true">
                     <i class="r"></i>
                     <i class="g"></i>
@@ -6809,6 +6933,101 @@
             render();
         }
     }
+
+    window.renameStage = function(stageName) {
+        const oldName = String(stageName || '').trim();
+        if (!oldName) return;
+
+        const nextRaw = prompt('Nuovo nome tappa:', oldName);
+        if (nextRaw === null) return; // annullato
+        const newName = String(nextRaw).trim();
+        if (!newName) {
+            alert('Il nome tappa non può essere vuoto.');
+            return;
+        }
+        if (newName === oldName) return;
+
+        // Se esiste già una tappa con quel nome, chiedi conferma del merge
+        const exists = clients.some(c => {
+            if (c.installato || c.standby) return false;
+            const t = (c.tappa || '').trim();
+            const sp = (c.spedizione || '').trim();
+            return t === newName && !sp;
+        }) || clients.some(c => (c.tappa || '').trim() === newName);
+
+        if (exists) {
+            const ok = confirm(
+                'Esiste già una tappa chiamata "' + newName + '".\n' +
+                'I clienti della tappa "' + oldName + '" verranno uniti a quella.\n\nContinuare?'
+            );
+            if (!ok) return;
+        }
+
+        let changed = 0;
+        clients.forEach(c => {
+            if ((c.tappa || '').trim() === oldName) {
+                c.tappa = newName;
+                changed++;
+            }
+        });
+
+        // Aggiorna intervallo giorni (dal/al) della tappa
+        try {
+            const ranges = (typeof loadTappaRanges === 'function') ? loadTappaRanges() : {};
+            if (ranges && ranges[oldName] != null) {
+                if (!ranges[newName]) {
+                    ranges[newName] = ranges[oldName];
+                } else {
+                    // merge: tieni valori esistenti, completa i mancanti
+                    const src = ranges[oldName] || {};
+                    const dst = ranges[newName] || {};
+                    if (!dst.dal && src.dal) dst.dal = src.dal;
+                    if (!dst.al && src.al) dst.al = src.al;
+                    ranges[newName] = dst;
+                }
+                delete ranges[oldName];
+                if (typeof saveTappaRanges === 'function') saveTappaRanges(ranges);
+            }
+        } catch (e) {}
+
+        // Aggiorna ordine percorso salvato per quella tappa
+        try {
+            const map = (typeof loadPercorsoOrderMap === 'function') ? loadPercorsoOrderMap() : null;
+            if (map && map[oldName] != null) {
+                if (!map[newName]) {
+                    map[newName] = map[oldName];
+                } else if (Array.isArray(map[oldName])) {
+                    // unisci evitando duplicati
+                    const seen = new Set((map[newName] || []).map(String));
+                    (map[oldName] || []).forEach(function(id) {
+                        const s = String(id);
+                        if (!seen.has(s)) {
+                            map[newName].push(s);
+                            seen.add(s);
+                        }
+                    });
+                }
+                delete map[oldName];
+                if (typeof savePercorsoOrderMap === 'function') savePercorsoOrderMap(map);
+            }
+        } catch (e) {}
+
+        if (changed === 0) {
+            alert('Nessun cliente trovato nella tappa "' + oldName + '".');
+            return;
+        }
+
+        saveToLocalStorage();
+        render();
+        try {
+            if (typeof currentView !== 'undefined' && currentView === 'percorso' && typeof renderPercorsoPage === 'function') {
+                renderPercorsoPage();
+            }
+            if (typeof currentView !== 'undefined' && currentView === 'meteo' && typeof renderMeteoPage === 'function') {
+                renderMeteoPage();
+            }
+        } catch (e) {}
+    };
 
 
     window.deleteSpedizione = function(spedName) {
