@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <title>JS Insegne Digitali — Note Clienti</title>
-    <meta name="note-clienti-build" content="2026-10-28-fix-rename-stage">
+    <meta name="note-clienti-build" content="2026-10-28-login-card-redesign">
     <style>
         /* APP LOCK: no horizontal page scroll; vertical wheel OK */
         html {
@@ -1572,12 +1572,17 @@
         }
         /* Box login (appare dopo intro) */
         .login-box {
-            background: linear-gradient(180deg, #ffffff 0%, #fdf2f8 100%);
-            border-radius: 20px;
-            padding: 40px 34px;
+            background:
+                radial-gradient(ellipse 90% 60% at 50% -10%, rgba(157, 23, 77, 0.08), transparent 55%),
+                linear-gradient(180deg, #ffffff 0%, #faf5f8 55%, #f7eef4 100%);
+            border-radius: 18px;
+            padding: 28px 26px 26px;
             width: 100%;
-            max-width: 400px;
-            box-shadow: 0 28px 60px -12px rgba(47, 15, 38, 0.5), 0 0 0 1px rgba(244, 114, 182, 0.25);
+            max-width: 340px;
+            box-shadow:
+                0 22px 48px -14px rgba(47, 15, 38, 0.48),
+                0 0 0 1px rgba(47, 15, 38, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.9);
             text-align: center;
             position: relative;
             overflow: hidden;
@@ -1596,49 +1601,293 @@
             content: '';
             position: absolute;
             top: 0; left: 0; right: 0;
-            height: 4px;
+            height: 3px;
             background: linear-gradient(90deg, var(--brand-red), var(--brand-green), var(--brand-blue));
         }
-        .login-box .login-logo {
-            width: 112px;
-            height: auto;
-            margin: 0 auto 14px;
-            display: block;
-            border-radius: 16px;
-            box-shadow: 0 10px 28px rgba(47, 15, 38, 0.35);
-            animation: loginLogoFloat 3.2s ease-in-out infinite;
+        .login-box::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 18px;
+            pointer-events: none;
+            box-shadow: inset 0 0 0 1px rgba(157, 23, 77, 0.06);
         }
-        @keyframes loginLogoFloat {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-5px); }
+        /* Brand JS + RGB nella schermata password */
+        .login-box .login-brand {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            margin: 0 auto 20px;
+            user-select: none;
+            overflow: visible;
+        }
+        .login-box .login-brand-mark {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            overflow: visible;
+            padding: 6px 4px;
+        }
+        .login-box .login-brand-js {
+            display: inline-flex;
+            align-items: center;
+            font-size: 2.85rem;
+            font-weight: 900;
+            letter-spacing: -0.045em;
+            line-height: 1.2;
+            font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            overflow: visible;
+            padding: 4px 2px 6px 2px;
+        }
+        .login-box .login-js-letter {
+            display: inline-block;
+            line-height: 1.2;
+            padding: 0 0.02em;
+            background: linear-gradient(135deg, #2f0f26 0%, #9d174d 55%, #831843 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            filter: drop-shadow(0 6px 14px rgba(47, 15, 38, 0.18));
+            animation: loginJsGlow 3.6s ease-in-out infinite;
+        }
+        .login-box .login-js-letter:nth-child(2) {
+            animation-delay: 0.2s;
+            margin-right: 0.02em;
+            padding-right: 0.03em;
+        }
+        @keyframes loginJsGlow {
+            0%, 100% {
+                filter: drop-shadow(0 6px 12px rgba(47, 15, 38, 0.16)) brightness(1);
+            }
+            50% {
+                filter: drop-shadow(0 8px 20px rgba(157, 23, 77, 0.28)) brightness(1.06);
+            }
+        }
+        .login-box .login-brand-rgb {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 5px;
+            padding-top: 1px;
+        }
+        .login-box .login-brand-rgb i {
+            display: block;
+            width: 30px;
+            height: 5px;
+            border-radius: 999px;
+            position: relative;
+            transform-origin: left center;
+            opacity: 0.55;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+        }
+        .login-box .login-brand-rgb i::after {
+            content: '';
+            position: absolute;
+            inset: -3px;
+            border-radius: 5px;
+            opacity: 0;
+            filter: blur(5px);
+            pointer-events: none;
+        }
+        .login-box .login-brand-rgb i.r {
+            background: linear-gradient(90deg, #ff4d4a, var(--brand-red), #a01512);
+            animation: loginBarPulse 2.4s ease-in-out infinite;
+        }
+        .login-box .login-brand-rgb i.r::after {
+            background: var(--brand-red);
+            animation: loginBarGlow 2.4s ease-in-out infinite;
+        }
+        .login-box .login-brand-rgb i.g {
+            background: linear-gradient(90deg, #2ee06a, var(--brand-green), #0a6b2e);
+            animation: loginBarPulse 2.4s ease-in-out 0.35s infinite;
+        }
+        .login-box .login-brand-rgb i.g::after {
+            background: var(--brand-green);
+            animation: loginBarGlow 2.4s ease-in-out 0.35s infinite;
+        }
+        .login-box .login-brand-rgb i.b {
+            background: linear-gradient(90deg, #6eb4ff, var(--brand-blue), #1a5a9e);
+            animation: loginBarPulse 2.4s ease-in-out 0.7s infinite;
+        }
+        .login-box .login-brand-rgb i.b::after {
+            background: var(--brand-blue);
+            animation: loginBarGlow 2.4s ease-in-out 0.7s infinite;
+        }
+        @keyframes loginBarPulse {
+            0%, 100% {
+                opacity: 0.5;
+                transform: scaleX(0.92);
+                filter: brightness(0.9);
+            }
+            40%, 55% {
+                opacity: 1;
+                transform: scaleX(1.1);
+                filter: brightness(1.2);
+            }
+        }
+        @keyframes loginBarGlow {
+            0%, 100% { opacity: 0; }
+            40%, 55% { opacity: 0.65; }
+        }
+        .login-box .login-brand-bar {
+            width: 96px;
+            height: 3.5px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, var(--brand-red), var(--brand-green), var(--brand-blue), var(--brand-red));
+            background-size: 200% 100%;
+            animation: loginBarFlow 2.4s linear infinite;
+            box-shadow:
+                0 0 12px rgba(216, 41, 38, 0.28),
+                0 0 14px rgba(17, 155, 69, 0.18),
+                0 0 12px rgba(71, 140, 220, 0.18);
+        }
+        @keyframes loginBarFlow {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+        .login-box .login-brand-sub {
+            font-size: 0.68rem;
+            font-weight: 800;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: #9d174d;
+            opacity: 0.9;
         }
         .login-box h1 {
-            font-size: 1.4rem;
-            color: var(--primary);
-            margin-bottom: 6px;
+            font-size: 1.28rem;
+            color: #2f0f26;
+            margin-bottom: 4px;
             font-weight: 800;
+            letter-spacing: -0.025em;
         }
-        .login-box p {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-            margin-bottom: 24px;
+        .login-box .login-lead {
+            color: #7a6470;
+            font-size: 0.84rem;
+            margin-bottom: 18px;
+            line-height: 1.4;
         }
-        .login-box .input-control {
+        .login-box .login-brand {
             margin-bottom: 14px;
-            text-align: center;
-            font-size: 1rem;
-            letter-spacing: 0.05em;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .login-box .login-js-letter,
+            .login-box .login-brand-rgb i,
+            .login-box .login-brand-rgb i::after,
+            .login-box .login-brand-bar {
+                animation: none !important;
+            }
+            .login-box .login-brand-rgb i {
+                opacity: 1;
+                transform: none;
+                filter: none;
+            }
+        }
+        .login-box .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            width: 100%;
+        }
+        .login-box .login-field {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 0 14px;
+            min-height: 48px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.92);
+            border: 1.5px solid rgba(47, 15, 38, 0.12);
+            box-shadow:
+                0 1px 2px rgba(47, 15, 38, 0.04),
+                inset 0 1px 0 rgba(255, 255, 255, 0.9);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+            cursor: text;
+            margin-bottom: 10px;
+        }
+        .login-box .login-field:focus-within {
+            border-color: rgba(157, 23, 77, 0.55);
+            background: #fff;
+            box-shadow:
+                0 0 0 4px rgba(157, 23, 77, 0.12),
+                0 8px 20px rgba(47, 15, 38, 0.08);
+        }
+        .login-box .login-field-ico {
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 9px;
+            color: #9d174d;
+            background: linear-gradient(145deg, #fdf2f8, #fce7f3);
+            border: 1px solid rgba(157, 23, 77, 0.14);
+        }
+        .login-box .login-pass-input {
+            flex: 1;
+            min-width: 0;
+            border: none;
+            outline: none;
+            background: transparent;
+            font-size: 0.98rem;
+            font-weight: 600;
+            color: #2f0f26;
+            letter-spacing: 0.08em;
+            padding: 12px 2px;
+            font-family: inherit;
+        }
+        .login-box .login-pass-input::placeholder {
+            color: #b09aa3;
+            font-weight: 500;
+            letter-spacing: 0.04em;
         }
         .login-error {
-            color: var(--danger);
-            font-size: 0.85rem;
-            margin-bottom: 12px;
-            min-height: 1.2em;
+            color: #dc2626;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            min-height: 1.15em;
         }
-        .login-box .btn-primary {
+        .login-box .login-submit {
             width: 100%;
+            display: inline-flex;
+            align-items: center;
             justify-content: center;
-            padding: 12px;
+            gap: 8px;
+            min-height: 48px;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+            color: #fff;
+            background: linear-gradient(135deg, #9d174d 0%, #831843 45%, #2f0f26 100%);
+            box-shadow:
+                0 10px 24px rgba(157, 23, 77, 0.32),
+                inset 0 1px 0 rgba(255, 255, 255, 0.18);
+            transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+        }
+        .login-box .login-submit:hover {
+            filter: brightness(1.06);
+            box-shadow:
+                0 14px 28px rgba(157, 23, 77, 0.38),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+        .login-box .login-submit:active {
+            transform: translateY(0);
+            filter: brightness(0.98);
+        }
+        .login-box .login-submit:disabled {
+            opacity: 0.7;
+            cursor: wait;
+            transform: none;
         }
         .login-skip {
             position: absolute;
@@ -1801,7 +2050,7 @@
             border-bottom: 1px solid rgba(244, 114, 182, 0.25);
             margin-bottom: 8px;
             position: relative;
-            overflow: hidden;
+            overflow: visible;
         }
         .portal-nav .portal-brand::before {
             content: '';
@@ -1829,7 +2078,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 12px;
+            gap: 7px;
             user-select: none;
         }
         .portal-nav .portal-brand-js {
@@ -1838,8 +2087,10 @@
             align-items: center;
             font-size: 2.75rem;
             font-weight: 900;
-            letter-spacing: -0.05em;
-            line-height: 1;
+            letter-spacing: 0.02em;
+            line-height: 1.15;
+            padding: 2px 2px 4px;
+            overflow: visible;
             font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
         }
         .portal-nav .portal-brand-js .js-letter {
@@ -1849,6 +2100,11 @@
             background: none;
             position: relative;
             transition: none;
+            line-height: 1.15;
+            padding: 0 1px;
+        }
+        .portal-nav .portal-brand-js .js-s {
+            padding-right: 3px;
         }
         /* Alone colorato RGB che ruota piano sulle lettere */
         .portal-nav .portal-brand-js .js-j {
@@ -1900,14 +2156,15 @@
         .portal-nav .portal-brand-rgb {
             display: flex;
             flex-direction: column;
-            gap: 6px;
-            padding-top: 3px;
+            justify-content: center;
+            gap: 5px;
+            padding-top: 1px;
         }
         .portal-nav .portal-brand-rgb i {
             display: block;
-            width: 30px;
-            height: 5px;
-            border-radius: 3px;
+            width: 26px;
+            height: 4.5px;
+            border-radius: 999px;
             position: relative;
             transform-origin: left center;
             opacity: 0.55;
@@ -2595,18 +2852,17 @@
                 padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
             }
             .login-box {
-                padding: 36px 24px 28px; margin: 0; border-radius: 24px;
-                box-shadow: 0 25px 50px rgba(0, 0, 0, 0.35); max-width: 360px;
+                padding: 26px 22px 24px; margin: 0; border-radius: 18px;
+                box-shadow: 0 22px 48px rgba(47, 15, 38, 0.4); max-width: 320px;
             }
-            .login-box h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; }
-            .login-box p { font-size: 0.95rem; margin-bottom: 28px; }
-            .login-box .input-control {
-                font-size: 16px; min-height: 50px; border-radius: 14px;
-                background: #f8fafc; margin-bottom: 16px;
+            .login-box h1 { font-size: 1.22rem; font-weight: 800; letter-spacing: -0.02em; }
+            .login-box .login-lead { font-size: 0.84rem; margin-bottom: 16px; }
+            .login-box .login-pass-input {
+                font-size: 16px; /* evita zoom iOS */
             }
-            .login-box .btn-primary {
+            .login-box .login-field { min-height: 50px; border-radius: 14px; }
+            .login-box .login-submit {
                 min-height: 50px; border-radius: 14px; font-size: 1rem;
-                box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
             }
             .prep-suggestions-card {
                 border-radius: 16px; border: none;
@@ -4382,13 +4638,35 @@
     </div>
     <button type="button" class="login-skip" id="loginSkipIntro" onclick="finishLoginIntro()">Salta intro ›</button>
     <div class="login-box" id="loginBox">
-        <img class="login-logo" src="logo-js.jpg" alt="JS Insegne Digitali" width="112" height="112">
+        <div class="login-brand" aria-label="JS Insegne Digitali">
+            <div class="login-brand-mark">
+                <span class="login-brand-js" aria-label="JS">
+                    <span class="login-js-letter">J</span><span class="login-js-letter">S</span>
+                </span>
+                <span class="login-brand-rgb" aria-hidden="true">
+                    <i class="r"></i>
+                    <i class="g"></i>
+                    <i class="b"></i>
+                </span>
+            </div>
+            <div class="login-brand-bar" aria-hidden="true"></div>
+            <div class="login-brand-sub">Insegne Digitali</div>
+        </div>
         <h1>Note Clienti</h1>
-        <p>Inserisci la password per continuare</p>
-        <form id="loginForm" onsubmit="return checkLogin(event)">
-            <input type="password" id="loginPassword" class="input-control" placeholder="Password" autocomplete="current-password">
+        <p class="login-lead">Inserisci la password per continuare</p>
+        <form id="loginForm" class="login-form" onsubmit="return checkLogin(event)">
+            <label class="login-field" for="loginPassword">
+                <span class="login-field-ico" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M7 11V8a5 5 0 0 1 10 0v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <rect x="5" y="11" width="14" height="10" rx="2.5" stroke="currentColor" stroke-width="2"/>
+                        <circle cx="12" cy="16" r="1.5" fill="currentColor"/>
+                    </svg>
+                </span>
+                <input type="password" id="loginPassword" class="login-pass-input" placeholder="Password" autocomplete="current-password" inputmode="text">
+            </label>
             <div id="loginError" class="login-error"></div>
-            <button type="submit" class="btn btn-primary">Entra</button>
+            <button type="submit" class="login-submit">Entra</button>
         </form>
     </div>
 </div>
