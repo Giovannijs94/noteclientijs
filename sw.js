@@ -1,5 +1,5 @@
 /* Service Worker – Gestione Note Clienti PWA */
-const CACHE_NAME = 'note-clienti-v47';
+const CACHE_NAME = 'note-clienti-v48';
 const ASSETS = [
   './',
   './index.html',
@@ -8,7 +8,8 @@ const ASSETS = [
   './icon-192.png',
   './icon-512.png',
   './icon-180.png',
-  './favicon.png'
+  './favicon.png',
+  './icon-512-maskable.png'
 ];
 
 self.addEventListener('install', (event) => {
