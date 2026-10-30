@@ -3048,6 +3048,43 @@
             font-size: 1.1rem;
             font-weight: 700;
         }
+
+        .prep-ocr-status {
+            margin: 0 0 12px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            font-size: 0.86rem;
+            font-weight: 600;
+            line-height: 1.45;
+            background: #eef2ff;
+            border: 1px solid #c7d2fe;
+            color: #3730a3;
+        }
+        .prep-ocr-status.is-work {
+            background: #fff7ed;
+            border-color: #fed7aa;
+            color: #9a3412;
+        }
+        .prep-ocr-status.is-ok {
+            background: #ecfdf5;
+            border-color: #a7f3d0;
+            color: #065f46;
+        }
+        .prep-ocr-status.is-err {
+            background: #fef2f2;
+            border-color: #fecaca;
+            color: #991b1b;
+        }
+        .prep-ocr-preview {
+            display: block;
+            max-width: 100%;
+            max-height: 140px;
+            margin-top: 8px;
+            border-radius: 10px;
+            border: 1px solid rgba(0,0,0,0.08);
+            object-fit: contain;
+            background: #0f172a;
+        }
         #viewPrep .installati-table-wrap {
             background: var(--card-bg);
             border-radius: var(--radius);
@@ -5696,7 +5733,29 @@
     </div>
 
     <div class="card" style="margin-bottom:16px;">
-        <div class="card-title">➕ Nuovo cliente in Pre-pianificazione</div>
+        <div class="card-title" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;">
+            <span>➕ Nuovo cliente in Pre-pianificazione</span>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+                <button type="button" class="btn btn-primary" id="prepOcrCaptureBtn" onclick="prepCaptureAndFill()">📷 Cattura intera finestra</button>
+                <button type="button" class="btn" id="prepOcrCaptureMoreBtn" onclick="prepCaptureAndFill()" title="Scorri altre schede in LED Manager e cattura di nuovo">➕ Cattura altri</button>
+                <label class="btn" style="cursor:pointer;margin:0;" title="Oppure carica un’immagine già salvata">
+                    🖼️ Da file
+                    <input type="file" id="prepOcrFileInput" accept="image/*" capture="environment" style="display:none;" onchange="prepOcrFromFile(event)">
+                </label>
+            </div>
+        </div>
+        <p style="margin:0 0 10px;font-size:0.82rem;color:var(--text-muted);line-height:1.4;">
+            <strong>Modo veloce (consigliato):</strong> in LED Manager seleziona i riquadri (o Ctrl+A sulla lista) → <strong>Ctrl+C</strong> → qui <strong>Incolla e importa tutti</strong>.
+            Oppure usa la cattura schermo per le schede visibili; scorri e premi <strong>Cattura altri</strong> per il resto.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+            <textarea id="prepPasteArea" class="input-control" rows="1" placeholder="Incolla qui da LED Manager (Ctrl+V)…" style="min-height:36px;max-height:56px;resize:none;font-size:0.84rem;padding:8px 10px;line-height:1.3;"></textarea>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                <button type="button" class="btn btn-primary" onclick="prepImportFromPaste()">📋 Incolla e importa tutti</button>
+                <button type="button" class="btn" onclick="document.getElementById('prepPasteArea').value='';setPrepOcrStatus('', '');">Svuota</button>
+            </div>
+        </div>
+        <div id="prepOcrStatus" class="prep-ocr-status" hidden></div>
         <form id="prepClientForm">
             <div class="form-grid prep-form-grid">
                 <div class="form-group">
@@ -6074,6 +6133,20 @@
             <button type="button" class="btn" onclick="closeEditScadenzaPrep()">Annulla</button>
             <button type="button" class="btn" style="color:#dc2626;" onclick="clearEditScadenzaPrep()">Rimuovi</button>
             <button type="button" class="btn btn-primary" onclick="confirmEditScadenzaPrep()">Salva</button>
+        </div>
+    </div>
+</div>
+
+
+<div id="renameClientModal" class="modal-overlay confirm-modal">
+    <div class="modal confirm-box" style="max-width:420px;">
+        <h3>Rinomina cliente</h3>
+        <p class="confirm-desc" style="margin-bottom:12px;">Nome attuale: <strong id="renameClientOldName"></strong></p>
+        <input type="text" id="renameClientInput" class="input-control" placeholder="Nuovo nome cliente…" style="margin-bottom:10px; text-align:center;" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmRenameClient();}">
+        <div id="renameClientError" class="login-error" style="min-height:1.2em;"></div>
+        <div class="confirm-actions">
+            <button type="button" class="btn" onclick="closeRenameClientModal()">Annulla</button>
+            <button type="button" class="btn btn-primary" onclick="confirmRenameClient()">Salva</button>
         </div>
     </div>
 </div>
@@ -8089,6 +8162,62 @@
 
     let pendingDeleteId = null;
 
+    let pendingRenameClientId = null;
+
+    window.renameClient = function(id) {
+        const client = clients.find(c => String(c.id) === String(id));
+        if (!client) return;
+        pendingRenameClientId = id;
+        const oldEl = document.getElementById('renameClientOldName');
+        const inp = document.getElementById('renameClientInput');
+        const err = document.getElementById('renameClientError');
+        const modal = document.getElementById('renameClientModal');
+        if (oldEl) oldEl.textContent = client.nome || '';
+        if (inp) inp.value = client.nome || '';
+        if (err) err.textContent = '';
+        if (modal) modal.style.display = 'flex';
+        setTimeout(function() {
+            if (inp) { try { inp.focus(); inp.select(); } catch (e) {} }
+        }, 50);
+    };
+
+    window.closeRenameClientModal = function() {
+        pendingRenameClientId = null;
+        const modal = document.getElementById('renameClientModal');
+        if (modal) modal.style.display = 'none';
+    };
+
+    window.confirmRenameClient = function() {
+        const err = document.getElementById('renameClientError');
+        if (!pendingRenameClientId) return;
+        const client = clients.find(c => String(c.id) === String(pendingRenameClientId));
+        if (!client) return;
+        const inp = document.getElementById('renameClientInput');
+        let clean = (inp && inp.value) ? inp.value.trim() : '';
+        if (typeof toAppUpper === 'function') clean = toAppUpper(clean);
+        if (!clean) {
+            if (err) err.textContent = 'Inserisci un nome.';
+            return;
+        }
+        // avviso se omonimo diverso id
+        const dup = clients.find(c =>
+            String(c.id) !== String(pendingRenameClientId) &&
+            (c.nome || '').trim().toLowerCase() === clean.toLowerCase()
+        );
+        if (dup && !confirm('Esiste già un cliente «' + clean + '». Rinomina comunque?')) {
+            return;
+        }
+        client.nome = clean;
+        saveToLocalStorage();
+        pendingRenameClientId = null;
+        const modal = document.getElementById('renameClientModal');
+        if (modal) modal.style.display = 'none';
+        try { render(); } catch (e) {}
+        try { if (typeof renderPrepPage === 'function') renderPrepPage(); } catch (e) {}
+        try { if (typeof renderStandbyPage === 'function' && currentView === 'standby') renderStandbyPage(); } catch (e) {}
+        try { if (typeof renderInstallatiPage === 'function' && currentView === 'installati') renderInstallatiPage(); } catch (e) {}
+    };
+
     window.deleteClient = function(id) {
         const client = clients.find(c => String(c.id) === String(id));
         if (!client) return;
@@ -8108,7 +8237,10 @@
         saveToLocalStorage();
         pendingDeleteId = null;
         document.getElementById('confirmDeleteModal').style.display = 'none';
-        render();
+        try { render(); } catch (e) {}
+        try { if (typeof renderPrepPage === 'function') renderPrepPage(); } catch (e) {}
+        try { if (typeof renderStandbyPage === 'function') renderStandbyPage(); } catch (e) {}
+        try { if (typeof renderInstallatiPage === 'function') renderInstallatiPage(); } catch (e) {}
     }
 
     window.deleteStage = function(stageName) {
@@ -9000,6 +9132,7 @@
                 '<button type="button" class="btn" style="background:#2563eb;color:#fff;border:none;" onclick="moveToPrep(\'' + client.id + '\')">📋 Pre-pianif.</button>' +
                 '<button type="button" class="btn" style="background:#16a34a;color:#fff;border:none;" onclick="markInstallato(\'' + client.id + '\')">✅ Installato</button>' +
                 '<button type="button" class="btn" style="background:#d97706;color:#fff;border:none;" onclick="markStandby(\'' + client.id + '\')">⏸️ Stand-by</button>' +
+                '<button type="button" class="btn-icon" onclick="renameClient(\'' + client.id + '\')" title="Rinomina">✏️</button>' +
                 '<button type="button" class="btn-icon danger" onclick="deleteClient(\'' + client.id + '\')" title="Elimina">🗑️</button>' +
               '</div>' +
             '</article>'
@@ -9369,6 +9502,7 @@
                                 <button class="btn" style="padding:8px 10px; font-size:0.75rem; background:#2563eb; color:white; border:none;" onclick="moveToPrep('${client.id}')">📋 Pre-pianif.</button>
                                 <button class="btn" style="padding:8px 10px; font-size:0.75rem; background:#16a34a; color:white; border:none;" onclick="markInstallato('${client.id}')">✅ Installato</button>
                                 <button class="btn" style="padding:8px 10px; font-size:0.75rem; background:#d97706; color:white; border:none;" onclick="markStandby('${client.id}')">⏸️ Stand-by</button>
+                                <button class="btn-icon" onclick="renameClient('${client.id}')" title="Rinomina">✏️</button>
                                 <button class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
                             </div>
                         </td>
@@ -9416,6 +9550,755 @@
         if (currentView === 'percorso') renderPercorsoPage();
     }
 
+
+
+    // ===== PREP OCR: cattura schermo / file → compilazione automatica =====
+    let _prepTesseractLoading = null;
+
+    function setPrepOcrStatus(msg, kind) {
+        const el = document.getElementById('prepOcrStatus');
+        if (!el) return;
+        if (!msg) {
+            el.hidden = true;
+            el.innerHTML = '';
+            el.className = 'prep-ocr-status';
+            return;
+        }
+        el.hidden = false;
+        el.className = 'prep-ocr-status' + (kind ? (' is-' + kind) : '');
+        el.innerHTML = msg;
+    }
+
+    function loadTesseractLib() {
+        if (window.Tesseract) return Promise.resolve(window.Tesseract);
+        if (_prepTesseractLoading) return _prepTesseractLoading;
+        _prepTesseractLoading = new Promise(function(resolve, reject) {
+            const s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+            s.async = true;
+            s.onload = function() {
+                if (window.Tesseract) resolve(window.Tesseract);
+                else reject(new Error('Tesseract non disponibile'));
+            };
+            s.onerror = function() { reject(new Error('Impossibile caricare il motore OCR (serve internet la prima volta)')); };
+            document.head.appendChild(s);
+        });
+        return _prepTesseractLoading;
+    }
+
+    function captureDisplayFrame() {
+        return navigator.mediaDevices.getDisplayMedia({
+            video: true,
+            audio: false
+        }).then(function(stream) {
+            return new Promise(function(resolve, reject) {
+                const video = document.createElement('video');
+                video.muted = true;
+                video.playsInline = true;
+                video.srcObject = stream;
+                const stop = function() {
+                    try { stream.getTracks().forEach(function(t) { t.stop(); }); } catch (e) {}
+                };
+                video.onloadedmetadata = function() {
+                    video.play().then(function() {
+                        setTimeout(function() {
+                            try {
+                                const w = video.videoWidth || 1280;
+                                const h = video.videoHeight || 720;
+                                const canvas = document.createElement('canvas');
+                                canvas.width = w;
+                                canvas.height = h;
+                                canvas.getContext('2d').drawImage(video, 0, 0, w, h);
+                                stop();
+                                resolve(canvas);
+                            } catch (err) {
+                                stop();
+                                reject(err);
+                            }
+                        }, 350);
+                    }).catch(function(err) { stop(); reject(err); });
+                };
+                video.onerror = function() { stop(); reject(new Error('Cattura video non riuscita')); };
+            });
+        });
+    }
+
+    function parseItalianDateToISO(raw) {
+        if (!raw) return '';
+        const s = String(raw).trim();
+        let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (m) return m[0];
+        m = s.match(/(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/);
+        if (m) {
+            let d = parseInt(m[1], 10), mo = parseInt(m[2], 10), y = parseInt(m[3], 10);
+            if (y < 100) y += 2000;
+            if (d > 31 && mo <= 12) { const t = d; d = mo; mo = t; }
+            if (mo < 1 || mo > 12 || d < 1 || d > 31) return '';
+            return y + '-' + String(mo).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+        }
+        return '';
+    }
+
+    function splitLedManagerCardTexts(ocrText) {
+        const raw = String(ocrText || '').replace(/\r/g, '\n');
+        // Spezza dove inizia una nuova scheda: CONF. ORDINE / Installatore / id (12345)
+        let parts = raw.split(/(?=\bCONF\.?\s*ORDINE\b)/i);
+        if (parts.length <= 1) {
+            parts = raw.split(/(?=\bInstallatore\s*:)/i);
+        }
+        // Se ancora un solo blocco, prova a spezzare su "AVVIA" / fine scheda
+        if (parts.length <= 1) {
+            const byAvvia = raw.split(/(?:\bAVVIA\b|\bELIMINA\b)/i);
+            if (byAvvia.length > 1) parts = byAvvia;
+        }
+
+        const cards = [];
+        for (let i = 0; i < parts.length; i++) {
+            let chunk = parts[i].trim();
+            if (!chunk) continue;
+            // Riattacca eventuale riga nome dalla fine del pezzo precedente
+            if (i > 0 && !/^\s*[A-Za-zÀ-ù]/.test(chunk)) {
+                // keep as is
+            }
+            // Se il pezzo inizia con CONF. ORDINE, recupera ultime 1-2 righe del pezzo precedente come nome
+            if (i > 0 && /^\s*CONF\.?\s*ORDINE/i.test(chunk)) {
+                const prevLines = parts[i - 1].trim().split(/\n+/).filter(Boolean);
+                const tail = prevLines.slice(-2).join('\n');
+                chunk = tail + '\n' + chunk;
+            }
+            // Solo riquadri scheda ordine (non dashboard)
+            if (chunk.length < 30) continue;
+            const isCard = /(scadenza|montaggio|indirizzo|installatore|\bindoor\b|\boutdoor\b|passo|\bcm\s*\d)/i.test(chunk)
+                || /\(\s*\d{3,}\s*\)/.test(chunk);
+            const isDashboard = /(dashboard|menu laterale|totale ordini|filtro avanzato|led manager pro)/i.test(chunk)
+                && !/\binstallatore\b/i.test(chunk);
+            if (!isCard || isDashboard) continue;
+            cards.push(chunk);
+        }
+
+        // Dedup grezzo
+        const uniq = [];
+        const seen = {};
+        cards.forEach(function(c) {
+            const key = c.slice(0, 80).toLowerCase().replace(/\s+/g, ' ');
+            if (seen[key]) return;
+            seen[key] = true;
+            uniq.push(c);
+        });
+        return uniq.length ? uniq : [raw];
+    }
+
+    function extractPrepFieldsFromText(ocrText) {
+        // Parser ottimizzato per scheda LED Manager Pro + fallback generico
+        const raw = String(ocrText || '').replace(/\r/g, '\n');
+        let lines = raw.split(/\n+/).map(function(l) {
+            return l.replace(/[|•·]+/g, ' ').replace(/\s+/g, ' ').trim();
+        }).filter(Boolean);
+
+        const noiseRe = /^(home|menu|cerca|search|filtra|impostazioni|modifica|elimina|avvia|aggiungi|priorit[aà]\s*urgente|necessaria\s*spedizione|struttura|calendarizza|jumboscreen|note clienti|stand-?by|ordini|percorso|meteo)$/i;
+        lines = lines.filter(function(L) {
+            if (L.length < 2) return false;
+            if (noiseRe.test(L)) return false;
+            if (/^(priorit|necessaria|struttura\s*non|calendarizz)/i.test(L)) return false;
+            return true;
+        });
+
+        const full = lines.join('\n');
+        const fullOne = lines.join(' ');
+        const out = { nome: '', modello: '', localita: '', scadenza: '', montaggio: '', qta: '' };
+
+        function cleanVal(v) {
+            return String(v || '')
+                .replace(/\s{2,}/g, ' ')
+                .replace(/^[\s:.\-–]+/, '')
+                .replace(/[\s.]+$/, '')
+                .trim();
+        }
+
+        // Nome: SOLO in alto a sinistra del riquadro — pulito da UI (mod.bipiemme, installati, ecc.)
+        function cleanLedClientName(s) {
+            let t = String(s || '').replace(/\s+/g, ' ').trim();
+            t = t.split(/\bCONF\.?\s*ORDINE\b/i)[0];
+            t = t.split(/\bNULLA\s*OSTA\b/i)[0];
+            t = t.split(/\bSCADENZA\s*:/i)[0];
+            t = t.split(/\bIN\s*CODA\b/i)[0];
+            t = t.replace(/mod\.?\s*bipiemme/ig, ' ');
+            t = t.replace(/bipiemme(?:\s*communication)?/ig, ' ');
+            t = t.replace(/mod\.?\s*bipiem+e/ig, ' ');
+            t = t.replace(/\binstallatore\b[:\s-]*/ig, ' ');
+            t = t.replace(/\binstallati\b/ig, ' ');
+            t = t.replace(/\binstallato\b/ig, ' ');
+            t = t.replace(/\binstallazione\b/ig, ' ');
+            t = t.replace(/\btipologia\b[:\s-]*\w*/ig, ' ');
+            t = t.replace(/\bin\s*coda\b/ig, ' ');
+            t = t.replace(/\bconf\.?\s*ordine\b[:\s-]*\d*/ig, ' ');
+            t = t.replace(/\bnulla\s*osta\b[:\s-]*\w*/ig, ' ');
+            t = t.replace(/\bscadenza\b[:\s-]*[\d\/\.\-]*/ig, ' ');
+            t = t.replace(/\bmod\.\b/ig, ' ');
+            t = t.replace(/\s{2,}/g, ' ').trim();
+            t = t.replace(/^[\s\-–—|:,]+/, '').replace(/[\s\-–—|:,]+$/, '').trim();
+            return t;
+        }
+        function stripUiRight(s) { return cleanLedClientName(s); }
+
+        let ledNome = '';
+        const preInstall = [];
+        for (let i = 0; i < lines.length; i++) {
+            const L = lines[i];
+            if (/^installatore\b/i.test(L)) break;
+            if (/^(modifica|elimina|avvia|misura|passo|cabinet|montaggio|indirizzo|contratto|tipologia)\b/i.test(L)) continue;
+            if (/^\s*conf\.?\s*ordine\b/i.test(L)) continue;
+            if (/^\s*nulla\s*osta\b/i.test(L)) continue;
+            if (/^\s*scadenza\s*:/i.test(L)) continue;
+            if (/\bin\s*coda\b/i.test(L) && !/\([0-9]{3,}\)/.test(L)) continue;
+            if (/\b(dashboard|elenco|filtri?|ricerca|led\s*manager\s*pro|totale)\b/i.test(L) && !/\([0-9]{3,}\)/.test(L)) continue;
+            // non usare righe che sono solo rumore (mod.bipiemme / installati)
+            const onlyNoise = /^(mod\.?\s*)?bipiemme$|^installati$|^installatore$|^mod\.$/i.test(L.trim());
+            if (onlyNoise) continue;
+            if (/\b(mod\.?\s*bipiemme|bipiemme)\b/i.test(L) && !/[A-Za-zÀ-ù]{4,}/.test(L.replace(/\b(mod\.?\s*)?bipiemme\b/ig, ''))) continue;
+            if (/[A-Za-zÀ-ù]{3,}/.test(L) && L.length >= 3) {
+                const cleaned = cleanLedClientName(L);
+                if (cleaned.length >= 3) preInstall.push(L);
+            }
+        }
+        // 1) riga con codice (id) tra parentesi
+        for (let i = 0; i < preInstall.length; i++) {
+            if (/\(\s*\d{3,}\s*\)/.test(preInstall[i])) {
+                ledNome = stripUiRight(preInstall[i]);
+                if (i > 0 && preInstall[i - 1].length >= 3 && preInstall[i - 1].length <= 48
+                    && !/\(\s*\d{3,}\s*\)/.test(preInstall[i - 1])
+                    && !/^(conf|nulla|scadenza|mod\.?|bipiemme|install)/i.test(preInstall[i - 1])) {
+                    const prev = stripUiRight(preInstall[i - 1]);
+                    if (prev && ledNome.toLowerCase().indexOf(prev.toLowerCase()) < 0) {
+                        ledNome = (prev + ' ' + ledNome).replace(/\s{2,}/g, ' ').trim();
+                    }
+                }
+                break;
+            }
+        }
+        // 2) eventuale nome spezzato
+        if (!ledNome && preInstall.length >= 2 && preInstall[0].length <= 28 && preInstall[1].length <= 48) {
+            const j = stripUiRight(preInstall[0] + ' ' + preInstall[1]);
+            if (j.length >= 6) ledNome = j;
+        }
+        // 3) prima riga utile
+        if (!ledNome && preInstall.length) ledNome = stripUiRight(preInstall[0]);
+        if (ledNome) {
+            let n = cleanLedClientName(ledNome);
+            n = n.replace(/([A-Za-zÀ-ù])\(\s*(\d{3,})\s*\)/g, '$1 ($2)');
+            out.nome = n.trim();
+        }
+
+        // Modello
+        let ledModello = '';
+        const modelloRe = /\b([A-Z]{1,4}\d{2,4}\s*\/\s*\d+(?:[.,]\d+)?[^\n]*?(?:INDOOR|OUTDOOR)[^\n]*)/i;
+        const mMod = fullOne.match(modelloRe);
+        if (mMod) {
+            ledModello = mMod[1];
+        } else {
+            for (let i = 0; i < lines.length; i++) {
+                const L = lines[i];
+                if (/^installatore\b/i.test(L)) continue;
+                if (/\b(INDOOR|OUTDOOR)\b/i.test(L) && /(?:SMD|CM|DV|FC\d|\/\d)/i.test(L)) {
+                    ledModello = L;
+                    break;
+                }
+                if (/^(FC|PH|P)\d/i.test(L) && L.length > 8) {
+                    ledModello = L;
+                    break;
+                }
+            }
+        }
+        if (ledModello) {
+            ledModello = ledModello.split(/\bTipologia\b/i)[0].trim();
+            out.modello = cleanVal(ledModello.replace(/\s{2,}/g, ' '));
+        }
+
+        // Città da Indirizzo
+        let ledCitta = '';
+        const mInd = full.match(/indirizzo\s*[:\-–]?\s*([^\n]+)/i);
+        if (mInd) {
+            const ind = mInd[1];
+            let mC = ind.match(/\-\s*([A-ZÀ-Ù][A-Za-zÀ-ù'\s]+?)\s*\(/);
+            if (mC) ledCitta = mC[1].trim();
+            if (!ledCitta && ind.indexOf('-') >= 0) {
+                const part = ind.split('-').pop().replace(/\(.*?\)/g, '').trim();
+                if (part && !/^\d+$/.test(part)) ledCitta = part;
+            }
+        }
+        if (ledCitta) out.localita = cleanVal(ledCitta.replace(/\(.*?\)/g, '').trim());
+
+        // Scadenza
+        const mScad = fullOne.match(/\bscadenza\s*[:\-–]?\s*(\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4})/i);
+        if (mScad) out.scadenza = parseItalianDateToISO(mScad[1]);
+        if (!out.scadenza) {
+            const allDates = fullOne.match(/\b\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}\b/g) || [];
+            if (allDates.length) out.scadenza = parseItalianDateToISO(allDates[allDates.length - 1]);
+        }
+
+        // Montaggio
+        const mMont = fullOne.match(/\bmontaggio\s*[:\-–]?\s*(a\s+)?(piantana|carrello|appesa|bandiera|parete|su\s*palo|altro)/i);
+        if (mMont) {
+            let m = (mMont[2] || '').toLowerCase();
+            if (m.indexOf('palo') >= 0) out.montaggio = 'Su palo';
+            else if (m === 'piantana') out.montaggio = 'Piantana';
+            else if (m === 'carrello') out.montaggio = 'Carrello';
+            else if (m === 'appesa') out.montaggio = 'Appesa';
+            else if (m === 'bandiera') out.montaggio = 'Bandiera';
+            else if (m === 'parete') out.montaggio = 'Parete';
+            else if (m === 'altro') out.montaggio = 'Altro';
+        }
+
+        // Fallback etichette
+        function afterLabel(src, re) {
+            const m = src.match(re);
+            return m ? cleanVal(m[1]) : '';
+        }
+        if (!out.nome) out.nome = afterLabel(full, /(?:nome\s*cliente|cliente|ragione\s*sociale|\bnome)\s*[:\-–]\s*([^\n]{3,80})/i);
+        if (!out.modello) out.modello = afterLabel(full, /(?:modello|prodotto|articolo)\s*[:\-–]\s*([^\n]{2,80})/i);
+        if (!out.localita) out.localita = afterLabel(full, /(?:localit[aà]|citt[aà]|comune|paese)\s*[:\-–]\s*([^\n]{2,60})/i);
+        if (!out.montaggio) {
+            const montOpts = ['Piantana', 'Carrello', 'Appesa', 'Bandiera', 'Parete', 'Su palo', 'Altro'];
+            for (let i = 0; i < montOpts.length; i++) {
+                const re = new RegExp('\\b' + montOpts[i].replace(/\s+/g, '\\s+') + '\\b', 'i');
+                if (re.test(fullOne)) { out.montaggio = montOpts[i]; break; }
+            }
+        }
+
+        const qm = fullOne.match(/(?:q\.?\s*t[aà]|quantit[aà]|pezzi|n[°o\.]?\s*pz)\s*[:\-–]?\s*(\d{1,3})/i);
+        if (qm) out.qta = qm[1];
+
+        // Numero ordine LED Manager: CONF. ORDINE: 23667103
+        const mOrd = fullOne.match(/\bconf\.?\s*ordine\s*[:\-–]?\s*(\d{4,})/i);
+        if (mOrd) out.confOrdine = mOrd[1];
+        else out.confOrdine = '';
+
+        return out;
+    }
+
+    function extractAllPrepClientsFromText(ocrText) {
+        const cards = splitLedManagerCardTexts(ocrText);
+        const results = [];
+        const seenKeys = {};
+        cards.forEach(function(card) {
+            const f = extractPrepFieldsFromText(card);
+            if (!f) return;
+            // Solo schede complete (riquadro ordine), non pezzi di dashboard
+            if (!f.nome) return;
+            if (!(f.modello || f.localita || f.scadenza || f.montaggio || f.confOrdine)) return;
+            // Stesso nome + stesso n° ordine = duplicato nello screenshot; nome uguale + ordine diverso = OK
+            const baseNome = String(f.nome || '').toLowerCase().replace(/\(\s*\d+\s*\)/g, '').replace(/\s+/g, ' ').trim();
+            const key = baseNome + '||' + String(f.confOrdine || '');
+            if (seenKeys[key]) return;
+            seenKeys[key] = true;
+            results.push(f);
+        });
+        // Se lo split ha fallito e abbiamo 1 solo risultato vuoto, prova tutto il testo
+        if (!results.length) {
+            const f = extractPrepFieldsFromText(ocrText);
+            if (f && (f.nome || f.modello)) results.push(f);
+        }
+        return results;
+    }
+
+    async function resolvePrepLocation(localitaVal) {
+        const loc = String(localitaVal || '').trim();
+        let provinciaVal = '';
+        let regioneVal = '';
+        if (!loc) return { localita: '', provincia: '', regione: '' };
+        try {
+            if (typeof resolveLocationData === 'function') {
+                const res = resolveLocationData(loc);
+                if (res) {
+                    if (res.prov) provinciaVal = res.prov;
+                    if (res.reg) regioneVal = res.reg;
+                }
+            }
+        } catch (e) {}
+        if ((!provinciaVal || !regioneVal) && typeof lookupItalianComuneOnline === 'function') {
+            try {
+                const found = await lookupItalianComuneOnline(loc);
+                if (found) {
+                    if (found.prov) provinciaVal = found.prov;
+                    if (found.reg) regioneVal = found.reg;
+                }
+            } catch (e) {}
+        }
+        return { localita: loc, provincia: provinciaVal, regione: regioneVal };
+    }
+
+    function stripModBipiemme(s) {
+        let t = String(s || '');
+        t = t.replace(/mod\.?\s*bipiemme/gi, ' ');
+        t = t.replace(/bipiemme(?:\s*communication)?/gi, ' ');
+        t = t.replace(/mod\.?\s*bipiem+e/gi, ' ');
+        t = t.replace(/\s{2,}/g, ' ').trim();
+        return t;
+    }
+    function prepNormalizeClientName(nome) {
+        return stripModBipiemme(String(nome || ''))
+            .toLowerCase()
+            .replace(/\(\s*\d+\s*\)/g, '')
+            .replace(/\s*[—\-]\s*ordine\s*\d+\s*$/i, '')
+            .replace(/\binstallati\b/gi, ' ')
+            .replace(/\binstallatore\b/gi, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function findPrepClientSameOrder(nomeVal, confOrdine) {
+        const base = prepNormalizeClientName(nomeVal);
+        const ord = String(confOrdine || '').trim();
+        return (clients || []).find(function(c) {
+            if (prepNormalizeClientName(c.nome) !== base) return false;
+            if (ord) return String(c.confOrdine || '').trim() === ord;
+            // senza n° ordine: considera duplicato solo se esiste già stesso nome senza ordine diverso registrato
+            return true;
+        }) || null;
+    }
+
+    async function addPrepClientFromOcrFields(fields) {
+        let nomeRaw = stripModBipiemme(String(fields.nome || ''))
+            .replace(/\binstallati\b/gi, ' ')
+            .replace(/\binstallato\b/gi, ' ')
+            .replace(/\binstallatore\b/gi, ' ')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+        const nomeVal = (typeof toAppUpper === 'function')
+            ? toAppUpper(nomeRaw)
+            : nomeRaw.toUpperCase();
+        const localitaVal = String(fields.localita || '').trim();
+        const scadenzaVal = String(fields.scadenza || '').trim();
+        const modelloVal = String(fields.modello || '').trim();
+        const montaggioVal = String(fields.montaggio || '').trim();
+        const confOrdine = String(fields.confOrdine || '').trim();
+        const qtaVal = parseInt(fields.qta, 10) || 1;
+
+        if (!nomeVal) return { ok: false, reason: 'nome mancante' };
+        if (!localitaVal) return { ok: false, reason: 'paese mancante', nome: nomeVal };
+        if (!scadenzaVal) return { ok: false, reason: 'scadenza mancante', nome: nomeVal };
+
+        // Già in elenco (stesso nominativo)?
+        // - stesso CONF ordine → non reinserire
+        // - senza nuovo ordine distinguibile e nome già presente → non reinserire
+        // - nome già presente ma CONF ordine diverso → aggiungi come ORDINE n
+        // Nel batch: più schede stesso nome → ORDINE 1, 2, 3… (non eliminare i doppioni del copia-incolla)
+        const baseKey = prepNormalizeClientName(nomeVal);
+        const omonimi = (clients || []).filter(function(c) {
+            return prepNormalizeClientName(c.nome) === baseKey;
+        });
+        const batchSeq = parseInt(fields._batchOrdineSeq, 10) || 0;
+
+        if (omonimi.length) {
+            if (confOrdine) {
+                const sameOrd = omonimi.some(function(c) {
+                    return String(c.confOrdine || '').trim() === confOrdine;
+                });
+                if (sameOrd) {
+                    return { ok: false, reason: 'già presente (stesso ordine)', nome: nomeVal };
+                }
+                // CONF diverso → si aggiunge sotto con Ordine n
+            } else if (!batchSeq) {
+                // nome già in elenco, senza nuovo n° ordine → non reinserire
+                return { ok: false, reason: 'già presente', nome: nomeVal };
+            }
+            // batchSeq > 0 e omonimi: può essere stesso import; se tutti nuovi nel batch ok
+        }
+
+        const loc = await resolvePrepLocation(localitaVal);
+        if (!loc.regione) {
+            return { ok: false, reason: 'regione non riconosciuta', nome: nomeVal, localita: localitaVal };
+        }
+
+        const modelli = [];
+        if (modelloVal) {
+            modelli.push({ nome: modelloVal, qta: qtaVal });
+            try {
+                if (typeof window.autoSaveNewTypedModel === 'function') window.autoSaveNewTypedModel(modelloVal);
+            } catch (e) {}
+        }
+
+        let ordineSeq = 1;
+        if (batchSeq > 0) {
+            ordineSeq = batchSeq;
+        } else if (omonimi.length) {
+            let maxSeq = 0;
+            omonimi.forEach(function(c) {
+                let n = parseInt(c.ordineSeq, 10) || 0;
+                const m = String(c.nome || '').match(/\bORDINE\s*(\d+)\s*$/i);
+                if (m) n = Math.max(n, parseInt(m[1], 10) || 0);
+                if (!n) n = 1;
+                if (n > maxSeq) maxSeq = n;
+                if (!/\bORDINE\s*\d+\s*$/i.test(String(c.nome || ''))) {
+                    const base = stripModBipiemme(String(c.nome || '').replace(/\s*[—\-]\s*ORDINE\s*\d+\s*$/i, '').trim());
+                    c.nome = base + ' — ORDINE 1';
+                    c.ordineSeq = 1;
+                    if (maxSeq < 1) maxSeq = 1;
+                }
+            });
+            ordineSeq = maxSeq + 1;
+        }
+
+        let nomeSalvataggio = stripModBipiemme(
+            String(nomeVal || '')
+                .replace(/\s*[—\-]\s*ORDINE\s*\d+\s*$/i, '')
+                .replace(/\binstallati\b/gi, ' ')
+                .replace(/\binstallato\b/gi, ' ')
+                .replace(/\binstallatore\b/gi, ' ')
+                .replace(/\s{2,}/g, ' ')
+                .trim()
+        );
+        if (typeof toAppUpper === 'function') nomeSalvataggio = toAppUpper(nomeSalvataggio);
+
+        // Più occorrenze (batch o omonimi già in lista con altro ordine): Ordine 1, 2, …
+        if (batchSeq > 0 || omonimi.length) {
+            nomeSalvataggio = nomeSalvataggio + ' — ORDINE ' + ordineSeq;
+        }
+
+        const notaParts = ['Import LED Manager'];
+        if (batchSeq > 0 || omonimi.length) notaParts.push('Ordine ' + ordineSeq);
+        else notaParts.push('Ordine 1');
+        if (confOrdine) notaParts.push('CONF. ' + confOrdine);
+
+        clients.push({
+            id: 'id_' + Date.now() + Math.random().toString(36).substring(2, 7),
+            nome: nomeSalvataggio,
+            confOrdine: confOrdine,
+            ordineSeq: (batchSeq > 0 || omonimi.length) ? ordineSeq : 1,
+            modelli: modelli,
+            montaggio: montaggioVal,
+            localita: loc.localita,
+            provincia: loc.provincia,
+            regione: loc.regione,
+            tappa: '',
+            spedizione: '',
+            data: '',
+            calendarizzato: false,
+            preavviso: false,
+            disponibilita: false,
+            spedito: false,
+            consegnato: false,
+            notaDisponibilita: '',
+            notaPrep: notaParts.join(' · '),
+            scadenza: scadenzaVal,
+            inLavorazione: false,
+            installato: false,
+            standby: false,
+            inPrep: true
+        });
+        return { ok: true, nome: nomeSalvataggio, confOrdine: confOrdine };
+    }
+
+    async function applyPrepOcrClients(list) {
+        const items = Array.isArray(list) ? list : [];
+        if (!items.length) {
+            setPrepOcrStatus('⚠️ Nessun cliente riconosciuto. Inquadra meglio le schede.', 'err');
+            return;
+        }
+
+        // Un solo cliente: compila il form e aggiunge in automatico
+        if (items.length === 1) {
+            applyPrepOcrFieldsToForm(items[0]);
+            const r = await addPrepClientFromOcrFields(items[0]);
+            if (r.ok) {
+                saveToLocalStorage();
+                try { render(); } catch (e) {}
+                try { renderPrepPage(); } catch (e) {}
+                setPrepOcrStatus('✅ Cliente <strong>' + String(r.nome).replace(/</g, '&lt;') + '</strong> aggiunto in Pre-pianificazione.<br>Altri in lista? Scorri e premi <strong>Cattura altri</strong>.', 'ok');
+            } else {
+                setPrepOcrStatus(
+                    '📋 Campi compilati nel form. Aggiunta automatica non riuscita (' + (r.reason || '?') + '). Controlla e premi Aggiungi.',
+                    r.reason === 'già presente' ? 'work' : 'err'
+                );
+            }
+            return;
+        }
+
+        // Più clienti: aggiungi tutti automaticamente (nessuno screenshot salvato)
+        // Pre-numera omonimi nello stesso import: Ordine 1, 2, 3…
+        (function assignBatchOrdineSeq(list) {
+            const groups = {};
+            list.forEach(function(f, idx) {
+                const k = prepNormalizeClientName(f.nome || '');
+                if (!k) return;
+                if (!groups[k]) groups[k] = [];
+                groups[k].push(f);
+            });
+            Object.keys(groups).forEach(function(k) {
+                const arr = groups[k];
+                if (arr.length < 2) return;
+                arr.forEach(function(f, i) {
+                    f._batchOrdineSeq = i + 1;
+                });
+            });
+        })(items);
+
+        setPrepOcrStatus('⏳ Trovate <strong>' + items.length + '</strong> schede: aggiunta in corso…', 'work');
+        let okN = 0, skip = [], fail = [];
+        for (let i = 0; i < items.length; i++) {
+            const r = await addPrepClientFromOcrFields(items[i]);
+            if (r.ok) okN++;
+            else if (r.reason && String(r.reason).indexOf('già presente') === 0) skip.push(r.nome || '');
+            else fail.push((r.nome || '—') + ' (' + (r.reason || '?') + ')');
+        }
+        if (okN) {
+            saveToLocalStorage();
+            try { render(); } catch (e) {}
+            try { renderPrepPage(); } catch (e) {}
+        }
+        let msg = '✅ Aggiunti <strong>' + okN + '</strong> di ' + items.length + ' clienti in Pre-pianificazione.';
+        if (skip.length) msg += '<br>⏭ Già presenti: ' + skip.map(function(n){ return String(n).replace(/</g,'&lt;'); }).join(', ');
+        if (fail.length) msg += '<br>⚠️ Non aggiunti: ' + fail.map(function(n){ return String(n).replace(/</g,'&lt;'); }).join(', ');
+        if (okN) msg += '<br><span style="font-weight:600;">Altri clienti più in basso?</span> Scorri in LED Manager e premi <strong>Cattura altri</strong>.';
+        setPrepOcrStatus(msg, okN ? 'ok' : 'err');
+    }
+
+    function applyPrepOcrFieldsToForm(fields) {
+        if (!fields) return;
+        const nome = document.getElementById('prepNome');
+        const modello = document.getElementById('prepModello');
+        const qta = document.getElementById('prepModelloQta');
+        const mont = document.getElementById('prepMontaggio');
+        const loc = document.getElementById('prepLocalita');
+        const scad = document.getElementById('prepScadenza');
+        if (nome && fields.nome) nome.value = (typeof toAppUpper === 'function') ? toAppUpper(fields.nome) : String(fields.nome).toUpperCase();
+        if (modello && fields.modello) modello.value = fields.modello;
+        if (qta && fields.qta) {
+            const n = String(fields.qta);
+            if ([].some.call(qta.options, function(o) { return o.value === n; })) qta.value = n;
+        }
+        if (mont && fields.montaggio) mont.value = fields.montaggio;
+        if (scad && fields.scadenza) scad.value = fields.scadenza;
+        if (loc && fields.localita) {
+            loc.value = fields.localita;
+            try {
+                if (typeof onPrepLocalitaBlur === 'function') onPrepLocalitaBlur(fields.localita);
+                else if (typeof onPrepLocalitaInput === 'function') onPrepLocalitaInput(fields.localita);
+            } catch (e) {}
+        }
+    }
+
+    // compat: vecchio nome
+    function applyPrepOcrFields(fields) {
+        applyPrepOcrFieldsToForm(fields);
+    }
+
+    function prepEnhanceCanvasForOcr(srcCanvas) {
+        // Upscale + contrasto leggero per leggere meglio i nomi
+        const scale = 2;
+        const w = srcCanvas.width;
+        const h = srcCanvas.height;
+        const out = document.createElement('canvas');
+        out.width = Math.max(1, Math.round(w * scale));
+        out.height = Math.max(1, Math.round(h * scale));
+        const ctx = out.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(srcCanvas, 0, 0, out.width, out.height);
+        try {
+            const img = ctx.getImageData(0, 0, out.width, out.height);
+            const d = img.data;
+            for (let i = 0; i < d.length; i += 4) {
+                // grayscale + contrasto
+                let y = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+                y = (y - 128) * 1.35 + 128;
+                if (y < 0) y = 0;
+                if (y > 255) y = 255;
+                d[i] = d[i + 1] = d[i + 2] = y;
+            }
+            ctx.putImageData(img, 0, 0);
+        } catch (e) {}
+        return out;
+    }
+
+    async function prepRunOcrOnCanvas(canvas) {
+        setPrepOcrStatus('🔎 Lettura testo in corso… (nomi in alta qualità)', 'work');
+        const Tesseract = await loadTesseractLib();
+        const enhanced = prepEnhanceCanvasForOcr(canvas);
+        const result = await Tesseract.recognize(enhanced, 'ita+eng', {
+            logger: function(m) {
+                if (!m || m.status !== 'recognizing text') return;
+                const pct = Math.round((m.progress || 0) * 100);
+                setPrepOcrStatus('🔎 Lettura testo… ' + pct + '%', 'work');
+            }
+        });
+        const text = (result && result.data && result.data.text) ? result.data.text : '';
+        const list = extractAllPrepClientsFromText(text);
+        await applyPrepOcrClients(list);
+        return list;
+    }
+
+    window.prepImportFromPaste = async function() {
+        const area = document.getElementById('prepPasteArea');
+        let raw = area ? String(area.value || '').trim() : '';
+        if (!raw) {
+            // prova clipboard
+            try {
+                if (navigator.clipboard && navigator.clipboard.readText) {
+                    raw = String(await navigator.clipboard.readText() || '').trim();
+                    if (area && raw) area.value = raw;
+                }
+            } catch (e) {}
+        }
+        if (!raw) {
+            setPrepOcrStatus('Incolla prima il testo da LED Manager (Ctrl+V nel riquadro), oppure copia e riprova.', 'err');
+            return;
+        }
+        setPrepOcrStatus('📋 Importazione da testo in corso…', 'work');
+        const list = extractAllPrepClientsFromText(raw);
+        await applyPrepOcrClients(list);
+        if (area) area.value = '';
+    };
+
+
+    window.prepCaptureAndFill = async function() {
+        const btn = document.getElementById('prepOcrCaptureBtn');
+        if (btn) btn.disabled = true;
+        try {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+                setPrepOcrStatus('❌ Questo browser non supporta la cattura schermo. Usa “Da file”.', 'err');
+                return;
+            }
+            setPrepOcrStatus('🖥️ Scegli <strong>intera finestra</strong> (o scheda) di LED Manager Pro — non un singolo riquadro. Poi conferma la condivisione…', 'work');
+            const canvas = await captureDisplayFrame();
+            await prepRunOcrOnCanvas(canvas);
+        } catch (err) {
+            const name = (err && err.name) || '';
+            if (name === 'NotAllowedError' || name === 'AbortError') {
+                setPrepOcrStatus('Cattura annullata. Riprova e seleziona la finestra con i dati cliente.', 'err');
+            } else {
+                setPrepOcrStatus('❌ ' + ((err && err.message) || 'Errore durante la cattura/lettura'), 'err');
+            }
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    };
+
+    window.prepOcrFromFile = async function(event) {
+        const input = event && event.target;
+        const file = input && input.files && input.files[0];
+        if (!file) return;
+        try {
+            setPrepOcrStatus('🖼️ Caricamento immagine…', 'work');
+            const url = URL.createObjectURL(file);
+            const img = new Image();
+            await new Promise(function(resolve, reject) {
+                img.onload = resolve;
+                img.onerror = reject;
+                img.src = url;
+            });
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth || img.width;
+            canvas.height = img.naturalHeight || img.height;
+            canvas.getContext('2d').drawImage(img, 0, 0);
+            try { URL.revokeObjectURL(url); } catch (e) {}
+            await prepRunOcrOnCanvas(canvas);
+        } catch (err) {
+            setPrepOcrStatus('❌ ' + ((err && err.message) || 'Impossibile leggere il file'), 'err');
+        } finally {
+            if (input) input.value = '';
+        }
+    };
 
     // ===== ORDINI (cabinet / accessori / speciali) =====
     let ordini = [];
@@ -9901,6 +10784,7 @@
                     </div>
                     <div class="info-card-actions">
                         <button type="button" class="btn btn-restore" onclick="unmarkStandby('${client.id}')">↩ Ripristina</button>
+                        <button type="button" class="btn-icon" onclick="renameClient('${client.id}')" title="Rinomina">✏️</button>
                         <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
                     </div>
                 </article>`;
@@ -10723,6 +11607,8 @@
                         String(zone.tappaName || zone.tecnico).replace(/</g, '&lt;') + '</span>';
                 }
                 actions +=
+                    '<button type="button" class="btn prep-mini-btn" onclick="renameClient(\'' + safeId + '\')" title="Rinomina">✏️ Rinomina</button>' +
+                    '<button type="button" class="btn-icon danger prep-mini-btn" onclick="deleteClient(\'' + safeId + '\')" title="Elimina">🗑️</button>' +
                     '<button type="button" class="btn' + ((montSpecial || (zone && zone.tecnico)) ? '' : ' btn-primary') +
                     ' prep-mini-btn" onclick="movePrepClientToNote(\'' + safeId + '\')">→ Note</button>';
 
@@ -14774,7 +15660,8 @@
                         </div>
                         <div class="info-card-actions">
                             <button type="button" class="btn btn-restore" onclick="unmarkInstallato('${client.id}')">↩ Ripristina</button>
-                            <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
+                            <button type="button" class="btn-icon" onclick="renameClient('${client.id}')" title="Rinomina">✏️</button>
+                        <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
                         </div>
                     </article>
                 `;
