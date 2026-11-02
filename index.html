@@ -3085,6 +3085,15 @@
         }
 
 
+        .cal-section-title {
+            font-weight: 800;
+            font-size: 1rem;
+            margin: 6px 0 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
         .cal-toolbar { display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px; }
         .cal-grid { display:grid;grid-template-columns:repeat(7,1fr);gap:6px; }
         .cal-dow { text-align:center;font-size:0.75rem;font-weight:700;color:var(--text-muted);padding:4px; }
@@ -5704,15 +5713,19 @@
             </span>
         </div>
     </div>
-    <p class="meteo-intro">Clienti da fare per giorno (in base a <strong>scadenza</strong> e data tappa). Clicca un giorno per il dettaglio.</p>
+    <p class="meteo-intro">Due calendari separati: <strong>Note Clienti</strong> e <strong>Pre-pianificazione</strong>. Stesso mese, clienti per giorno (scadenza / data / tappa).</p>
     <div class="cal-toolbar">
         <button type="button" class="btn" onclick="calShiftMonth(-1)">‹ Prec.</button>
         <strong id="calMonthLabel" style="min-width:160px;text-align:center;"></strong>
         <button type="button" class="btn" onclick="calShiftMonth(1)">Succ. ›</button>
         <button type="button" class="btn" onclick="calGoToday()">Oggi</button>
     </div>
-    <div id="calGrid" class="cal-grid"></div>
-    <div id="calDayDetail" class="cal-day-detail card" style="display:none;margin-top:14px;"></div>
+    <div class="cal-section-title">📝 Note Clienti <span class="consigli-badge" id="calNoteBadge">0</span></div>
+    <div id="calGridNote" class="cal-grid"></div>
+    <div id="calDayDetailNote" class="cal-day-detail card" style="display:none;margin-top:12px;margin-bottom:18px;"></div>
+    <div class="cal-section-title" style="margin-top:8px;">📋 Pre-pianificazione <span class="consigli-badge" id="calPrepBadge">0</span></div>
+    <div id="calGridPrep" class="cal-grid"></div>
+    <div id="calDayDetailPrep" class="cal-day-detail card" style="display:none;margin-top:12px;"></div>
 </div><!-- /#viewCalendario -->
 
 <div id="viewPercorso" class="view-panel">
@@ -15827,10 +15840,28 @@
         return dates;
     }
 
-    function clientsByDateMap() {
+    function clientEventDates(c) {
+        const dates = [];
+        const scad = (c.scadenza || '').trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(scad)) dates.push({ date: scad, kind: 'scadenza' });
+        const d = (c.data || '').trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(d) && d !== scad) dates.push({ date: d, kind: 'data' });
+        const dal = (c.tappaDal || c.dal || '').trim();
+        const al = (c.tappaAl || c.al || '').trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dal)) dates.push({ date: dal, kind: 'tappa' });
+        if (/^\d{4}-\d{2}-\d{2}$/.test(al) && al !== dal) dates.push({ date: al, kind: 'tappa' });
+        return dates;
+    }
+
+    function isPrepClient(c) {
+        return typeof isInPrep === 'function' ? isInPrep(c) : (c && (c.inPrep === true || c.inPrep === 'true'));
+    }
+
+    function clientsByDateMap(filterFn) {
         const map = {};
         (clients || []).forEach(function(c) {
             if (c.installato) return;
+            if (filterFn && !filterFn(c)) return;
             clientEventDates(c).forEach(function(ev) {
                 if (!map[ev.date]) map[ev.date] = [];
                 map[ev.date].push({ client: c, kind: ev.kind });
@@ -15858,50 +15889,37 @@
         const n = new Date();
         _calYear = n.getFullYear();
         _calMonth = n.getMonth();
-        _calSelected = n.toISOString().slice(0, 10);
+        _calSelectedNote = n.toISOString().slice(0, 10);
+        _calSelectedPrep = n.toISOString().slice(0, 10);
         renderCalendarioPage();
     };
-    window.calSelectDay = function(iso) {
-        _calSelected = iso;
+    window.calSelectDay = function(iso, which) {
+        if (which === 'prep') _calSelectedPrep = iso;
+        else _calSelectedNote = iso;
         renderCalendarioPage();
     };
 
-    function renderCalendarioPage() {
-        const map = clientsByDateMap();
-        const badge = document.getElementById('navCalendarioCount');
-        if (badge) {
-            let n = 0;
-            Object.keys(map).forEach(function(k) { n += map[k].length; });
-            badge.textContent = n;
-        }
-        const label = document.getElementById('calMonthLabel');
-        const mesi = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
-        if (label) label.textContent = mesi[_calMonth] + ' ' + _calYear;
+    let _calSelectedNote = null;
+    let _calSelectedPrep = null;
 
-        const grid = document.getElementById('calGrid');
-        if (!grid) return;
+    function buildCalGridHtml(map, selectedIso, which) {
         const first = new Date(_calYear, _calMonth, 1);
-        const startDow = (first.getDay() + 6) % 7; // lun=0
+        const startDow = (first.getDay() + 6) % 7;
         const daysInMonth = new Date(_calYear, _calMonth + 1, 0).getDate();
         const todayIso = new Date().toISOString().slice(0, 10);
-
         let html = '';
         ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].forEach(function(d) {
             html += '<div class="cal-dow">' + d + '</div>';
         });
-        // celle vuote prima
-        for (let i = 0; i < startDow; i++) {
-            html += '<div class="cal-cell is-out"></div>';
-        }
+        for (let i = 0; i < startDow; i++) html += '<div class="cal-cell is-out"></div>';
         for (let day = 1; day <= daysInMonth; day++) {
             const iso = _calYear + '-' + String(_calMonth + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
             const items = map[iso] || [];
             const cls = ['cal-cell'];
             if (iso === todayIso) cls.push('is-today');
-            if (iso === _calSelected) cls.push('is-selected');
+            if (iso === selectedIso) cls.push('is-selected');
             let chips = '';
-            const show = items.slice(0, 3);
-            show.forEach(function(it) {
+            items.slice(0, 3).forEach(function(it) {
                 const c = it.client;
                 const left = calDaysUntil(iso);
                 let ccls = 'cal-chip';
@@ -15911,20 +15929,18 @@
                     String(c.nome || '').replace(/</g, '&lt;') + '</span>';
             });
             if (items.length > 3) chips += '<span class="cal-more">+' + (items.length - 3) + ' altri</span>';
-            html += '<div class="' + cls.join(' ') + '" onclick="calSelectDay(\'' + iso + '\')">' +
+            html += '<div class="' + cls.join(' ') + '" onclick="calSelectDay(\'' + iso + '\',\'' + which + '\')">' +
                 '<div class="cal-day-num">' + day + (items.length ? ' · ' + items.length : '') + '</div>' +
                 chips + '</div>';
         }
-        grid.innerHTML = html;
+        return html;
+    }
 
-        const detail = document.getElementById('calDayDetail');
-        if (!detail) return;
-        if (!_calSelected) { detail.style.display = 'none'; detail.innerHTML = ''; return; }
-        const list = map[_calSelected] || [];
-        detail.style.display = 'block';
+    function buildCalDetailHtml(iso, map, titlePrefix) {
+        if (!iso) return '';
+        const list = map[iso] || [];
         if (!list.length) {
-            detail.innerHTML = '<div class="card-title">' + _calSelected + '</div><p style="color:var(--text-muted);">Nessun cliente in questo giorno.</p>';
-            return;
+            return '<div class="card-title">' + titlePrefix + ' · ' + iso + '</div><p style="color:var(--text-muted);margin:0;">Nessun cliente in questo giorno.</p>';
         }
         let rows = list.map(function(it) {
             const c = it.client;
@@ -15941,7 +15957,55 @@
                 (c.scadenza ? ' · 📅 ' + c.scadenza : '') +
                 '</div>';
         }).join('');
-        detail.innerHTML = '<div class="card-title">Clienti del ' + _calSelected + ' (' + list.length + ')</div>' + rows;
+        return '<div class="card-title">' + titlePrefix + ' · ' + iso + ' (' + list.length + ')</div>' + rows;
+    }
+
+    function countMapItems(map) {
+        let n = 0;
+        Object.keys(map).forEach(function(k) { n += map[k].length; });
+        return n;
+    }
+
+    function renderCalendarioPage() {
+        const mapNote = clientsByDateMap(function(c) { return !isPrepClient(c); });
+        const mapPrep = clientsByDateMap(function(c) { return isPrepClient(c); });
+
+        const badge = document.getElementById('navCalendarioCount');
+        if (badge) badge.textContent = countMapItems(mapNote) + countMapItems(mapPrep);
+        const bNote = document.getElementById('calNoteBadge');
+        const bPrep = document.getElementById('calPrepBadge');
+        if (bNote) bNote.textContent = countMapItems(mapNote);
+        if (bPrep) bPrep.textContent = countMapItems(mapPrep);
+
+        const label = document.getElementById('calMonthLabel');
+        const mesi = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+        if (label) label.textContent = mesi[_calMonth] + ' ' + _calYear;
+
+        const gridNote = document.getElementById('calGridNote');
+        const gridPrep = document.getElementById('calGridPrep');
+        if (gridNote) gridNote.innerHTML = buildCalGridHtml(mapNote, _calSelectedNote, 'note');
+        if (gridPrep) gridPrep.innerHTML = buildCalGridHtml(mapPrep, _calSelectedPrep, 'prep');
+
+        const detNote = document.getElementById('calDayDetailNote');
+        const detPrep = document.getElementById('calDayDetailPrep');
+        if (detNote) {
+            if (_calSelectedNote) {
+                detNote.style.display = 'block';
+                detNote.innerHTML = buildCalDetailHtml(_calSelectedNote, mapNote, '📝 Note Clienti');
+            } else {
+                detNote.style.display = 'none';
+                detNote.innerHTML = '';
+            }
+        }
+        if (detPrep) {
+            if (_calSelectedPrep) {
+                detPrep.style.display = 'block';
+                detPrep.innerHTML = buildCalDetailHtml(_calSelectedPrep, mapPrep, '📋 Pre-pianificazione');
+            } else {
+                detPrep.style.display = 'none';
+                detPrep.innerHTML = '';
+            }
+        }
     }
 
     // ===== CONSIGLI PIANIFICAZIONE (regole intelligenti su Prep) =====
