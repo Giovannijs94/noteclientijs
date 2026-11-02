@@ -2617,6 +2617,41 @@
                 margin-left: 0;
             }
         }
+
+        .app-refresh-btn {
+            position: fixed;
+            top: 12px;
+            right: 58px;
+            z-index: 10050;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(47, 15, 38, 0.18);
+            background: #fff;
+            color: #2f0f26;
+            font-weight: 700;
+            font-size: 0.82rem;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
+            transition: transform .15s, background .15s, box-shadow .15s;
+        }
+        .app-refresh-btn:hover {
+            background: #f8fafc;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.16);
+        }
+        .app-refresh-btn.is-busy {
+            opacity: 0.75;
+            pointer-events: none;
+        }
+        body.locked .app-refresh-btn { display: none; }
+        @media (max-width: 520px) {
+            .app-refresh-btn { right: 54px; padding: 8px 10px; }
+            .app-refresh-btn .app-refresh-txt { display: none; }
+        }
+
         .portal-nav-toggle {
             position: fixed;
             top: 16px;
@@ -5437,6 +5472,9 @@
 <button type="button" class="portal-nav-toggle" id="portalNavToggle" onclick="togglePortalNav()" title="Menu" aria-label="Apri o chiudi menu">
     <span class="toggle-ico-close">‹</span>
     <span class="toggle-ico-open">☰</span>
+</button>
+<button type="button" class="app-refresh-btn" id="appRefreshBtn" onclick="forceAppUpdate()" title="Aggiorna l’app (scarica ultime modifiche)" aria-label="Aggiorna pagina">
+    🔄 <span class="app-refresh-txt">Aggiorna</span>
 </button>
 <div class="portal-nav-backdrop" id="portalNavBackdrop" onclick="closePortalNav()" aria-hidden="true"></div>
 <div class="app-layout">
@@ -16055,6 +16093,36 @@
     }
     window.renderConsigliPage = renderConsigliPage;
     window.renderCalendarioPage = renderCalendarioPage;
+
+
+    window.forceAppUpdate = async function() {
+        const btn = document.getElementById('appRefreshBtn');
+        if (btn) {
+            btn.classList.add('is-busy');
+            btn.innerHTML = '⏳ <span class="app-refresh-txt">Aggiorno…</span>';
+        }
+        try {
+            if (window.caches && caches.keys) {
+                const keys = await caches.keys();
+                await Promise.all(keys.map(function(k) { return caches.delete(k); }));
+            }
+            if (navigator.serviceWorker) {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(regs.map(function(r) {
+                    return r.update().then(function() { return r.unregister(); }).catch(function() { return r.unregister(); });
+                }));
+            }
+        } catch (e) {
+            console.warn('forceAppUpdate', e);
+        }
+        try {
+            const url = new URL(window.location.href);
+            url.searchParams.set('_refresh', String(Date.now()));
+            window.location.replace(url.toString());
+        } catch (e2) {
+            window.location.reload();
+        }
+    };
 
     window.switchView = function(view) {
         currentView = view;
