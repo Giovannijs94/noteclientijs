@@ -9812,6 +9812,8 @@
             t = t.split(/\bNULLA\s*OSTA\b/i)[0];
             t = t.split(/\bSCADENZA\s*:/i)[0];
             t = t.split(/\bIN\s*CODA\b/i)[0];
+            t = t.split(/\bCAUZIONE\b/i)[0];
+            // etichette UI LED Manager — mai nomi cliente
             t = t.replace(/mod\.?\s*bipiemme/ig, ' ');
             t = t.replace(/bipiemme(?:\s*communication)?/ig, ' ');
             t = t.replace(/mod\.?\s*bipiem+e/ig, ' ');
@@ -9821,12 +9823,23 @@
             t = t.replace(/\binstallazione\b/ig, ' ');
             t = t.replace(/\btipologia\b[:\s-]*\w*/ig, ' ');
             t = t.replace(/\bin\s*coda\b/ig, ' ');
+            t = t.replace(/\bcauzione\b\s*[:\-–]?\s*(s[iì]|no|si)?/ig, ' ');
+            t = t.replace(/\bnulla\s*osta\b\s*[:\-–]?\s*(s[iì]|no|si)?/ig, ' ');
             t = t.replace(/\bconf\.?\s*ordine\b[:\s-]*\d*/ig, ' ');
-            t = t.replace(/\bnulla\s*osta\b[:\s-]*\w*/ig, ' ');
             t = t.replace(/\bscadenza\b[:\s-]*[\d\/\.\-]*/ig, ' ');
+            t = t.replace(/\bpriorit[aà]\s*urgente\b/ig, ' ');
+            t = t.replace(/\bnecessaria\s*spedizione\b/ig, ' ');
+            t = t.replace(/\bstruttura\s*non\s*necessaria\b/ig, ' ');
+            t = t.replace(/\bcalendarizz[ao]\w*\b/ig, ' ');
+            t = t.replace(/\bmodifica\b/ig, ' ');
+            t = t.replace(/\belimina\b/ig, ' ');
+            t = t.replace(/\bavvia\b/ig, ' ');
             t = t.replace(/\bmod\.\b/ig, ' ');
             t = t.replace(/\s{2,}/g, ' ').trim();
             t = t.replace(/^[\s\-–—|:,]+/, '').replace(/[\s\-–—|:,]+$/, '').trim();
+            // se dopo la pulizia resta solo SI/NO o etichetta → scarta
+            if (/^(s[iì]|no|sì)$/i.test(t)) return '';
+            if (/^(cauzione|nulla\s*osta|scadenza|ordine|montaggio|indirizzo)$/i.test(t)) return '';
             return t;
         }
         function stripUiRight(s) { return cleanLedClientName(s); }
@@ -9843,8 +9856,10 @@
             if (/\bin\s*coda\b/i.test(L) && !/\([0-9]{3,}\)/.test(L)) continue;
             if (/\b(dashboard|elenco|filtri?|ricerca|led\s*manager\s*pro|totale)\b/i.test(L) && !/\([0-9]{3,}\)/.test(L)) continue;
             // non usare righe che sono solo rumore (mod.bipiemme / installati)
-            const onlyNoise = /^(mod\.?\s*)?bipiemme$|^installati$|^installatore$|^mod\.$/i.test(L.trim());
+            const onlyNoise = /^(mod\.?\s*)?bipiemme$|^installati$|^installatore$|^mod\.$|^cauzione\b.*|^nulla\s*osta\b.*|^(s[iì]|no)$/i.test(L.trim());
             if (onlyNoise) continue;
+            if (/\bcauzione\b/i.test(L) && !/\([0-9]{3,}\)/.test(L) && L.length < 40) continue;
+            if (/^(cauzione|nulla\s*osta|scadenza|conf\.?\s*ordine)\b/i.test(L)) continue;
             if (/\b(mod\.?\s*bipiemme|bipiemme)\b/i.test(L) && !/[A-Za-zÀ-ù]{4,}/.test(L.replace(/\b(mod\.?\s*)?bipiemme\b/ig, ''))) continue;
             if (/[A-Za-zÀ-ù]{3,}/.test(L) && L.length >= 3) {
                 const cleaned = cleanLedClientName(L);
@@ -9876,7 +9891,21 @@
         if (ledNome) {
             let n = cleanLedClientName(ledNome);
             n = n.replace(/([A-Za-zÀ-ù])\(\s*(\d{3,})\s*\)/g, '$1 ($2)');
-            out.nome = n.trim();
+            n = n.trim();
+            // non accettare etichette residue come nome
+            if (n && !/cauzione/i.test(n) && !/^(s[iì]|no)$/i.test(n) && n.length >= 3) {
+                out.nome = n;
+            }
+        }
+        // se il nome è ancora vuoto, cerca riga con (codice id) nel testo intero
+        if (!out.nome) {
+            for (let i = 0; i < lines.length; i++) {
+                const L = lines[i];
+                if (!/\(\s*\d{3,}\s*\)/.test(L)) continue;
+                if (/\bcauzione\b/i.test(L)) continue;
+                let n = cleanLedClientName(L);
+                if (n.length >= 3) { out.nome = n; break; }
+            }
         }
 
         // Modello
@@ -9971,27 +10000,84 @@
 
     function extractAllPrepClientsFromText(ocrText) {
         const cards = splitLedManagerCardTexts(ocrText);
-        const results = [];
-        const seenKeys = {};
+        const rawList = [];
         cards.forEach(function(card) {
             const f = extractPrepFieldsFromText(card);
             if (!f) return;
-            // Solo schede complete (riquadro ordine), non pezzi di dashboard
+            if (typeof stripModBipiemme === 'function') f.nome = stripModBipiemme(f.nome || '');
+            f.nome = String(f.nome || '')
+                .replace(/\binstallati\b/gi, ' ')
+                .replace(/\binstallatore\b/gi, ' ')
+                .replace(/\s{2,}/g, ' ')
+                .trim();
             if (!f.nome) return;
             if (!(f.modello || f.localita || f.scadenza || f.montaggio || f.confOrdine)) return;
-            // Stesso nome + stesso n° ordine = duplicato nello screenshot; nome uguale + ordine diverso = OK
-            const baseNome = String(f.nome || '').toLowerCase().replace(/\(\s*\d+\s*\)/g, '').replace(/\s+/g, ' ').trim();
-            const key = baseNome + '||' + String(f.confOrdine || '');
-            if (seenKeys[key]) return;
-            seenKeys[key] = true;
-            results.push(f);
+            rawList.push(f);
         });
-        // Se lo split ha fallito e abbiamo 1 solo risultato vuoto, prova tutto il testo
-        if (!results.length) {
+        if (!rawList.length) {
             const f = extractPrepFieldsFromText(ocrText);
-            if (f && (f.nome || f.modello)) results.push(f);
+            if (f && f.nome) rawList.push(f);
         }
+
+        // Raggruppa: stesso nome + stesso CONF. ORDINE → un solo record con quantità = occorrenze
+        // stesso nome + CONF. diversi → restano separati (Ordine 1, 2, …)
+        const groups = {};
+        const orderKeys = [];
+        rawList.forEach(function(f) {
+            const base = (typeof prepNormalizeClientName === 'function')
+                ? prepNormalizeClientName(f.nome)
+                : String(f.nome || '').toLowerCase().trim();
+            const conf = String(f.confOrdine || '').trim();
+            const key = base + '||' + conf;
+            if (!groups[key]) {
+                groups[key] = {
+                    nome: f.nome,
+                    modello: f.modello || '',
+                    localita: f.localita || '',
+                    scadenza: f.scadenza || '',
+                    montaggio: f.montaggio || '',
+                    confOrdine: conf,
+                    qta: 0,
+                    _count: 0
+                };
+                orderKeys.push(key);
+            }
+            const g = groups[key];
+            g._count += 1;
+            // accumula quantità esplicita OCR o +1 per occorrenza scheda
+            const addQ = parseInt(f.qta, 10);
+            g.qta += (addQ > 0 ? addQ : 1);
+            // preferisci campi più completi
+            if (!g.modello && f.modello) g.modello = f.modello;
+            if (!g.localita && f.localita) g.localita = f.localita;
+            if (!g.scadenza && f.scadenza) g.scadenza = f.scadenza;
+            if (!g.montaggio && f.montaggio) g.montaggio = f.montaggio;
+            // se stesso conf e modelli diversi in OCR confuso, tieni il primo non vuoto
+            if (f.modello && g.modello && f.modello.length > g.modello.length) g.modello = f.modello;
+        });
+
+        const results = orderKeys.map(function(k) {
+            const g = groups[k];
+            if (!g.qta || g.qta < 1) g.qta = g._count || 1;
+            return g;
+        });
         return results;
+    }
+
+    /** Match completo: stesso nominativo + conf + modello + scadenza + paese + montaggio */
+    function prepClientFullyMatches(existing, fields) {
+        if (!existing || !fields) return false;
+        const baseE = prepNormalizeClientName(existing.nome);
+        const baseF = prepNormalizeClientName(fields.nome);
+        if (baseE !== baseF) return false;
+        if (String(existing.confOrdine || '').trim() !== String(fields.confOrdine || '').trim()) return false;
+        const modE = (existing.modelli && existing.modelli[0] && existing.modelli[0].nome) ? String(existing.modelli[0].nome).trim().toLowerCase() : '';
+        const modF = String(fields.modello || '').trim().toLowerCase();
+        if (modE !== modF) return false;
+        if (String(existing.scadenza || '').trim() !== String(fields.scadenza || '').trim()) return false;
+        if (String(existing.localita || '').trim().toLowerCase() !== String(fields.localita || '').trim().toLowerCase()) return false;
+        if (String(existing.montaggio || '').trim().toLowerCase() !== String(fields.montaggio || '').trim().toLowerCase()) return false;
+        return true;
     }
 
     async function resolvePrepLocation(localitaVal) {
@@ -10025,6 +10111,8 @@
         t = t.replace(/mod\.?\s*bipiemme/gi, ' ');
         t = t.replace(/bipiemme(?:\s*communication)?/gi, ' ');
         t = t.replace(/mod\.?\s*bipiem+e/gi, ' ');
+        t = t.replace(/\bcauzione\b\s*[:\-–]?\s*(s[iì]|no|si)?/gi, ' ');
+        t = t.replace(/\bnulla\s*osta\b\s*[:\-–]?\s*(s[iì]|no|si)?/gi, ' ');
         t = t.replace(/\s{2,}/g, ' ').trim();
         return t;
     }
@@ -10065,38 +10153,25 @@
         const modelloVal = String(fields.modello || '').trim();
         const montaggioVal = String(fields.montaggio || '').trim();
         const confOrdine = String(fields.confOrdine || '').trim();
-        const qtaVal = parseInt(fields.qta, 10) || 1;
+        let qtaVal = parseInt(fields.qta, 10) || 1;
+        if (qtaVal < 1) qtaVal = 1;
+        if (qtaVal > 99) qtaVal = 99;
 
         if (!nomeVal) return { ok: false, reason: 'nome mancante' };
         if (!localitaVal) return { ok: false, reason: 'paese mancante', nome: nomeVal };
         if (!scadenzaVal) return { ok: false, reason: 'scadenza mancante', nome: nomeVal };
 
-        // Già in elenco (stesso nominativo)?
-        // - stesso CONF ordine → non reinserire
-        // - senza nuovo ordine distinguibile e nome già presente → non reinserire
-        // - nome già presente ma CONF ordine diverso → aggiungi come ORDINE n
-        // Nel batch: più schede stesso nome → ORDINE 1, 2, 3… (non eliminare i doppioni del copia-incolla)
+        // Già in "Clienti per regione" (Prep)? → non reinserire
         const baseKey = prepNormalizeClientName(nomeVal);
-        const omonimi = (clients || []).filter(function(c) {
+        const inPrepSameName = (clients || []).filter(function(c) {
+            if (typeof isInPrep === 'function' && !isInPrep(c)) return false;
             return prepNormalizeClientName(c.nome) === baseKey;
         });
-        const batchSeq = parseInt(fields._batchOrdineSeq, 10) || 0;
-
-        if (omonimi.length) {
-            if (confOrdine) {
-                const sameOrd = omonimi.some(function(c) {
-                    return String(c.confOrdine || '').trim() === confOrdine;
-                });
-                if (sameOrd) {
-                    return { ok: false, reason: 'già presente (stesso ordine)', nome: nomeVal };
-                }
-                // CONF diverso → si aggiunge sotto con Ordine n
-            } else if (!batchSeq) {
-                // nome già in elenco, senza nuovo n° ordine → non reinserire
-                return { ok: false, reason: 'già presente', nome: nomeVal };
-            }
-            // batchSeq > 0 e omonimi: può essere stesso import; se tutti nuovi nel batch ok
+        if (inPrepSameName.length) {
+            return { ok: false, reason: 'già in clienti per regione', nome: nomeVal };
         }
+
+        // (Eventuali omonimi non-prep non bloccano; il batch gestisce Ordine 1,2 e quantità)
 
         const loc = await resolvePrepLocation(localitaVal);
         if (!loc.regione) {
@@ -10110,6 +10185,12 @@
                 if (typeof window.autoSaveNewTypedModel === 'function') window.autoSaveNewTypedModel(modelloVal);
             } catch (e) {}
         }
+
+        // Omonimi con CONF diverso → ORDINE 1, 2, …
+        const omonimi = (clients || []).filter(function(c) {
+            return prepNormalizeClientName(c.nome) === baseKey;
+        });
+        const batchSeq = parseInt(fields._batchOrdineSeq, 10) || 0;
 
         let ordineSeq = 1;
         if (batchSeq > 0) {
@@ -10135,15 +10216,11 @@
         let nomeSalvataggio = stripModBipiemme(
             String(nomeVal || '')
                 .replace(/\s*[—\-]\s*ORDINE\s*\d+\s*$/i, '')
-                .replace(/\binstallati\b/gi, ' ')
-                .replace(/\binstallato\b/gi, ' ')
-                .replace(/\binstallatore\b/gi, ' ')
                 .replace(/\s{2,}/g, ' ')
                 .trim()
         );
         if (typeof toAppUpper === 'function') nomeSalvataggio = toAppUpper(nomeSalvataggio);
 
-        // Più occorrenze (batch o omonimi già in lista con altro ordine): Ordine 1, 2, …
         if (batchSeq > 0 || omonimi.length) {
             nomeSalvataggio = nomeSalvataggio + ' — ORDINE ' + ordineSeq;
         }
@@ -10152,6 +10229,7 @@
         if (batchSeq > 0 || omonimi.length) notaParts.push('Ordine ' + ordineSeq);
         else notaParts.push('Ordine 1');
         if (confOrdine) notaParts.push('CONF. ' + confOrdine);
+        if (qtaVal > 1) notaParts.push('Qta ' + qtaVal);
 
         clients.push({
             id: 'id_' + Date.now() + Math.random().toString(36).substring(2, 7),
@@ -10179,7 +10257,7 @@
             standby: false,
             inPrep: true
         });
-        return { ok: true, nome: nomeSalvataggio, confOrdine: confOrdine };
+        return { ok: true, nome: nomeSalvataggio, confOrdine: confOrdine, qta: qtaVal };
     }
 
     async function applyPrepOcrClients(list) {
@@ -10201,17 +10279,18 @@
             } else {
                 setPrepOcrStatus(
                     '📋 Campi compilati nel form. Aggiunta automatica non riuscita (' + (r.reason || '?') + '). Controlla e premi Aggiungi.',
-                    r.reason === 'già presente' ? 'work' : 'err'
+                    (String(r.reason || '').indexOf('già') === 0) ? 'work' : 'err'
                 );
             }
             return;
         }
 
         // Più clienti: aggiungi tutti automaticamente (nessuno screenshot salvato)
-        // Pre-numera omonimi nello stesso import: Ordine 1, 2, 3…
+        // Pre-numera solo omonimi con CONF. ORDINE diversi (modelli/ordini diversi)
+        // Stesso CONF è già stato unito in quantità da extractAllPrepClientsFromText
         (function assignBatchOrdineSeq(list) {
             const groups = {};
-            list.forEach(function(f, idx) {
+            list.forEach(function(f) {
                 const k = prepNormalizeClientName(f.nome || '');
                 if (!k) return;
                 if (!groups[k]) groups[k] = [];
@@ -10220,6 +10299,10 @@
             Object.keys(groups).forEach(function(k) {
                 const arr = groups[k];
                 if (arr.length < 2) return;
+                // verifica che abbiano conf diversi
+                const confs = arr.map(function(f) { return String(f.confOrdine || ''); });
+                const uniqueConfs = confs.filter(function(c, i) { return confs.indexOf(c) === i; });
+                if (uniqueConfs.length < 2) return; // stesso conf → quantità, non ordini multipli
                 arr.forEach(function(f, i) {
                     f._batchOrdineSeq = i + 1;
                 });
@@ -10231,7 +10314,7 @@
         for (let i = 0; i < items.length; i++) {
             const r = await addPrepClientFromOcrFields(items[i]);
             if (r.ok) okN++;
-            else if (r.reason && String(r.reason).indexOf('già presente') === 0) skip.push(r.nome || '');
+            else if (r.reason && (String(r.reason).indexOf('già presente') === 0 || String(r.reason).indexOf('già in clienti') === 0)) skip.push(r.nome || '');
             else fail.push((r.nome || '—') + ' (' + (r.reason || '?') + ')');
         }
         if (okN) {
@@ -10240,7 +10323,7 @@
             try { renderPrepPage(); } catch (e) {}
         }
         let msg = '✅ Aggiunti <strong>' + okN + '</strong> di ' + items.length + ' clienti in Pre-pianificazione.';
-        if (skip.length) msg += '<br>⏭ Già presenti: ' + skip.map(function(n){ return String(n).replace(/</g,'&lt;'); }).join(', ');
+        if (skip.length) msg += '<br>⏭ Già in clienti per regione: ' + skip.map(function(n){ return String(n).replace(/</g,'&lt;'); }).join(', ');
         if (fail.length) msg += '<br>⚠️ Non aggiunti: ' + fail.map(function(n){ return String(n).replace(/</g,'&lt;'); }).join(', ');
         if (okN) msg += '<br><span style="font-weight:600;">Altri clienti più in basso?</span> Scorri in LED Manager e premi <strong>Cattura altri</strong>.';
         setPrepOcrStatus(msg, okN ? 'ok' : 'err');
