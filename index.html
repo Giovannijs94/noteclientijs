@@ -6138,15 +6138,62 @@
 </div>
 
 
-<div id="renameClientModal" class="modal-overlay confirm-modal">
-    <div class="modal confirm-box" style="max-width:420px;">
-        <h3>Rinomina cliente</h3>
-        <p class="confirm-desc" style="margin-bottom:12px;">Nome attuale: <strong id="renameClientOldName"></strong></p>
-        <input type="text" id="renameClientInput" class="input-control" placeholder="Nuovo nome cliente…" style="margin-bottom:10px; text-align:center;" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmRenameClient();}">
-        <div id="renameClientError" class="login-error" style="min-height:1.2em;"></div>
-        <div class="confirm-actions">
-            <button type="button" class="btn" onclick="closeRenameClientModal()">Annulla</button>
-            <button type="button" class="btn btn-primary" onclick="confirmRenameClient()">Salva</button>
+<div id="editClientModal" class="modal-overlay confirm-modal">
+    <div class="modal confirm-box" style="max-width:520px;text-align:left;">
+        <h3 style="text-align:center;">✏️ Modifica cliente</h3>
+        <input type="hidden" id="editClientId" value="">
+        <div class="form-grid" style="margin-top:12px;">
+            <div class="form-group" style="grid-column:1/-1;">
+                <label for="editClientNome">Nome</label>
+                <input type="text" id="editClientNome" class="input-control" placeholder="Nome cliente">
+            </div>
+            <div class="form-group" style="grid-column:1/-1;">
+                <label for="editClientModello">Modello</label>
+                <input type="text" id="editClientModello" class="input-control" list="modelliDatalist" placeholder="Modello">
+            </div>
+            <div class="form-group">
+                <label for="editClientQta">Quantità</label>
+                <select id="editClientQta" class="select-control">
+                    <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                    <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+                    <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+                    <option value="10">10</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="editClientMontaggio">Montaggio</label>
+                <select id="editClientMontaggio" class="select-control">
+                    <option value="">— Seleziona —</option>
+                    <option value="Piantana">Piantana</option>
+                    <option value="Carrello">Carrello</option>
+                    <option value="Appesa">Appesa</option>
+                    <option value="Bandiera">Bandiera</option>
+                    <option value="Parete">Parete</option>
+                    <option value="Su palo">Su palo</option>
+                    <option value="Altro">Altro</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="editClientLocalita">Paese / città</label>
+                <input type="text" id="editClientLocalita" class="input-control" list="distCitiesDatalist" placeholder="Paese">
+            </div>
+            <div class="form-group">
+                <label for="editClientScadenza">Scadenza</label>
+                <input type="date" id="editClientScadenza" class="input-control">
+            </div>
+            <div class="form-group">
+                <label for="editClientConfOrdine">N° ordine (CONF.)</label>
+                <input type="text" id="editClientConfOrdine" class="input-control" placeholder="opzionale">
+            </div>
+            <div class="form-group" style="grid-column:1/-1;">
+                <label for="editClientNota">Nota</label>
+                <input type="text" id="editClientNota" class="input-control" placeholder="Nota prep / note">
+            </div>
+        </div>
+        <div id="editClientError" class="login-error" style="min-height:1.2em;text-align:center;"></div>
+        <div class="confirm-actions" style="margin-top:12px;">
+            <button type="button" class="btn" onclick="closeEditClientModal()">Annulla</button>
+            <button type="button" class="btn btn-primary" onclick="confirmEditClient()">Salva scheda</button>
         </div>
     </div>
 </div>
@@ -7120,7 +7167,7 @@
                 ${getQuantityOptionsHTML(qta)}
             </select>
             <div class="model-actions-btns">
-                <button type="button" class="btn-icon" onclick="editSelectedModelRow(this)" title="Rinomina">✏️</button>
+                <button type="button" class="btn-icon" onclick="editSelectedModelRow(this)" title="Modifica scheda">✏️</button>
                 <button type="button" class="btn-icon danger" onclick="deleteSelectedModelRow(this)" title="Elimina">🗑️</button>
                 <button type="button" class="btn-icon danger" onclick="removeModelRow(this)" title="Rimuovi">✕</button>
             </div>
@@ -7328,7 +7375,7 @@
             <div class="modal-model-item" data-model-index="${i}">
                 <span class="model-name-label">${String(m).replace(/</g, '&lt;')}</span>
                 <div style="display:flex; gap:6px;">
-                    <button type="button" class="btn-icon" data-action="rename-model" data-model-index="${i}" title="Rinomina">✏️</button>
+                    <button type="button" class="btn-icon" data-action="rename-model" data-model-index="${i}" title="Modifica scheda">✏️</button>
                     <button type="button" class="btn-icon danger" data-action="delete-model" data-model-index="${i}" title="Elimina">🗑️</button>
                 </div>
             </div>
@@ -8162,61 +8209,104 @@
 
     let pendingDeleteId = null;
 
-    let pendingRenameClientId = null;
-
-    window.renameClient = function(id) {
+    window.editClient = function(id) {
         const client = clients.find(c => String(c.id) === String(id));
         if (!client) return;
-        pendingRenameClientId = id;
-        const oldEl = document.getElementById('renameClientOldName');
-        const inp = document.getElementById('renameClientInput');
-        const err = document.getElementById('renameClientError');
-        const modal = document.getElementById('renameClientModal');
-        if (oldEl) oldEl.textContent = client.nome || '';
-        if (inp) inp.value = client.nome || '';
+        const modal = document.getElementById('editClientModal');
+        const err = document.getElementById('editClientError');
         if (err) err.textContent = '';
+        document.getElementById('editClientId').value = client.id;
+        document.getElementById('editClientNome').value = client.nome || '';
+        const m0 = (client.modelli && client.modelli[0]) ? client.modelli[0] : { nome: '', qta: 1 };
+        document.getElementById('editClientModello').value = m0.nome || '';
+        const qta = document.getElementById('editClientQta');
+        if (qta) qta.value = String(m0.qta || 1);
+        document.getElementById('editClientMontaggio').value = client.montaggio || '';
+        document.getElementById('editClientLocalita').value = client.localita || '';
+        document.getElementById('editClientScadenza').value = client.scadenza || client.data || '';
+        document.getElementById('editClientConfOrdine').value = client.confOrdine || '';
+        document.getElementById('editClientNota').value = client.notaPrep || client.notaDisponibilita || '';
         if (modal) modal.style.display = 'flex';
         setTimeout(function() {
-            if (inp) { try { inp.focus(); inp.select(); } catch (e) {} }
-        }, 50);
+            try { document.getElementById('editClientNome').focus(); } catch (e) {}
+        }, 40);
     };
+    // compat vecchio nome
+    window.renameClient = window.editClient;
 
-    window.closeRenameClientModal = function() {
-        pendingRenameClientId = null;
-        const modal = document.getElementById('renameClientModal');
+    window.closeEditClientModal = function() {
+        const modal = document.getElementById('editClientModal');
         if (modal) modal.style.display = 'none';
+        const idEl = document.getElementById('editClientId');
+        if (idEl) idEl.value = '';
     };
+    window.closeRenameClientModal = window.closeEditClientModal;
 
-    window.confirmRenameClient = function() {
-        const err = document.getElementById('renameClientError');
-        if (!pendingRenameClientId) return;
-        const client = clients.find(c => String(c.id) === String(pendingRenameClientId));
+    window.confirmEditClient = async function() {
+        const err = document.getElementById('editClientError');
+        const id = (document.getElementById('editClientId') || {}).value;
+        const client = clients.find(c => String(c.id) === String(id));
         if (!client) return;
-        const inp = document.getElementById('renameClientInput');
-        let clean = (inp && inp.value) ? inp.value.trim() : '';
-        if (typeof toAppUpper === 'function') clean = toAppUpper(clean);
-        if (!clean) {
-            if (err) err.textContent = 'Inserisci un nome.';
+        let nome = (document.getElementById('editClientNome').value || '').trim();
+        if (typeof toAppUpper === 'function') nome = toAppUpper(nome);
+        const modello = (document.getElementById('editClientModello').value || '').trim();
+        const qta = parseInt((document.getElementById('editClientQta') || {}).value, 10) || 1;
+        const montaggio = (document.getElementById('editClientMontaggio').value || '').trim();
+        const localita = (document.getElementById('editClientLocalita').value || '').trim();
+        const scadenza = (document.getElementById('editClientScadenza').value || '').trim();
+        const confOrdine = (document.getElementById('editClientConfOrdine').value || '').trim();
+        const nota = (document.getElementById('editClientNota').value || '').trim();
+        if (!nome) {
+            if (err) err.textContent = 'Inserisci il nome.';
             return;
         }
-        // avviso se omonimo diverso id
-        const dup = clients.find(c =>
-            String(c.id) !== String(pendingRenameClientId) &&
-            (c.nome || '').trim().toLowerCase() === clean.toLowerCase()
-        );
-        if (dup && !confirm('Esiste già un cliente «' + clean + '». Rinomina comunque?')) {
+        if (!localita) {
+            if (err) err.textContent = 'Inserisci il paese/città.';
             return;
         }
-        client.nome = clean;
+        let provincia = client.provincia || '';
+        let regione = client.regione || '';
+        try {
+            if (typeof resolveLocationData === 'function') {
+                const res = resolveLocationData(localita);
+                if (res && res.prov) provincia = res.prov;
+                if (res && res.reg) regione = res.reg;
+            }
+            if ((!provincia || !regione) && typeof lookupItalianComuneOnline === 'function') {
+                const found = await lookupItalianComuneOnline(localita);
+                if (found) {
+                    if (found.prov) provincia = found.prov;
+                    if (found.reg) regione = found.reg;
+                }
+            }
+        } catch (e) {}
+        client.nome = nome;
+        client.montaggio = montaggio;
+        client.localita = localita;
+        client.provincia = provincia;
+        client.regione = regione;
+        if (scadenza) client.scadenza = scadenza;
+        client.confOrdine = confOrdine;
+        if (client.inPrep) client.notaPrep = nota;
+        else client.notaDisponibilita = nota;
+        if (modello) {
+            if (!Array.isArray(client.modelli) || !client.modelli.length) client.modelli = [{ nome: modello, qta: qta }];
+            else {
+                client.modelli[0].nome = modello;
+                client.modelli[0].qta = qta;
+            }
+            try {
+                if (typeof window.autoSaveNewTypedModel === 'function') window.autoSaveNewTypedModel(modello);
+            } catch (e) {}
+        }
         saveToLocalStorage();
-        pendingRenameClientId = null;
-        const modal = document.getElementById('renameClientModal');
-        if (modal) modal.style.display = 'none';
+        closeEditClientModal();
         try { render(); } catch (e) {}
         try { if (typeof renderPrepPage === 'function') renderPrepPage(); } catch (e) {}
-        try { if (typeof renderStandbyPage === 'function' && currentView === 'standby') renderStandbyPage(); } catch (e) {}
-        try { if (typeof renderInstallatiPage === 'function' && currentView === 'installati') renderInstallatiPage(); } catch (e) {}
+        try { if (typeof renderStandbyPage === 'function') renderStandbyPage(); } catch (e) {}
+        try { if (typeof renderInstallatiPage === 'function') renderInstallatiPage(); } catch (e) {}
     };
+    window.confirmRenameClient = function() { return confirmEditClient(); };
 
     window.deleteClient = function(id) {
         const client = clients.find(c => String(c.id) === String(id));
@@ -9132,7 +9222,7 @@
                 '<button type="button" class="btn" style="background:#2563eb;color:#fff;border:none;" onclick="moveToPrep(\'' + client.id + '\')">📋 Pre-pianif.</button>' +
                 '<button type="button" class="btn" style="background:#16a34a;color:#fff;border:none;" onclick="markInstallato(\'' + client.id + '\')">✅ Installato</button>' +
                 '<button type="button" class="btn" style="background:#d97706;color:#fff;border:none;" onclick="markStandby(\'' + client.id + '\')">⏸️ Stand-by</button>' +
-                '<button type="button" class="btn-icon" onclick="renameClient(\'' + client.id + '\')" title="Rinomina">✏️</button>' +
+                '<button type="button" class="btn-icon" onclick="editClient(\'' + client.id + '\')" title="Modifica scheda">✏️</button>' +
                 '<button type="button" class="btn-icon danger" onclick="deleteClient(\'' + client.id + '\')" title="Elimina">🗑️</button>' +
               '</div>' +
             '</article>'
@@ -9502,7 +9592,7 @@
                                 <button class="btn" style="padding:8px 10px; font-size:0.75rem; background:#2563eb; color:white; border:none;" onclick="moveToPrep('${client.id}')">📋 Pre-pianif.</button>
                                 <button class="btn" style="padding:8px 10px; font-size:0.75rem; background:#16a34a; color:white; border:none;" onclick="markInstallato('${client.id}')">✅ Installato</button>
                                 <button class="btn" style="padding:8px 10px; font-size:0.75rem; background:#d97706; color:white; border:none;" onclick="markStandby('${client.id}')">⏸️ Stand-by</button>
-                                <button class="btn-icon" onclick="renameClient('${client.id}')" title="Rinomina">✏️</button>
+                                <button class="btn-icon" onclick="editClient('${client.id}')" title="Modifica scheda">✏️</button>
                                 <button class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
                             </div>
                         </td>
@@ -9837,12 +9927,14 @@
         }
 
         // Montaggio
-        const mMont = fullOne.match(/\bmontaggio\s*[:\-–]?\s*(a\s+)?(piantana|carrello|appesa|bandiera|parete|su\s*palo|altro)/i);
+        // carrellabile / carrello → Carrello
+        const mMont = fullOne.match(/\bmontaggio\s*[:\-–]?\s*(a\s+)?(piantana|carrellabile|carrello|appesa|bandiera|parete|su\s*palo|altro)/i)
+            || fullOne.match(/\b(carrellabile|carrello|piantana|appesa|bandiera|parete|su\s*palo)\b/i);
         if (mMont) {
-            let m = (mMont[2] || '').toLowerCase();
+            let m = (mMont[2] || mMont[1] || '').toLowerCase();
             if (m.indexOf('palo') >= 0) out.montaggio = 'Su palo';
+            else if (m.indexOf('carrell') >= 0) out.montaggio = 'Carrello';
             else if (m === 'piantana') out.montaggio = 'Piantana';
-            else if (m === 'carrello') out.montaggio = 'Carrello';
             else if (m === 'appesa') out.montaggio = 'Appesa';
             else if (m === 'bandiera') out.montaggio = 'Bandiera';
             else if (m === 'parete') out.montaggio = 'Parete';
@@ -9860,6 +9952,7 @@
         if (!out.montaggio) {
             const montOpts = ['Piantana', 'Carrello', 'Appesa', 'Bandiera', 'Parete', 'Su palo', 'Altro'];
             for (let i = 0; i < montOpts.length; i++) {
+                if (montOpts[i] === 'Carrello' && /carrellabile/i.test(fullOne)) { out.montaggio = 'Carrello'; break; }
                 const re = new RegExp('\\b' + montOpts[i].replace(/\s+/g, '\\s+') + '\\b', 'i');
                 if (re.test(fullOne)) { out.montaggio = montOpts[i]; break; }
             }
@@ -10784,7 +10877,7 @@
                     </div>
                     <div class="info-card-actions">
                         <button type="button" class="btn btn-restore" onclick="unmarkStandby('${client.id}')">↩ Ripristina</button>
-                        <button type="button" class="btn-icon" onclick="renameClient('${client.id}')" title="Rinomina">✏️</button>
+                        <button type="button" class="btn-icon" onclick="editClient('${client.id}')" title="Modifica scheda">✏️</button>
                         <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
                     </div>
                 </article>`;
@@ -11607,7 +11700,7 @@
                         String(zone.tappaName || zone.tecnico).replace(/</g, '&lt;') + '</span>';
                 }
                 actions +=
-                    '<button type="button" class="btn prep-mini-btn" onclick="renameClient(\'' + safeId + '\')" title="Rinomina">✏️ Rinomina</button>' +
+                    '<button type="button" class="btn prep-mini-btn" onclick="editClient(\'' + safeId + '\')" title="Modifica scheda">✏️ Modifica</button>' +
                     '<button type="button" class="btn-icon danger prep-mini-btn" onclick="deleteClient(\'' + safeId + '\')" title="Elimina">🗑️</button>' +
                     '<button type="button" class="btn' + ((montSpecial || (zone && zone.tecnico)) ? '' : ' btn-primary') +
                     ' prep-mini-btn" onclick="movePrepClientToNote(\'' + safeId + '\')">→ Note</button>';
@@ -15660,7 +15753,7 @@
                         </div>
                         <div class="info-card-actions">
                             <button type="button" class="btn btn-restore" onclick="unmarkInstallato('${client.id}')">↩ Ripristina</button>
-                            <button type="button" class="btn-icon" onclick="renameClient('${client.id}')" title="Rinomina">✏️</button>
+                            <button type="button" class="btn-icon" onclick="editClient('${client.id}')" title="Modifica scheda">✏️</button>
                         <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
                         </div>
                     </article>
