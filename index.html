@@ -5864,6 +5864,7 @@
             <div style="display:flex;flex-wrap:wrap;gap:8px;">
                 <button type="button" class="btn btn-primary" onclick="prepImportFromPaste()">📋 Incolla e importa tutti</button>
                 <button type="button" class="btn" onclick="document.getElementById('prepPasteArea').value='';setPrepOcrStatus('', '');">Svuota</button>
+                <button type="button" class="btn" onclick="refreshAllClientProvinces({ onlyPrep: false })" title="Ricontrolla paese e aggiorna provincia/regione (usa internet)">🌍 Aggiorna province</button>
             </div>
         </div>
         <div id="prepOcrStatus" class="prep-ocr-status" hidden></div>
@@ -7034,8 +7035,18 @@
             clearTimeout(timer);
             if (r.ok) {
                 const data = await r.json();
-                if (data && data[0]) {
-                    const hit = data[0];
+                if (data && data.length) {
+                    // Preferisci comune/città rispetto a strada/POI
+                    let hit = data[0];
+                    for (let hi = 0; hi < data.length; hi++) {
+                        const t = String(data[hi].type || data[hi].class || '');
+                        const cls = String(data[hi].class || '');
+                        if (t === 'administrative' || t === 'city' || t === 'town' || t === 'village' || t === 'municipality'
+                            || cls === 'place' || cls === 'boundary') {
+                            hit = data[hi];
+                            break;
+                        }
+                    }
                     const addr = hit.address || {};
                     const reg = normalizeRegioneName(addr.state || addr.region || '');
                     let prov = '';
@@ -10063,19 +10074,50 @@
             out.modello = cleanVal(ledModello.replace(/\s{2,}/g, ' '));
         }
 
-        // Città da Indirizzo
+        // Città da Indirizzo — massima precisione (paese + eventuale provincia tra parentesi)
         let ledCitta = '';
+        let ledProvHint = '';
         const mInd = full.match(/indirizzo\s*[:\-–]?\s*([^\n]+)/i);
         if (mInd) {
-            const ind = mInd[1];
-            let mC = ind.match(/\-\s*([A-ZÀ-Ù][A-Za-zÀ-ù'\s]+?)\s*\(/);
+            const ind = mInd[1].trim();
+            // Provincia tra parentesi finale: (Roma) / (RM) / (BA)
+            const mProv = ind.match(/\(\s*([A-Za-zÀ-ù]{2,}|\w{2})\s*\)\s*$/);
+            if (mProv) ledProvHint = mProv[1].trim();
+            // Pattern: ... - CITTA (Prov)
+            let mC = ind.match(/\-\s*([A-ZÀ-Ù][A-Za-zÀ-ù'’\s\.]+?)\s*\(/);
             if (mC) ledCitta = mC[1].trim();
-            if (!ledCitta && ind.indexOf('-') >= 0) {
-                const part = ind.split('-').pop().replace(/\(.*?\)/g, '').trim();
-                if (part && !/^\d+$/.test(part)) ledCitta = part;
+            if (!ledCitta) {
+                // dopo ultimo trattino
+                if (ind.indexOf('-') >= 0) {
+                    const part = ind.split('-').pop().replace(/\(.*?\)/g, '').trim();
+                    if (part && !/^\d+$/.test(part) && !/^(via|v\.le|viale|corso|piazza)/i.test(part)) {
+                        ledCitta = part;
+                    }
+                }
+            }
+            if (!ledCitta) {
+                // CAP + comune: 00048 NETTUNO
+                const mCap = ind.match(/\b\d{5}\s+([A-ZÀ-Ù][A-Za-zÀ-ù'’\s]+?)(?:\s*\(|$)/);
+                if (mCap) ledCitta = mCap[1].trim();
+            }
+            if (!ledCitta) {
+                // ultima parola significativa non numerica
+                const cleaned = ind.replace(/\(.*?\)/g, ' ').replace(/\b\d+\b/g, ' ').replace(/,/g, ' ');
+                const tokens = cleaned.split(/\s+/).filter(Boolean);
+                for (let ti = tokens.length - 1; ti >= 0; ti--) {
+                    const tok = tokens[ti];
+                    if (/^(via|v\.le|viale|corso|piazza|p\.zza|strada|contrada|loc\.|localit[aà])$/i.test(tok)) continue;
+                    if (tok.length >= 3) { ledCitta = tok; break; }
+                }
             }
         }
-        if (ledCitta) out.localita = cleanVal(ledCitta.replace(/\(.*?\)/g, '').trim());
+        if (ledCitta) {
+            ledCitta = ledCitta.replace(/\(.*?\)/g, '').replace(/\s{2,}/g, ' ').trim();
+            out.localita = cleanVal(ledCitta);
+            if (ledProvHint) out.provinciaHint = ledProvHint;
+            // query arricchita per lookup online
+            out.localitaQuery = out.localita + (ledProvHint ? (', ' + ledProvHint) : '');
+        }
 
         // Scadenza
         const mScad = fullOne.match(/\bscadenza\s*[:\-–]?\s*(\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4})/i);
@@ -10210,30 +10252,75 @@
         return true;
     }
 
-    async function resolvePrepLocation(localitaVal) {
+    async function resolvePrepLocation(localitaVal, opts) {
+        opts = opts || {};
         const loc = String(localitaVal || '').trim();
+        const hint = String(opts.provinciaHint || opts.hint || '').trim();
+        const queryExtra = String(opts.query || '').trim();
         let provinciaVal = '';
         let regioneVal = '';
-        if (!loc) return { localita: '', provincia: '', regione: '' };
+        let resolvedName = loc;
+
+        if (!loc) return { localita: '', provincia: '', regione: '', name: '' };
+
+        // 1) database locale
         try {
             if (typeof resolveLocationData === 'function') {
                 const res = resolveLocationData(loc);
                 if (res) {
                     if (res.prov) provinciaVal = res.prov;
                     if (res.reg) regioneVal = res.reg;
+                    if (res.name) resolvedName = res.name;
                 }
             }
         } catch (e) {}
-        if ((!provinciaVal || !regioneVal) && typeof lookupItalianComuneOnline === 'function') {
+
+        // 2) online Nominatim — sempre tentato per precisione (anche se locale ha qualcosa)
+        const queries = [];
+        if (queryExtra) queries.push(queryExtra);
+        if (hint) queries.push(loc + ', ' + hint + ', Italia');
+        queries.push(loc + ', Italia');
+        if (hint && hint.length === 2) queries.push(loc + ' (' + hint.toUpperCase() + '), Italia');
+        // dedupe
+        const seenQ = {};
+        const uniqQ = [];
+        queries.forEach(function(q) {
+            const k = q.toLowerCase();
+            if (seenQ[k]) return;
+            seenQ[k] = true;
+            uniqQ.push(q);
+        });
+
+        for (let qi = 0; qi < uniqQ.length; qi++) {
             try {
-                const found = await lookupItalianComuneOnline(loc);
-                if (found) {
-                    if (found.prov) provinciaVal = found.prov;
-                    if (found.reg) regioneVal = found.reg;
-                }
+                if (typeof lookupItalianComuneOnline !== 'function') break;
+                // piccola pausa tra richieste Nominatim (policy)
+                if (qi > 0) await new Promise(function(r) { setTimeout(r, 1100); });
+                const found = await lookupItalianComuneOnline(uniqQ[qi]);
+                if (!found) continue;
+                if (found.name) resolvedName = found.name;
+                if (found.prov) provinciaVal = found.prov;
+                if (found.reg) regioneVal = found.reg;
+                // se abbiamo entrambi, stop
+                if (provinciaVal && regioneVal) break;
             } catch (e) {}
         }
-        return { localita: loc, provincia: provinciaVal, regione: regioneVal };
+
+        // 3) se abbiamo solo hint provincia testuale, prova codice
+        if (!provinciaVal && hint && typeof guessProvinciaCode === 'function') {
+            const g = guessProvinciaCode(hint);
+            if (g) provinciaVal = g;
+        }
+        if (!regioneVal && provinciaVal && typeof PROVINCE_TO_REGION !== 'undefined' && PROVINCE_TO_REGION[provinciaVal]) {
+            regioneVal = PROVINCE_TO_REGION[provinciaVal];
+        }
+
+        return {
+            localita: resolvedName || loc,
+            provincia: provinciaVal,
+            regione: regioneVal,
+            name: resolvedName || loc
+        };
     }
 
     function stripModBipiemme(s) {
@@ -10297,17 +10384,49 @@
             return prepNormalizeClientName(c.nome) === baseKey;
         });
         if (already.length) {
+            // Non reinserire, ma aggiorna sempre paese → provincia/regione
+            try {
+                const loc = await resolvePrepLocation(localitaVal || already[0].localita || '', {
+                    provinciaHint: fields.provinciaHint || '',
+                    query: fields.localitaQuery || ''
+                });
+                let changed = false;
+                already.forEach(function(c) {
+                    if (localitaVal && (!c.localita || c.localita.trim() !== localitaVal)) {
+                        // non sovrascrivere paese se diverso e già valorizzato: aggiorna solo se vuoto o uguale base
+                        if (!c.localita) { c.localita = loc.localita || localitaVal; changed = true; }
+                    }
+                    if (loc.localita && c.localita && prepNormalizeClientName(c.localita) === prepNormalizeClientName(localitaVal || c.localita)) {
+                        if (loc.localita !== c.localita) { c.localita = loc.localita; changed = true; }
+                    }
+                    if (loc.provincia && c.provincia !== loc.provincia) { c.provincia = loc.provincia; changed = true; }
+                    if (loc.regione && c.regione !== loc.regione) { c.regione = loc.regione; changed = true; }
+                    // se manca paese ma abbiamo localitaVal dall'import
+                    if (!c.localita && (loc.localita || localitaVal)) {
+                        c.localita = loc.localita || localitaVal;
+                        changed = true;
+                    }
+                    if ((!c.provincia || !c.regione) && c.localita) {
+                        // già tentato via loc sopra
+                    }
+                });
+                if (changed) saveToLocalStorage();
+            } catch (e) {}
             const inPrep = already.some(function(c) {
                 return typeof isInPrep === 'function' ? isInPrep(c) : (c.inPrep === true || c.inPrep === 'true');
             });
             return {
                 ok: false,
-                reason: inPrep ? 'già in clienti per regione' : 'già in Note Clienti',
-                nome: nomeVal
+                reason: inPrep ? 'già in clienti per regione (provincia aggiornata)' : 'già in Note Clienti (provincia aggiornata)',
+                nome: nomeVal,
+                updated: true
             };
         }
 
-        const loc = await resolvePrepLocation(localitaVal);
+        const loc = await resolvePrepLocation(localitaVal, {
+            provinciaHint: fields.provinciaHint || '',
+            query: fields.localitaQuery || ''
+        });
         if (!loc.regione) {
             return { ok: false, reason: 'regione non riconosciuta', nome: nomeVal, localita: localitaVal };
         }
@@ -16158,6 +16277,47 @@
     window.renderConsigliPage = renderConsigliPage;
     window.renderCalendarioPage = renderCalendarioPage;
 
+
+
+    /** Controlla paese di tutti i clienti e aggiorna provincia/regione (online se serve) */
+    window.refreshAllClientProvinces = async function(opts) {
+        opts = opts || {};
+        const onlyPrep = !!opts.onlyPrep;
+        const list = (clients || []).filter(function(c) {
+            if (!c || !(c.localita || '').trim()) return false;
+            if (onlyPrep && typeof isInPrep === 'function' && !isInPrep(c)) return false;
+            return true;
+        });
+        if (!list.length) {
+            if (typeof setPrepOcrStatus === 'function') setPrepOcrStatus('Nessun cliente con paese da controllare.', 'work');
+            return { updated: 0, total: 0 };
+        }
+        let updated = 0;
+        for (let i = 0; i < list.length; i++) {
+            const c = list[i];
+            if (typeof setPrepOcrStatus === 'function') {
+                setPrepOcrStatus('🌍 Controllo paesi… ' + (i + 1) + '/' + list.length + ' — ' + String(c.nome || '').replace(/</g, '&lt;'), 'work');
+            }
+            try {
+                const loc = await resolvePrepLocation(c.localita, {});
+                let ch = false;
+                if (loc.localita && loc.localita !== c.localita) { c.localita = loc.localita; ch = true; }
+                if (loc.provincia && loc.provincia !== c.provincia) { c.provincia = loc.provincia; ch = true; }
+                if (loc.regione && loc.regione !== c.regione) { c.regione = loc.regione; ch = true; }
+                if ((!c.provincia && loc.provincia) || (!c.regione && loc.regione)) ch = true;
+                if (ch) updated++;
+            } catch (e) {}
+            // rate limit Nominatim
+            if (i < list.length - 1) await new Promise(function(r) { setTimeout(r, 1100); });
+        }
+        if (updated) saveToLocalStorage();
+        try { render(); } catch (e) {}
+        try { if (typeof renderPrepPage === 'function') renderPrepPage(); } catch (e) {}
+        if (typeof setPrepOcrStatus === 'function') {
+            setPrepOcrStatus('✅ Province aggiornate: <strong>' + updated + '</strong> su ' + list.length + ' clienti controllati.', 'ok');
+        }
+        return { updated: updated, total: list.length };
+    };
 
     window.forceAppUpdate = async function() {
         const btn = document.getElementById('appRefreshBtn');
