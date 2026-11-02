@@ -5864,7 +5864,7 @@
             <div style="display:flex;flex-wrap:wrap;gap:8px;">
                 <button type="button" class="btn btn-primary" onclick="prepImportFromPaste()">📋 Incolla e importa tutti</button>
                 <button type="button" class="btn" onclick="document.getElementById('prepPasteArea').value='';setPrepOcrStatus('', '');">Svuota</button>
-                <button type="button" class="btn" onclick="refreshAllClientProvinces({ onlyPrep: false })" title="Ricontrolla paese e aggiorna provincia/regione (usa internet)">🌍 Aggiorna province</button>
+                <button type="button" class="btn" onclick="refreshAllClientProvinces({ onlyPrep: true })" title="Ricontrolla paese e aggiorna provincia solo per clienti in Pre-pianificazione">🌍 Aggiorna province</button>
             </div>
         </div>
         <div id="prepOcrStatus" class="prep-ocr-status" hidden></div>
@@ -10384,42 +10384,36 @@
             return prepNormalizeClientName(c.nome) === baseKey;
         });
         if (already.length) {
-            // Non reinserire, ma aggiorna sempre paese → provincia/regione
-            try {
-                const loc = await resolvePrepLocation(localitaVal || already[0].localita || '', {
-                    provinciaHint: fields.provinciaHint || '',
-                    query: fields.localitaQuery || ''
-                });
-                let changed = false;
-                already.forEach(function(c) {
-                    if (localitaVal && (!c.localita || c.localita.trim() !== localitaVal)) {
-                        // non sovrascrivere paese se diverso e già valorizzato: aggiorna solo se vuoto o uguale base
-                        if (!c.localita) { c.localita = loc.localita || localitaVal; changed = true; }
-                    }
-                    if (loc.localita && c.localita && prepNormalizeClientName(c.localita) === prepNormalizeClientName(localitaVal || c.localita)) {
-                        if (loc.localita !== c.localita) { c.localita = loc.localita; changed = true; }
-                    }
-                    if (loc.provincia && c.provincia !== loc.provincia) { c.provincia = loc.provincia; changed = true; }
-                    if (loc.regione && c.regione !== loc.regione) { c.regione = loc.regione; changed = true; }
-                    // se manca paese ma abbiamo localitaVal dall'import
-                    if (!c.localita && (loc.localita || localitaVal)) {
-                        c.localita = loc.localita || localitaVal;
-                        changed = true;
-                    }
-                    if ((!c.provincia || !c.regione) && c.localita) {
-                        // già tentato via loc sopra
-                    }
-                });
-                if (changed) saveToLocalStorage();
-            } catch (e) {}
-            const inPrep = already.some(function(c) {
+            // Non reinserire; aggiorna provincia/regione solo se il cliente è in Pre-pianificazione
+            const inPrepList = already.filter(function(c) {
                 return typeof isInPrep === 'function' ? isInPrep(c) : (c.inPrep === true || c.inPrep === 'true');
             });
+            if (inPrepList.length) {
+                try {
+                    const loc = await resolvePrepLocation(localitaVal || inPrepList[0].localita || '', {
+                        provinciaHint: fields.provinciaHint || '',
+                        query: fields.localitaQuery || ''
+                    });
+                    let changed = false;
+                    inPrepList.forEach(function(c) {
+                        if (!c.localita && (loc.localita || localitaVal)) {
+                            c.localita = loc.localita || localitaVal;
+                            changed = true;
+                        }
+                        if (loc.localita && c.localita && prepNormalizeClientName(c.localita) === prepNormalizeClientName(localitaVal || c.localita)) {
+                            if (loc.localita !== c.localita) { c.localita = loc.localita; changed = true; }
+                        }
+                        if (loc.provincia && c.provincia !== loc.provincia) { c.provincia = loc.provincia; changed = true; }
+                        if (loc.regione && c.regione !== loc.regione) { c.regione = loc.regione; changed = true; }
+                    });
+                    if (changed) saveToLocalStorage();
+                } catch (e) {}
+            }
+            const inPrep = inPrepList.length > 0;
             return {
                 ok: false,
-                reason: inPrep ? 'già in clienti per regione (provincia aggiornata)' : 'già in Note Clienti (provincia aggiornata)',
-                nome: nomeVal,
-                updated: true
+                reason: inPrep ? 'già in Pre-pianificazione' : 'già in Note Clienti',
+                nome: nomeVal
             };
         }
 
@@ -16282,7 +16276,7 @@
     /** Controlla paese di tutti i clienti e aggiorna provincia/regione (online se serve) */
     window.refreshAllClientProvinces = async function(opts) {
         opts = opts || {};
-        const onlyPrep = !!opts.onlyPrep;
+        const onlyPrep = (opts.onlyPrep !== false); // default: solo Prep
         const list = (clients || []).filter(function(c) {
             if (!c || !(c.localita || '').trim()) return false;
             if (onlyPrep && typeof isInPrep === 'function' && !isInPrep(c)) return false;
@@ -16314,7 +16308,7 @@
         try { render(); } catch (e) {}
         try { if (typeof renderPrepPage === 'function') renderPrepPage(); } catch (e) {}
         if (typeof setPrepOcrStatus === 'function') {
-            setPrepOcrStatus('✅ Province aggiornate: <strong>' + updated + '</strong> su ' + list.length + ' clienti controllati.', 'ok');
+            setPrepOcrStatus('✅ Province aggiornate (solo Prep): <strong>' + updated + '</strong> su ' + list.length + ' controllati.', 'ok');
         }
         return { updated: updated, total: list.length };
     };
