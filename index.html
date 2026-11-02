@@ -3049,6 +3049,31 @@
             font-weight: 700;
         }
 
+
+        .cal-toolbar { display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px; }
+        .cal-grid { display:grid;grid-template-columns:repeat(7,1fr);gap:6px; }
+        .cal-dow { text-align:center;font-size:0.75rem;font-weight:700;color:var(--text-muted);padding:4px; }
+        .cal-cell { min-height:88px;border:1px solid var(--border);border-radius:12px;padding:6px;background:#fff;cursor:pointer; }
+        .cal-cell:hover { border-color:#a5b4fc; }
+        .cal-cell.is-out { opacity:0.45;background:#f8fafc; }
+        .cal-cell.is-today { border-color:#6366f1;box-shadow:0 0 0 2px rgba(99,102,241,0.2); }
+        .cal-cell.is-selected { border-color:#4f46e5;background:#eef2ff; }
+        .cal-day-num { font-weight:800;font-size:0.9rem;margin-bottom:4px; }
+        .cal-chip { display:block;font-size:0.68rem;font-weight:600;line-height:1.25;padding:2px 5px;margin-bottom:3px;border-radius:6px;background:#e0e7ff;color:#3730a3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+        .cal-chip.is-urgent { background:#fee2e2;color:#991b1b; }
+        .cal-chip.is-soon { background:#ffedd5;color:#9a3412; }
+        .cal-more { font-size:0.68rem;color:var(--text-muted);font-weight:600; }
+        .cal-day-detail .cal-detail-row { padding:10px 0;border-bottom:1px solid var(--border); }
+        .consigli-card { background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:12px; }
+        .consigli-card h3 { margin:0 0 8px;font-size:1rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap; }
+        .consigli-badge { font-size:0.72rem;font-weight:800;padding:2px 8px;border-radius:999px;background:#e0e7ff;color:#3730a3; }
+        .consigli-badge.urgent { background:#fee2e2;color:#991b1b; }
+        .consigli-badge.warn { background:#ffedd5;color:#9a3412; }
+        .consigli-badge.ok { background:#d1fae5;color:#065f46; }
+        .consigli-list { margin:8px 0 0;padding-left:18px; }
+        .consigli-list li { margin-bottom:6px;line-height:1.4; }
+        .consigli-empty { text-align:center;color:var(--text-muted);padding:40px 16px; }
+
         .prep-ocr-status {
             margin: 0 0 12px;
             padding: 10px 12px;
@@ -5436,6 +5461,11 @@
                 <span class="nav-ico-wrap"><span class="nav-ico">📝</span></span>
                 <span class="nav-txt-wrap"><span class="nav-txt">Note</span><span class="nav-desc">Clienti e tappe</span></span>
             </button>
+            <button type="button" class="portal-nav-btn" id="navCalendario" onclick="switchView('calendario')">
+                <span class="nav-ico-wrap"><span class="nav-ico">📅</span></span>
+                <span class="nav-txt-wrap"><span class="nav-txt">Calendario</span><span class="nav-desc">Clienti per giorno</span></span>
+                <span class="nav-badge" id="navCalendarioCount">0</span>
+            </button>
             <button type="button" class="portal-nav-btn" id="navPercorso" onclick="switchView('percorso')">
                 <span class="nav-ico-wrap"><span class="nav-ico">🗺️</span></span>
                 <span class="nav-txt-wrap"><span class="nav-txt">Percorso</span><span class="nav-desc">Mappa e itinerario</span></span>
@@ -5450,6 +5480,11 @@
                 <span class="nav-ico-wrap"><span class="nav-ico">📋</span></span>
                 <span class="nav-txt-wrap"><span class="nav-txt">Pre-pianif.</span><span class="nav-desc">In attesa di tappa</span></span>
                 <span class="nav-badge badge-prep" id="navPrepCount">0</span>
+            </button>
+            <button type="button" class="portal-nav-btn" id="navConsigli" onclick="switchView('consigli')">
+                <span class="nav-ico-wrap"><span class="nav-ico">💡</span></span>
+                <span class="nav-txt-wrap"><span class="nav-txt">Consigli pianif.</span><span class="nav-desc">Consegne da fare</span></span>
+                <span class="nav-badge" id="navConsigliCount">0</span>
             </button>
             <button type="button" class="portal-nav-btn" id="navInstallati" onclick="switchView('installati')">
                 <span class="nav-ico-wrap"><span class="nav-ico">✅</span></span>
@@ -5616,6 +5651,31 @@
         </div>
     </div>
 </div><!-- /#viewNote -->
+
+
+<div id="viewCalendario" class="view-panel">
+    <div class="header-bar">
+        <div class="header-title-group">
+            <h1>📅 Calendario</h1>
+        </div>
+        <div class="header-actions header-actions-right">
+            <span class="header-jumbo" aria-label="Jumboscreen">
+                <span class="header-jumbo-word">
+                    <span class="header-jumbo-letters">JUMBOSCRE</span><span class="header-jumbo-e" aria-hidden="true"><i></i><i></i><i></i></span><span class="header-jumbo-letters">N</span>
+                </span><span class="header-jumbo-reg">®</span>
+            </span>
+        </div>
+    </div>
+    <p class="meteo-intro">Clienti da fare per giorno (in base a <strong>scadenza</strong> e data tappa). Clicca un giorno per il dettaglio.</p>
+    <div class="cal-toolbar">
+        <button type="button" class="btn" onclick="calShiftMonth(-1)">‹ Prec.</button>
+        <strong id="calMonthLabel" style="min-width:160px;text-align:center;"></strong>
+        <button type="button" class="btn" onclick="calShiftMonth(1)">Succ. ›</button>
+        <button type="button" class="btn" onclick="calGoToday()">Oggi</button>
+    </div>
+    <div id="calGrid" class="cal-grid"></div>
+    <div id="calDayDetail" class="cal-day-detail card" style="display:none;margin-top:14px;"></div>
+</div><!-- /#viewCalendario -->
 
 <div id="viewPercorso" class="view-panel">
     <div class="header-bar">
@@ -5833,6 +5893,25 @@
         <div id="prepMiniList"></div>
     </div>
 </div><!-- /#viewPrep -->
+
+<div id="viewConsigli" class="view-panel">
+    <div class="header-bar">
+        <div class="header-title-group">
+            <h1>💡 Consigli pianificazione</h1>
+        </div>
+        <div class="header-actions header-actions-right">
+            <button type="button" class="btn btn-primary" onclick="renderConsigliPage()">🔄 Aggiorna consigli</button>
+            <span class="header-jumbo" aria-label="Jumboscreen">
+                <span class="header-jumbo-word">
+                    <span class="header-jumbo-letters">JUMBOSCRE</span><span class="header-jumbo-e" aria-hidden="true"><i></i><i></i><i></i></span><span class="header-jumbo-letters">N</span>
+                </span><span class="header-jumbo-reg">®</span>
+            </span>
+        </div>
+    </div>
+    <p class="meteo-intro">Analisi automatica dei clienti in <strong>Pre-pianificazione</strong>: urgenza scadenza, raggruppamento per zona e ordine di consegna consigliato.</p>
+    <div id="consigliContainer"></div>
+</div><!-- /#viewConsigli -->
+
 
 <div id="viewInstallati" class="view-panel">
     <div class="header-bar">
@@ -10161,17 +10240,21 @@
         if (!localitaVal) return { ok: false, reason: 'paese mancante', nome: nomeVal };
         if (!scadenzaVal) return { ok: false, reason: 'scadenza mancante', nome: nomeVal };
 
-        // Già in "Clienti per regione" (Prep)? → non reinserire
+        // Già in elenco (Note Clienti o Prep / clienti per regione)? → non copiare di nuovo
         const baseKey = prepNormalizeClientName(nomeVal);
-        const inPrepSameName = (clients || []).filter(function(c) {
-            if (typeof isInPrep === 'function' && !isInPrep(c)) return false;
+        const already = (clients || []).filter(function(c) {
             return prepNormalizeClientName(c.nome) === baseKey;
         });
-        if (inPrepSameName.length) {
-            return { ok: false, reason: 'già in clienti per regione', nome: nomeVal };
+        if (already.length) {
+            const inPrep = already.some(function(c) {
+                return typeof isInPrep === 'function' ? isInPrep(c) : (c.inPrep === true || c.inPrep === 'true');
+            });
+            return {
+                ok: false,
+                reason: inPrep ? 'già in clienti per regione' : 'già in Note Clienti',
+                nome: nomeVal
+            };
         }
-
-        // (Eventuali omonimi non-prep non bloccano; il batch gestisce Ordine 1,2 e quantità)
 
         const loc = await resolvePrepLocation(localitaVal);
         if (!loc.regione) {
@@ -10323,7 +10406,7 @@
             try { renderPrepPage(); } catch (e) {}
         }
         let msg = '✅ Aggiunti <strong>' + okN + '</strong> di ' + items.length + ' clienti in Pre-pianificazione.';
-        if (skip.length) msg += '<br>⏭ Già in clienti per regione: ' + skip.map(function(n){ return String(n).replace(/</g,'&lt;'); }).join(', ');
+        if (skip.length) msg += '<br>⏭ Già in elenco (Note/Prep): ' + skip.map(function(n){ return String(n).replace(/</g,'&lt;'); }).join(', ');
         if (fail.length) msg += '<br>⚠️ Non aggiunti: ' + fail.map(function(n){ return String(n).replace(/</g,'&lt;'); }).join(', ');
         if (okN) msg += '<br><span style="font-weight:600;">Altri clienti più in basso?</span> Scorri in LED Manager e premi <strong>Cattura altri</strong>.';
         setPrepOcrStatus(msg, okN ? 'ok' : 'err');
@@ -15686,24 +15769,319 @@
         box.innerHTML = cards.join('') || '<div class="meteo-empty">Nessun dato.</div>';
     };
 
+
+    // ===== CALENDARIO =====
+    let _calYear = new Date().getFullYear();
+    let _calMonth = new Date().getMonth(); // 0-11
+    let _calSelected = null;
+
+    function clientEventDates(c) {
+        const dates = [];
+        const scad = (c.scadenza || '').trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(scad)) dates.push({ date: scad, kind: 'scadenza' });
+        const d = (c.data || '').trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(d) && d !== scad) dates.push({ date: d, kind: 'data' });
+        // tappa dal-al se presenti
+        const dal = (c.tappaDal || c.dal || '').trim();
+        const al = (c.tappaAl || c.al || '').trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dal)) dates.push({ date: dal, kind: 'tappa' });
+        if (/^\d{4}-\d{2}-\d{2}$/.test(al) && al !== dal) dates.push({ date: al, kind: 'tappa' });
+        return dates;
+    }
+
+    function clientsByDateMap() {
+        const map = {};
+        (clients || []).forEach(function(c) {
+            if (c.installato) return;
+            clientEventDates(c).forEach(function(ev) {
+                if (!map[ev.date]) map[ev.date] = [];
+                map[ev.date].push({ client: c, kind: ev.kind });
+            });
+        });
+        return map;
+    }
+
+    function calDaysUntil(iso) {
+        try {
+            const t = new Date(iso + 'T12:00:00');
+            const n = new Date();
+            n.setHours(12, 0, 0, 0);
+            return Math.round((t - n) / 86400000);
+        } catch (e) { return 999; }
+    }
+
+    window.calShiftMonth = function(delta) {
+        _calMonth += delta;
+        if (_calMonth > 11) { _calMonth = 0; _calYear++; }
+        if (_calMonth < 0) { _calMonth = 11; _calYear--; }
+        renderCalendarioPage();
+    };
+    window.calGoToday = function() {
+        const n = new Date();
+        _calYear = n.getFullYear();
+        _calMonth = n.getMonth();
+        _calSelected = n.toISOString().slice(0, 10);
+        renderCalendarioPage();
+    };
+    window.calSelectDay = function(iso) {
+        _calSelected = iso;
+        renderCalendarioPage();
+    };
+
+    function renderCalendarioPage() {
+        const map = clientsByDateMap();
+        const badge = document.getElementById('navCalendarioCount');
+        if (badge) {
+            let n = 0;
+            Object.keys(map).forEach(function(k) { n += map[k].length; });
+            badge.textContent = n;
+        }
+        const label = document.getElementById('calMonthLabel');
+        const mesi = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+        if (label) label.textContent = mesi[_calMonth] + ' ' + _calYear;
+
+        const grid = document.getElementById('calGrid');
+        if (!grid) return;
+        const first = new Date(_calYear, _calMonth, 1);
+        const startDow = (first.getDay() + 6) % 7; // lun=0
+        const daysInMonth = new Date(_calYear, _calMonth + 1, 0).getDate();
+        const todayIso = new Date().toISOString().slice(0, 10);
+
+        let html = '';
+        ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].forEach(function(d) {
+            html += '<div class="cal-dow">' + d + '</div>';
+        });
+        // celle vuote prima
+        for (let i = 0; i < startDow; i++) {
+            html += '<div class="cal-cell is-out"></div>';
+        }
+        for (let day = 1; day <= daysInMonth; day++) {
+            const iso = _calYear + '-' + String(_calMonth + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+            const items = map[iso] || [];
+            const cls = ['cal-cell'];
+            if (iso === todayIso) cls.push('is-today');
+            if (iso === _calSelected) cls.push('is-selected');
+            let chips = '';
+            const show = items.slice(0, 3);
+            show.forEach(function(it) {
+                const c = it.client;
+                const left = calDaysUntil(iso);
+                let ccls = 'cal-chip';
+                if (left < 0 || left <= 2) ccls += ' is-urgent';
+                else if (left <= 7) ccls += ' is-soon';
+                chips += '<span class="' + ccls + '" title="' + String(c.nome || '').replace(/"/g, '&quot;') + '">' +
+                    String(c.nome || '').replace(/</g, '&lt;') + '</span>';
+            });
+            if (items.length > 3) chips += '<span class="cal-more">+' + (items.length - 3) + ' altri</span>';
+            html += '<div class="' + cls.join(' ') + '" onclick="calSelectDay(\'' + iso + '\')">' +
+                '<div class="cal-day-num">' + day + (items.length ? ' · ' + items.length : '') + '</div>' +
+                chips + '</div>';
+        }
+        grid.innerHTML = html;
+
+        const detail = document.getElementById('calDayDetail');
+        if (!detail) return;
+        if (!_calSelected) { detail.style.display = 'none'; detail.innerHTML = ''; return; }
+        const list = map[_calSelected] || [];
+        detail.style.display = 'block';
+        if (!list.length) {
+            detail.innerHTML = '<div class="card-title">' + _calSelected + '</div><p style="color:var(--text-muted);">Nessun cliente in questo giorno.</p>';
+            return;
+        }
+        let rows = list.map(function(it) {
+            const c = it.client;
+            const models = (c.modelli || []).map(function(m) {
+                return (m.nome || '') + (m.qta > 1 ? ' ×' + m.qta : '');
+            }).join(', ') || '—';
+            return '<div class="cal-detail-row">' +
+                '<strong>' + String(c.nome || '').replace(/</g, '&lt;') + '</strong> ' +
+                '<span style="color:var(--text-muted);font-size:0.82rem;">(' + it.kind + ')</span><br>' +
+                '📍 ' + String(c.localita || '—').replace(/</g, '&lt;') +
+                (c.regione ? ' · ' + String(c.regione).replace(/</g, '&lt;') : '') + '<br>' +
+                '📦 ' + String(models).replace(/</g, '&lt;') +
+                (c.montaggio ? ' · 🔧 ' + String(c.montaggio).replace(/</g, '&lt;') : '') +
+                (c.scadenza ? ' · 📅 ' + c.scadenza : '') +
+                '</div>';
+        }).join('');
+        detail.innerHTML = '<div class="card-title">Clienti del ' + _calSelected + ' (' + list.length + ')</div>' + rows;
+    }
+
+    // ===== CONSIGLI PIANIFICAZIONE (regole intelligenti su Prep) =====
+    function renderConsigliPage() {
+        const box = document.getElementById('consigliContainer');
+        const badge = document.getElementById('navConsigliCount');
+        const allPrep = (clients || []).filter(function(c) {
+            return typeof isInPrep === 'function' ? isInPrep(c) : (c.inPrep === true || c.inPrep === 'true');
+        });
+        if (badge) badge.textContent = allPrep.length;
+        if (!box) return;
+        if (!allPrep.length) {
+            box.innerHTML = '<div class="consigli-empty">Nessun cliente in Pre-pianificazione.<br>Aggiungi clienti in Prep per ricevere i consigli.</div>';
+            return;
+        }
+
+        const today = new Date();
+        today.setHours(12, 0, 0, 0);
+
+        function daysLeft(c) {
+            const s = (c.scadenza || '').trim();
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return 9999;
+            return Math.round((new Date(s + 'T12:00:00') - today) / 86400000);
+        }
+
+        // 1) Urgenti
+        const sorted = allPrep.slice().sort(function(a, b) { return daysLeft(a) - daysLeft(b); });
+        const urgenti = sorted.filter(function(c) { return daysLeft(c) <= 7; });
+        const medi = sorted.filter(function(c) { const d = daysLeft(c); return d > 7 && d <= 21; });
+        const ok = sorted.filter(function(c) { return daysLeft(c) > 21 && daysLeft(c) < 9000; });
+        const noScad = sorted.filter(function(c) { return daysLeft(c) >= 9000; });
+
+        // 2) Cluster per regione / località
+        const byReg = {};
+        allPrep.forEach(function(c) {
+            let reg = (c.regione || '').trim() || 'Senza regione';
+            if (!byReg[reg]) byReg[reg] = [];
+            byReg[reg].push(c);
+        });
+        const regKeys = Object.keys(byReg).sort(function(a, b) {
+            return byReg[b].length - byReg[a].length;
+        });
+
+        // 3) Suggerimenti zona (tecnici) se disponibili
+        const zoneTips = [];
+        if (typeof getZoneRecommendation === 'function') {
+            const seen = {};
+            allPrep.forEach(function(c) {
+                const z = getZoneRecommendation(c);
+                if (!z || !z.zoneKey) return;
+                if (!seen[z.zoneKey]) {
+                    seen[z.zoneKey] = { zone: z, clients: [] };
+                }
+                seen[z.zoneKey].clients.push(c);
+            });
+            Object.keys(seen).forEach(function(k) {
+                zoneTips.push(seen[k]);
+            });
+        }
+
+        function clientLine(c) {
+            const d = daysLeft(c);
+            let badge = '';
+            if (d < 9000) {
+                if (d < 0) badge = '<span class="consigli-badge urgent">scaduta ' + Math.abs(d) + 'g fa</span>';
+                else if (d <= 3) badge = '<span class="consigli-badge urgent">tra ' + d + ' giorni</span>';
+                else if (d <= 7) badge = '<span class="consigli-badge warn">tra ' + d + ' giorni</span>';
+                else badge = '<span class="consigli-badge ok">tra ' + d + ' giorni</span>';
+            }
+            const models = (c.modelli || []).map(function(m) {
+                return (m.nome || '') + (m.qta > 1 ? ' ×' + m.qta : '');
+            }).join(', ');
+            return '<li><strong>' + String(c.nome || '').replace(/</g, '&lt;') + '</strong> ' + badge +
+                '<br><span style="color:var(--text-muted);font-size:0.86rem;">📍 ' +
+                String(c.localita || '—').replace(/</g, '&lt;') +
+                (c.regione ? ' · ' + String(c.regione).replace(/</g, '&lt;') : '') +
+                (models ? ' · 📦 ' + String(models).replace(/</g, '&lt;') : '') +
+                (c.montaggio ? ' · 🔧 ' + String(c.montaggio).replace(/</g, '&lt;') : '') +
+                '</span></li>';
+        }
+
+        let html = '';
+
+        // Sintesi AI-like
+        html += '<div class="consigli-card" style="background:linear-gradient(135deg,#eef2ff,#f8fafc);border-color:#c7d2fe;">' +
+            '<h3>🧠 Sintesi consigli</h3>' +
+            '<p style="margin:0;line-height:1.5;">Hai <strong>' + allPrep.length + '</strong> clienti in Prep. ' +
+            (urgenti.length ? '<strong style="color:#991b1b;">' + urgenti.length + ' urgenti</strong> (scadenza ≤ 7 giorni). ' : 'Nessuna urgenza grave. ') +
+            (regKeys.length ? 'Distribuiti su <strong>' + regKeys.length + ' regioni</strong>. ' : '') +
+            'Priorità: prima le scadenze vicine, poi raggruppa per <strong>stesso paese/regione</strong> per ridurre i viaggi.</p></div>';
+
+        if (urgenti.length) {
+            html += '<div class="consigli-card"><h3>🔥 Da fare subito <span class="consigli-badge urgent">' + urgenti.length + '</span></h3>' +
+                '<p style="margin:0 0 6px;color:var(--text-muted);font-size:0.88rem;">Scadenza entro 7 giorni (o già scaduta). Programma consegna/installazione prioritaria.</p>' +
+                '<ul class="consigli-list">' + urgenti.map(clientLine).join('') + '</ul></div>';
+        }
+        if (medi.length) {
+            html += '<div class="consigli-card"><h3>⏰ Prossima finestra <span class="consigli-badge warn">' + medi.length + '</span></h3>' +
+                '<p style="margin:0 0 6px;color:var(--text-muted);font-size:0.88rem;">Scadenza tra 8 e 21 giorni. Ideali da abbinare per zona.</p>' +
+                '<ul class="consigli-list">' + medi.map(clientLine).join('') + '</ul></div>';
+        }
+
+        // Percorsi consigliati per regione
+        html += '<div class="consigli-card"><h3>🗺️ Consegne consigliate per zona</h3>';
+        regKeys.forEach(function(reg) {
+            const list = byReg[reg].slice().sort(function(a, b) { return daysLeft(a) - daysLeft(b); });
+            // sotto-raggruppa per località
+            const byLoc = {};
+            list.forEach(function(c) {
+                const loc = (c.localita || '—').trim();
+                if (!byLoc[loc]) byLoc[loc] = [];
+                byLoc[loc].push(c);
+            });
+            const locKeys = Object.keys(byLoc).sort(function(a, b) { return byLoc[b].length - byLoc[a].length; });
+            html += '<div style="margin:12px 0 8px;padding-top:8px;border-top:1px solid var(--border);">' +
+                '<strong>📍 ' + String(reg).replace(/</g, '&lt;') + '</strong> ' +
+                '<span class="consigli-badge">' + list.length + ' clienti</span></div>';
+            html += '<p style="margin:0 0 6px;font-size:0.88rem;line-height:1.45;">Consiglio: in un unico giro tocca ' +
+                locKeys.slice(0, 5).map(function(l) {
+                    return '<strong>' + String(l).replace(/</g, '&lt;') + '</strong> (' + byLoc[l].length + ')';
+                }).join(', ') +
+                (locKeys.length > 5 ? '…' : '') +
+                '. Ordine suggerito per scadenza:</p>';
+            html += '<ul class="consigli-list">' + list.slice(0, 12).map(clientLine).join('') +
+                (list.length > 12 ? '<li style="color:var(--text-muted);">… e altri ' + (list.length - 12) + '</li>' : '') +
+                '</ul>';
+        });
+        html += '</div>';
+
+        if (zoneTips.length) {
+            html += '<div class="consigli-card"><h3>👷 Tecnici di zona</h3><ul class="consigli-list">';
+            zoneTips.forEach(function(zt) {
+                html += '<li><strong>' + String(zt.zone.tappaName || zt.zone.tecnico || '').replace(/</g, '&lt;') + '</strong> → ' +
+                    String(zt.zone.tecnico || '').replace(/</g, '&lt;') +
+                    ' · ' + zt.clients.length + ' clienti Prep' +
+                    (zt.zone.reason ? '<br><span style="color:var(--text-muted);font-size:0.85rem;">' + String(zt.zone.reason).replace(/</g, '&lt;') + '</span>' : '') +
+                    '</li>';
+            });
+            html += '</ul></div>';
+        }
+
+        if (noScad.length) {
+            html += '<div class="consigli-card"><h3>⚠️ Senza scadenza <span class="consigli-badge">' + noScad.length + '</span></h3>' +
+                '<p style="margin:0 0 6px;color:var(--text-muted);font-size:0.88rem;">Imposta una scadenza per prioritizzarli correttamente.</p>' +
+                '<ul class="consigli-list">' + noScad.map(clientLine).join('') + '</ul></div>';
+        }
+
+        box.innerHTML = html;
+    }
+    window.renderConsigliPage = renderConsigliPage;
+    window.renderCalendarioPage = renderCalendarioPage;
+
     window.switchView = function(view) {
         currentView = view;
         document.getElementById('viewNote').classList.toggle('active', view === 'note');
+        const viewCalendario = document.getElementById('viewCalendario');
+        if (viewCalendario) viewCalendario.classList.toggle('active', view === 'calendario');
         const viewPercorso = document.getElementById('viewPercorso');
         if (viewPercorso) viewPercorso.classList.toggle('active', view === 'percorso');
         const viewMeteo = document.getElementById('viewMeteo');
         if (viewMeteo) viewMeteo.classList.toggle('active', view === 'meteo');
         document.getElementById('viewPrep').classList.toggle('active', view === 'prep');
+        const viewConsigli = document.getElementById('viewConsigli');
+        if (viewConsigli) viewConsigli.classList.toggle('active', view === 'consigli');
         document.getElementById('viewInstallati').classList.toggle('active', view === 'installati');
         document.getElementById('viewStandby').classList.toggle('active', view === 'standby');
         const viewOrdini = document.getElementById('viewOrdini');
         if (viewOrdini) viewOrdini.classList.toggle('active', view === 'ordini');
         document.getElementById('navNote').classList.toggle('active', view === 'note');
+        const navCalendario = document.getElementById('navCalendario');
+        if (navCalendario) navCalendario.classList.toggle('active', view === 'calendario');
         const navPercorso = document.getElementById('navPercorso');
         if (navPercorso) navPercorso.classList.toggle('active', view === 'percorso');
         const navMeteo = document.getElementById('navMeteo');
         if (navMeteo) navMeteo.classList.toggle('active', view === 'meteo');
         document.getElementById('navPrep').classList.toggle('active', view === 'prep');
+        const navConsigli = document.getElementById('navConsigli');
+        if (navConsigli) navConsigli.classList.toggle('active', view === 'consigli');
         document.getElementById('navInstallati').classList.toggle('active', view === 'installati');
         document.getElementById('navStandby').classList.toggle('active', view === 'standby');
         const navOrdini = document.getElementById('navOrdini');
@@ -15720,7 +16098,9 @@
             try { if (placeFindMap) setTimeout(function(){ placeFindMap.invalidateSize(); }, 200); } catch(e) {}
         }
         if (view === 'meteo') { try { renderMeteoPage(); } catch(e) { console.error(e); } }
+        if (view === 'calendario') { try { renderCalendarioPage(); } catch (e) { console.error(e); } }
         if (view === 'prep') { try { populateDistCitiesDatalist(); } catch(e) {} renderPrepPage(); }
+        if (view === 'consigli') { try { renderConsigliPage(); } catch (e) { console.error(e); } }
         if (view === 'installati') renderInstallatiPage();
         if (view === 'standby') renderStandbyPage();
         if (view === 'ordini') { try { renderOrdiniPage(); } catch (e) { console.error(e); } }
