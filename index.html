@@ -5856,13 +5856,13 @@
             </div>
         </div>
         <p style="margin:0 0 10px;font-size:0.82rem;color:var(--text-muted);line-height:1.4;">
-            <strong>Modo veloce (consigliato):</strong> in LED Manager seleziona i riquadri (o Ctrl+A sulla lista) → <strong>Ctrl+C</strong> → qui <strong>Incolla e importa tutti</strong>.
+            <strong>Modo veloce:</strong> copia da LED Manager → <strong>Incolla / aggiorna Prep</strong>. Paese = solo città (niente via). Se il cliente è già in Prep, <strong>sistema</strong> paese, provincia e altri dati errati.
             Oppure usa la cattura schermo per le schede visibili; scorri e premi <strong>Cattura altri</strong> per il resto.
         </p>
         <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
             <textarea id="prepPasteArea" class="input-control" rows="1" placeholder="Incolla qui da LED Manager (Ctrl+V)…" style="min-height:36px;max-height:56px;resize:none;font-size:0.84rem;padding:8px 10px;line-height:1.3;"></textarea>
             <div style="display:flex;flex-wrap:wrap;gap:8px;">
-                <button type="button" class="btn btn-primary" onclick="prepImportFromPaste()">📋 Incolla e importa tutti</button>
+                <button type="button" class="btn btn-primary" onclick="prepImportFromPaste()">📋 Incolla / aggiorna Prep</button>
                 <button type="button" class="btn" onclick="document.getElementById('prepPasteArea').value='';setPrepOcrStatus('', '');">Svuota</button>
                 <button type="button" class="btn" onclick="refreshAllClientProvinces({ onlyPrep: true })" title="Ricontrolla paese e aggiorna provincia solo per clienti in Pre-pianificazione">🌍 Aggiorna province</button>
             </div>
@@ -10074,49 +10074,67 @@
             out.modello = cleanVal(ledModello.replace(/\s{2,}/g, ' '));
         }
 
-        // Città da Indirizzo — massima precisione (paese + eventuale provincia tra parentesi)
+        // Solo PAESE + PROVINCIA (mai via/civico/CAP come località)
         let ledCitta = '';
         let ledProvHint = '';
         const mInd = full.match(/indirizzo\s*[:\-–]?\s*([^\n]+)/i);
         if (mInd) {
-            const ind = mInd[1].trim();
-            // Provincia tra parentesi finale: (Roma) / (RM) / (BA)
-            const mProv = ind.match(/\(\s*([A-Za-zÀ-ù]{2,}|\w{2})\s*\)\s*$/);
+            let ind = mInd[1].trim();
+            // Provincia tra parentesi finale: (Roma) / (RM)
+            const mProv = ind.match(/\(\s*([A-Za-zÀ-ù'.\s]{2,}|\w{2})\s*\)\s*$/);
             if (mProv) ledProvHint = mProv[1].trim();
-            // Pattern: ... - CITTA (Prov)
-            let mC = ind.match(/\-\s*([A-ZÀ-Ù][A-Za-zÀ-ù'’\s\.]+?)\s*\(/);
-            if (mC) ledCitta = mC[1].trim();
-            if (!ledCitta) {
-                // dopo ultimo trattino
-                if (ind.indexOf('-') >= 0) {
-                    const part = ind.split('-').pop().replace(/\(.*?\)/g, '').trim();
-                    if (part && !/^\d+$/.test(part) && !/^(via|v\.le|viale|corso|piazza)/i.test(part)) {
-                        ledCitta = part;
-                    }
+            // Rimuovi parentesi provincia dal testo di lavoro
+            ind = ind.replace(/\(\s*[A-Za-zÀ-ù'.\s]{2,}|\w{2}\s*\)\s*$/g, '').replace(/\([^)]*\)\s*$/g, '').trim();
+            // Se c'è " - CITTA" prendi solo dopo l'ultimo trattino (paese), non la via
+            if (ind.indexOf('-') >= 0) {
+                const after = ind.split('-').pop().trim();
+                // evita pezzi che sono ancora via
+                if (after && !/^(via|v\.le|viale|corso|piazza|p\.zza|strada|contrada|loc\.|n\.|n°)/i.test(after) && !/^\d+/.test(after)) {
+                    ledCitta = after.replace(/,.*$/, '').trim();
                 }
             }
+            // CAP + comune: 00048 NETTUNO
             if (!ledCitta) {
-                // CAP + comune: 00048 NETTUNO
-                const mCap = ind.match(/\b\d{5}\s+([A-ZÀ-Ù][A-Za-zÀ-ù'’\s]+?)(?:\s*\(|$)/);
+                const mCap = ind.match(/\b\d{5}\s+([A-ZÀ-Ù][A-Za-zÀ-ù'’\s]+)$/);
                 if (mCap) ledCitta = mCap[1].trim();
             }
+            // Ultimo token "da paese": scarta tutto ciò che sembra indirizzo
             if (!ledCitta) {
-                // ultima parola significativa non numerica
-                const cleaned = ind.replace(/\(.*?\)/g, ' ').replace(/\b\d+\b/g, ' ').replace(/,/g, ' ');
-                const tokens = cleaned.split(/\s+/).filter(Boolean);
-                for (let ti = tokens.length - 1; ti >= 0; ti--) {
-                    const tok = tokens[ti];
-                    if (/^(via|v\.le|viale|corso|piazza|p\.zza|strada|contrada|loc\.|localit[aà])$/i.test(tok)) continue;
-                    if (tok.length >= 3) { ledCitta = tok; break; }
+                const noStreet = ind
+                    .replace(/\b(via|v\.le|viale|corso|piazza|p\.zza|piazzale|strada|contrada|vicolo|largo|traversa|localit[aà]|loc\.)\b[\s\S]*/i, '')
+                    .replace(/\b\d{1,4}([A-Za-z])?\b/g, ' ')
+                    .replace(/\b\d{5}\b/g, ' ')
+                    .replace(/,/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+                // se abbiamo ancora testo, prendi le ultime 1-3 parole capitalizzate
+                const toks = noStreet.split(/\s+/).filter(function(t) {
+                    return t.length >= 2 && !/^(di|del|della|dei|degli|e|a|al|da)$/i.test(t);
+                });
+                if (toks.length) {
+                    // preferisci token con iniziale maiuscola se presenti
+                    ledCitta = toks.slice(-2).join(' ').trim();
+                    if (toks.length === 1) ledCitta = toks[0];
                 }
             }
+            // Pulizia finale: togli residui di via
+            if (ledCitta) {
+                ledCitta = ledCitta
+                    .replace(/^(via|v\.le|viale|corso|piazza)\s+.*/i, '')
+                    .replace(/\d+/g, '')
+                    .replace(/[|,;]+/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+            }
         }
-        if (ledCitta) {
-            ledCitta = ledCitta.replace(/\(.*?\)/g, '').replace(/\s{2,}/g, ' ').trim();
+        if (ledCitta && ledCitta.length >= 2) {
             out.localita = cleanVal(ledCitta);
-            if (ledProvHint) out.provinciaHint = ledProvHint;
-            // query arricchita per lookup online
-            out.localitaQuery = out.localita + (ledProvHint ? (', ' + ledProvHint) : '');
+            if (ledProvHint) {
+                out.provinciaHint = ledProvHint;
+                // se hint è già sigla 2 lettere
+                if (/^[a-z]{2}$/i.test(ledProvHint)) out.provinciaHint = ledProvHint.toUpperCase();
+            }
+            out.localitaQuery = out.localita + (ledProvHint ? (', ' + ledProvHint) : '') + ', Italia';
         }
 
         // Scadenza
@@ -10384,37 +10402,52 @@
             return prepNormalizeClientName(c.nome) === baseKey;
         });
         if (already.length) {
-            // Non reinserire; aggiorna provincia/regione solo se il cliente è in Pre-pianificazione
             const inPrepList = already.filter(function(c) {
                 return typeof isInPrep === 'function' ? isInPrep(c) : (c.inPrep === true || c.inPrep === 'true');
             });
-            if (inPrepList.length) {
-                try {
-                    const loc = await resolvePrepLocation(localitaVal || inPrepList[0].localita || '', {
-                        provinciaHint: fields.provinciaHint || '',
-                        query: fields.localitaQuery || ''
-                    });
-                    let changed = false;
-                    inPrepList.forEach(function(c) {
-                        if (!c.localita && (loc.localita || localitaVal)) {
-                            c.localita = loc.localita || localitaVal;
-                            changed = true;
-                        }
-                        if (loc.localita && c.localita && prepNormalizeClientName(c.localita) === prepNormalizeClientName(localitaVal || c.localita)) {
-                            if (loc.localita !== c.localita) { c.localita = loc.localita; changed = true; }
-                        }
-                        if (loc.provincia && c.provincia !== loc.provincia) { c.provincia = loc.provincia; changed = true; }
-                        if (loc.regione && c.regione !== loc.regione) { c.regione = loc.regione; changed = true; }
-                    });
-                    if (changed) saveToLocalStorage();
-                } catch (e) {}
+            // Note Clienti: non toccare
+            if (!inPrepList.length) {
+                return { ok: false, reason: 'già in Note Clienti', nome: nomeVal };
             }
-            const inPrep = inPrepList.length > 0;
-            return {
-                ok: false,
-                reason: inPrep ? 'già in Pre-pianificazione' : 'già in Note Clienti',
-                nome: nomeVal
-            };
+            // Prep: aggiorna / sistema info sbagliate (paese, provincia, modello, scadenza, montaggio, qta)
+            try {
+                const loc = await resolvePrepLocation(localitaVal || inPrepList[0].localita || '', {
+                    provinciaHint: fields.provinciaHint || '',
+                    query: fields.localitaQuery || localitaVal || ''
+                });
+                let changed = 0;
+                inPrepList.forEach(function(c) {
+                    // Paese: se dall'import abbiamo un paese "pulito", usa quello risolto
+                    if (localitaVal || loc.localita) {
+                        const newLoc = loc.localita || localitaVal;
+                        if (newLoc && c.localita !== newLoc) { c.localita = newLoc; changed++; }
+                    }
+                    if (loc.provincia && c.provincia !== loc.provincia) { c.provincia = loc.provincia; changed++; }
+                    if (loc.regione && c.regione !== loc.regione) { c.regione = loc.regione; changed++; }
+                    if (montaggioVal && c.montaggio !== montaggioVal) { c.montaggio = montaggioVal; changed++; }
+                    if (scadenzaVal && c.scadenza !== scadenzaVal) { c.scadenza = scadenzaVal; changed++; }
+                    if (confOrdine && c.confOrdine !== confOrdine) { c.confOrdine = confOrdine; changed++; }
+                    if (modelloVal) {
+                        if (!Array.isArray(c.modelli) || !c.modelli.length) {
+                            c.modelli = [{ nome: modelloVal, qta: qtaVal }];
+                            changed++;
+                        } else {
+                            const m0 = c.modelli[0];
+                            if (m0.nome !== modelloVal) { m0.nome = modelloVal; changed++; }
+                            if (qtaVal > 1 && (parseInt(m0.qta, 10) || 1) !== qtaVal) { m0.qta = qtaVal; changed++; }
+                        }
+                    }
+                });
+                if (changed) saveToLocalStorage();
+                return {
+                    ok: true,
+                    updated: true,
+                    nome: inPrepList[0].nome || nomeVal,
+                    reason: changed ? ('aggiornato (' + changed + ' campi)') : 'già in Prep, invariato'
+                };
+            } catch (e) {
+                return { ok: false, reason: 'già in Pre-pianificazione', nome: nomeVal };
+            }
         }
 
         const loc = await resolvePrepLocation(localitaVal, {
@@ -10561,7 +10594,8 @@
         for (let i = 0; i < items.length; i++) {
             const r = await addPrepClientFromOcrFields(items[i]);
             if (r.ok) okN++;
-            else if (r.reason && (String(r.reason).indexOf('già presente') === 0 || String(r.reason).indexOf('già in clienti') === 0)) skip.push(r.nome || '');
+            else if (r.updated) okN++;
+            else if (r.reason && (String(r.reason).indexOf('già presente') === 0 || String(r.reason).indexOf('già in') === 0)) skip.push(r.nome || '');
             else fail.push((r.nome || '—') + ' (' + (r.reason || '?') + ')');
         }
         if (okN) {
