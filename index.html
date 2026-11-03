@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <title>JS Insegne Digitali — Note Clienti</title>
-    <meta name="note-clienti-build" content="2026-11-03-prep-ordine-solo-se-presente">
+    <meta name="note-clienti-build" content="2026-11-03-prep-import-fast-v84">
     <style>
         /* APP LOCK: no horizontal page scroll; vertical wheel OK */
         html {
@@ -7027,7 +7027,7 @@
                 q: q + ', Italia'
             });
             const controller = new AbortController();
-            const timer = setTimeout(function() { controller.abort(); }, 8000);
+            const timer = setTimeout(function() { controller.abort(); }, 2500);
             const r = await fetch('https://nominatim.openstreetmap.org/search?' + params.toString(), {
                 headers: { 'Accept': 'application/json', 'Accept-Language': 'it' },
                 signal: controller.signal
@@ -7094,7 +7094,7 @@
             const url = 'https://geocoding-api.open-meteo.com/v1/search?name=' +
                 encodeURIComponent(q) + '&count=5&language=it&format=json&countryCode=IT';
             const controller = new AbortController();
-            const timer = setTimeout(function() { controller.abort(); }, 8000);
+            const timer = setTimeout(function() { controller.abort(); }, 2500);
             const r = await fetch(url, { signal: controller.signal });
             clearTimeout(timer);
             if (r.ok) {
@@ -10285,62 +10285,93 @@
         const loc = String(localitaVal || '').trim();
         const hint = String(opts.provinciaHint || opts.hint || '').trim();
         const queryExtra = String(opts.query || '').trim();
+        const fast = !!opts.fast; // durante import multiplo: niente Nominatim
         let provinciaVal = '';
         let regioneVal = '';
         let resolvedName = loc;
 
         if (!loc) return { localita: '', provincia: '', regione: '', name: '' };
 
-        // 1) database locale
+        // 0) Estrai provincia da pattern tipici LED Manager: "(TP)", "(Foggia)", "FOGGIA (Foggia)"
         try {
-            if (typeof resolveLocationData === 'function') {
-                const res = resolveLocationData(loc);
-                if (res) {
-                    if (res.prov) provinciaVal = res.prov;
-                    if (res.reg) regioneVal = res.reg;
-                    if (res.name) resolvedName = res.name;
+            let mCode = loc.match(/\(\s*([A-Z]{2})\s*\)\s*$/);
+            if (mCode) provinciaVal = mCode[1].toUpperCase();
+            if (!provinciaVal) {
+                const mName = loc.match(/\(\s*([A-Za-zÀ-ù][A-Za-zÀ-ù'’\s-]{1,40}?)\s*\)\s*$/);
+                if (mName && typeof guessProvinciaCode === 'function') {
+                    const g = guessProvinciaCode(mName[1].trim());
+                    if (g) provinciaVal = g;
+                }
+            }
+            if (!provinciaVal && hint) {
+                if (/^[A-Za-z]{2}$/.test(hint)) provinciaVal = hint.toUpperCase();
+                else if (typeof guessProvinciaCode === 'function') {
+                    const g = guessProvinciaCode(hint);
+                    if (g) provinciaVal = g;
+                }
+            }
+            // "CITTA (Provincia)" nel mezzo
+            if (!provinciaVal) {
+                const mMid = loc.match(/\b([A-ZÀ-Ù]{2,})\s*\(\s*([A-Za-zÀ-ù]{2,}(?:\s+[A-Za-zÀ-ù]+)?)\s*\)/);
+                if (mMid && typeof guessProvinciaCode === 'function') {
+                    const g = guessProvinciaCode(mMid[2].trim()) || (/^[A-Za-z]{2}$/.test(mMid[2].trim()) ? mMid[2].trim().toUpperCase() : '');
+                    if (g) provinciaVal = g;
                 }
             }
         } catch (e) {}
 
-        // 2) online Nominatim — sempre tentato per precisione (anche se locale ha qualcosa)
-        const queries = [];
-        if (queryExtra) queries.push(queryExtra);
-        if (hint) queries.push(loc + ', ' + hint + ', Italia');
-        queries.push(loc + ', Italia');
-        if (hint && hint.length === 2) queries.push(loc + ' (' + hint.toUpperCase() + '), Italia');
-        // dedupe
-        const seenQ = {};
-        const uniqQ = [];
-        queries.forEach(function(q) {
-            const k = q.toLowerCase();
-            if (seenQ[k]) return;
-            seenQ[k] = true;
-            uniqQ.push(q);
-        });
+        // 1) database locale (veloce)
+        try {
+            if (typeof resolveLocationData === 'function') {
+                // prova pezzi dell'indirizzo (comune spesso verso la fine)
+                const candidates = [];
+                if (queryExtra) candidates.push(queryExtra);
+                candidates.push(loc);
+                const parts = loc.split(/[-–,]/).map(function(p) { return p.trim(); }).filter(Boolean);
+                for (let i = parts.length - 1; i >= 0 && i >= parts.length - 3; i--) {
+                    candidates.push(parts[i].replace(/\([^)]*\)/g, '').trim());
+                }
+                for (let ci = 0; ci < candidates.length; ci++) {
+                    const res = resolveLocationData(candidates[ci]);
+                    if (!res) continue;
+                    if (res.prov && !provinciaVal) provinciaVal = res.prov;
+                    if (res.reg) regioneVal = res.reg;
+                    if (res.name) resolvedName = res.name;
+                    if (provinciaVal && regioneVal) break;
+                }
+            }
+        } catch (e) {}
 
-        for (let qi = 0; qi < uniqQ.length; qi++) {
-            try {
-                if (typeof lookupItalianComuneOnline !== 'function') break;
-                // piccola pausa tra richieste Nominatim (policy)
-                if (qi > 0) await new Promise(function(r) { setTimeout(r, 1100); });
-                const found = await lookupItalianComuneOnline(uniqQ[qi]);
-                if (!found) continue;
-                if (found.name) resolvedName = found.name;
-                if (found.prov) provinciaVal = found.prov;
-                if (found.reg) regioneVal = found.reg;
-                // se abbiamo entrambi, stop
-                if (provinciaVal && regioneVal) break;
-            } catch (e) {}
-        }
-
-        // 3) se abbiamo solo hint provincia testuale, prova codice
-        if (!provinciaVal && hint && typeof guessProvinciaCode === 'function') {
-            const g = guessProvinciaCode(hint);
-            if (g) provinciaVal = g;
-        }
+        // 2) regione da provincia
         if (!regioneVal && provinciaVal && typeof PROVINCE_TO_REGION !== 'undefined' && PROVINCE_TO_REGION[provinciaVal]) {
             regioneVal = PROVINCE_TO_REGION[provinciaVal];
+        }
+
+        // 3) Online SOLO se manca provincia/regione e non siamo in modalità fast
+        if (!fast && !(provinciaVal && regioneVal) && typeof lookupItalianComuneOnline === 'function') {
+            const queries = [];
+            if (queryExtra) queries.push(queryExtra);
+            if (hint) queries.push(loc + ', ' + hint + ', Italia');
+            queries.push(loc + ', Italia');
+            const seenQ = {};
+            for (let qi = 0; qi < queries.length && qi < 2; qi++) {
+                const q = queries[qi];
+                const k = String(q || '').toLowerCase();
+                if (!k || seenQ[k]) continue;
+                seenQ[k] = true;
+                try {
+                    if (qi > 0) await new Promise(function(r) { setTimeout(r, 350); });
+                    const found = await lookupItalianComuneOnline(q);
+                    if (!found) continue;
+                    if (found.name) resolvedName = found.name;
+                    if (found.prov) provinciaVal = found.prov;
+                    if (found.reg) regioneVal = found.reg;
+                    if (provinciaVal && regioneVal) break;
+                } catch (e) {}
+            }
+            if (!regioneVal && provinciaVal && typeof PROVINCE_TO_REGION !== 'undefined' && PROVINCE_TO_REGION[provinciaVal]) {
+                regioneVal = PROVINCE_TO_REGION[provinciaVal];
+            }
         }
 
         return {
@@ -10350,6 +10381,7 @@
             name: resolvedName || loc
         };
     }
+
 
     function stripModBipiemme(s) {
         let t = String(s || '');
@@ -10406,8 +10438,9 @@
         if (!localitaVal) return { ok: false, reason: 'indirizzo mancante', nome: nomeVal };
         if (!scadenzaVal) return { ok: false, reason: 'scadenza mancante', nome: nomeVal };
 
-                // Già presente SOLO se coincidono TUTTI: nome + modello + CONF. ORDINE + numero Ordine.
-        // Qualsiasi differenza → inserisce una nuova scheda.
+                        // Già presente se stesso cliente e i campi valorizzati coincidono.
+        // Campi vuoti non bloccano il match (evita doppioni se CONF/modello mancava al primo import).
+        // Se c'è "Ordine N" diverso → scheda nuova.
         const baseKey = prepNormalizeClientName(nomeVal);
         const incomingOrdine = parseInt(fields._batchOrdineSeq, 10) || parseInt(fields.ordineNum, 10) || 0;
         const already = (clients || []).filter(function(c) {
@@ -10415,26 +10448,37 @@
         });
         if (already.length) {
             const target = already.find(function(c) {
-                // 1) CONF. ORDINE
+                // CONF. ORDINE: se entrambi valorizzati, devono coincidere
                 const cConf = String(c.confOrdine || '').trim();
-                if (confOrdine || cConf) {
-                    if (cConf !== confOrdine) return false;
-                }
-                // 2) Numero Ordine
+                if (confOrdine && cConf && cConf !== confOrdine) return false;
+
+                // Numero Ordine: se entrambi valorizzati, devono coincidere
                 let n = parseInt(c.ordineSeq, 10) || 0;
                 const m = String(c.nome || '').match(/\bORDINE\s*(\d+)\s*$/i);
                 if (m) n = parseInt(m[1], 10) || n;
-                if (incomingOrdine > 0 || n > 0) {
-                    if (n !== incomingOrdine) return false;
+                if (incomingOrdine > 0 && n > 0 && n !== incomingOrdine) return false;
+                // Se in ingresso c'è Ordine N e l'esistente non ce l'ha (o viceversa) → considera diverso solo
+                // quando stiamo importando esplicitamente più ordini (incomingOrdine > 0 && n === 0 e esistono già altri)
+                // Per il caso normale senza Ordine N: match ok
+                if (incomingOrdine > 0 && n === 0) {
+                    // c'è già una scheda base senza ordine: non è lo stesso "Ordine N"
+                    // ma se è l'unica e stiamo re-incollando la stessa, meglio aggiornare
+                    // → match solo se non ci sono altre schede con ordini di questo cliente
+                    const siblingsWithOrd = already.filter(function(x) {
+                        const xn = parseInt(x.ordineSeq, 10) || 0;
+                        const xm = String(x.nome || '').match(/\bORDINE\s*(\d+)\s*$/i);
+                        return (xm ? parseInt(xm[1], 10) : xn) > 0;
+                    });
+                    if (siblingsWithOrd.length) return false;
                 }
-                // 3) Modello
+
+                // Modello: se entrambi valorizzati, devono coincidere
                 const modE = (c.modelli && c.modelli[0] && c.modelli[0].nome)
                     ? String(c.modelli[0].nome).trim().toLowerCase()
                     : '';
                 const modF = String(modelloVal || '').trim().toLowerCase();
-                if (modE || modF) {
-                    if (modE !== modF) return false;
-                }
+                if (modE && modF && modE !== modF) return false;
+
                 return true;
             }) || null;
 
@@ -10442,7 +10486,8 @@
                 try {
                     const loc = await resolvePrepLocation(localitaVal, {
                         provinciaHint: fields.provinciaHint || '',
-                        query: fields.localitaQuery || ''
+                        query: fields.localitaQuery || '',
+                        fast: true
                     });
                     let changed = false;
                     if (localitaVal && target.localita !== localitaVal) {
@@ -10477,6 +10522,11 @@
                             changed = true;
                         }
                     }
+                    // Allinea ordineSeq se in ingresso c'è e sul target manca
+                    if (incomingOrdine > 0 && !(parseInt(target.ordineSeq, 10) > 0)) {
+                        target.ordineSeq = incomingOrdine;
+                        changed = true;
+                    }
                     if (changed) {
                         saveToLocalStorage();
                         try { render(); } catch (e) {}
@@ -10497,15 +10547,12 @@
             // target non trovato → prosegui e crea nuova scheda
         }
 
-
-
+        // Risolvi località (fast: DB locale + pattern, niente Nominatim in import massivo)
         const loc = await resolvePrepLocation(localitaVal, {
             provinciaHint: fields.provinciaHint || '',
-            query: fields.localitaQuery || ''
+            query: fields.localitaQuery || '',
+            fast: true
         });
-        if (!loc.regione) {
-            return { ok: false, reason: 'regione non riconosciuta', nome: nomeVal, localita: localitaVal };
-        }
 
         const modelli = [];
         if (modelloVal) {
@@ -10539,6 +10586,21 @@
         if (confOrdine) notaParts.push('CONF. ' + confOrdine);
         if (qtaVal > 1) notaParts.push('Qta ' + qtaVal);
 
+                if (!(loc && (loc.regione || loc.provincia))) {
+            // ultimo tentativo: se l'indirizzo ha (XX) codice provincia
+            const m = String(localitaVal || '').match(/\(\s*([A-Z]{2})\s*\)/);
+            if (m && typeof PROVINCE_TO_REGION !== 'undefined' && PROVINCE_TO_REGION[m[1]]) {
+                loc.provincia = m[1];
+                loc.regione = PROVINCE_TO_REGION[m[1]];
+            }
+        }
+        if (!(loc && loc.regione) && !(loc && loc.provincia && typeof PROVINCE_TO_REGION !== 'undefined' && PROVINCE_TO_REGION[loc.provincia])) {
+            return { ok: false, reason: 'regione non riconosciuta', nome: nomeVal, localita: localitaVal };
+        }
+        if (loc && loc.provincia && !loc.regione && typeof PROVINCE_TO_REGION !== 'undefined') {
+            loc.regione = PROVINCE_TO_REGION[loc.provincia] || loc.regione;
+        }
+
         clients.push({
             id: 'id_' + Date.now() + Math.random().toString(36).substring(2, 7),
             nome: nomeSalvataggio,
@@ -10547,8 +10609,8 @@
             modelli: modelli,
             montaggio: montaggioVal,
             localita: localitaVal,
-            provincia: loc.provincia,
-            regione: loc.regione,
+            provincia: (loc && loc.provincia) || '',
+            regione: (loc && loc.regione) || (loc && loc.provincia && typeof PROVINCE_TO_REGION !== 'undefined' ? (PROVINCE_TO_REGION[loc.provincia] || '') : ''),
             tappa: '',
             spedizione: '',
             data: '',
@@ -10594,9 +10656,9 @@
         }
 
         // Più clienti: aggiungi tutti automaticamente (nessuno screenshot salvato)
-        // Usa il numero "Ordine N" SOLO se presente sulla scheda LED Manager.
-        // Se più schede stesso cliente senza Ordine N → numera 1,2,3.
-        // Se una sola scheda senza Ordine N → nessun suffisso.
+        // "Ordine N" SOLO se presente sulla scheda LED Manager.
+        // Più schede stesso cliente SENZA "Ordine N" → possibili doppioni di split: non numerare.
+        // Più schede con "Ordine N" (o misto) → usa i numeri reali / sequenza.
         (function assignBatchOrdineSeq(list) {
             const groups = {};
             list.forEach(function(f) {
@@ -10613,14 +10675,15 @@
                     if (n > 0) arr[0]._batchOrdineSeq = n;
                     return;
                 }
-                // Più schede stesso cliente
+                if (!anyHasOrdine) {
+                    // Nessun "Ordine N" sulle schede: non creare ORDINE 1/2 artificiali
+                    return;
+                }
                 let fallback = 1;
                 const used = {};
                 arr.forEach(function(f) {
                     let n = parseInt(f.ordineNum, 10);
                     if (!(n > 0) || used[n]) {
-                        // solo se qualcuno ha Ordine N, oppure siamo in multi-scheda:
-                        // assegna sequenziale
                         while (used[fallback]) fallback++;
                         n = fallback;
                         fallback++;
@@ -10638,6 +10701,11 @@
             if (r.ok) { if (r.updated) updN++; else okN++; }
             else if (r.reason && (String(r.reason).indexOf('già presente') === 0 || String(r.reason).indexOf('già in clienti') === 0)) skip.push(r.nome || '');
             else fail.push((r.nome || '—') + ' (' + (r.reason || '?') + ')');
+            // lascia respirare la UI ogni scheda
+            if (i % 1 === 0) await new Promise(function(res) { setTimeout(res, 0); });
+            if (items.length > 3 && (i + 1) % 3 === 0) {
+                setPrepOcrStatus('⏳ Import: <strong>' + (i + 1) + '</strong>/' + items.length + ' schede…', 'work');
+            }
         }
         if (okN) {
             saveToLocalStorage();
@@ -14296,7 +14364,7 @@
             const url = 'https://geocoding-api.open-meteo.com/v1/search?name=' +
                 encodeURIComponent(base) + '&count=5&language=it&format=json&countryCode=IT';
             const controller = new AbortController();
-            const timer = setTimeout(function() { controller.abort(); }, 8000);
+            const timer = setTimeout(function() { controller.abort(); }, 2500);
             const res = await fetch(url, { signal: controller.signal });
             clearTimeout(timer);
             if (res.ok) {
@@ -14326,7 +14394,7 @@
         try {
             const url = 'https://photon.komoot.io/api/?limit=5&lang=it&q=' + encodeURIComponent(base + ', Italia');
             const controller = new AbortController();
-            const timer = setTimeout(function() { controller.abort(); }, 8000);
+            const timer = setTimeout(function() { controller.abort(); }, 2500);
             const res = await fetch(url, { signal: controller.signal });
             clearTimeout(timer);
             if (res.ok) {
@@ -14358,7 +14426,7 @@
                 q: base + ', Italia'
             });
             const controller = new AbortController();
-            const timer = setTimeout(function() { controller.abort(); }, 8000);
+            const timer = setTimeout(function() { controller.abort(); }, 2500);
             const res = await fetch('https://nominatim.openstreetmap.org/search?' + params.toString(), {
                 headers: { 'Accept': 'application/json', 'Accept-Language': 'it' },
                 signal: controller.signal
