@@ -10399,38 +10399,89 @@
         if (!localitaVal) return { ok: false, reason: 'indirizzo mancante', nome: nomeVal };
         if (!scadenzaVal) return { ok: false, reason: 'scadenza mancante', nome: nomeVal };
 
-        // Già in elenco (Note Clienti o Prep / clienti per regione)? → non copiare di nuovo
+        // Se il cliente è già presente, NON lo scartiamo: l'incolla successivo
+        // deve aggiornare i dati importati da LED Manager. Per evitare di modificare
+        // l'ordine sbagliato in caso di omonimi, con CONF. ORDINE cerchiamo prima
+        // la corrispondenza esatta; senza CONF. ORDINE aggiorniamo l'unico omonimo.
         const baseKey = prepNormalizeClientName(nomeVal);
         const already = (clients || []).filter(function(c) {
             return prepNormalizeClientName(c.nome) === baseKey;
         });
         if (already.length) {
-            // Non reinserire; aggiorna provincia/regione solo se il cliente è in Pre-pianificazione
-            const inPrepList = already.filter(function(c) {
-                return typeof isInPrep === 'function' ? isInPrep(c) : (c.inPrep === true || c.inPrep === 'true');
-            });
-            if (inPrepList.length) {
-                try {
-                    const loc = await resolvePrepLocation(localitaVal || inPrepList[0].localita || '', {
-                        provinciaHint: fields.provinciaHint || '',
-                        query: fields.localitaQuery || ''
-                    });
-                    let changed = false;
-                    inPrepList.forEach(function(c) {
-                        // L'indirizzo già salvato non va mai sostituito dal solo comune trovato online.
-                        if (!c.localita && localitaVal) { c.localita = localitaVal; changed = true; }
-                        if (loc.provincia && c.provincia !== loc.provincia) { c.provincia = loc.provincia; changed = true; }
-                        if (loc.regione && c.regione !== loc.regione) { c.regione = loc.regione; changed = true; }
-                    });
-                    if (changed) saveToLocalStorage();
-                } catch (e) {}
+            let target = null;
+            if (confOrdine) {
+                target = already.find(function(c) {
+                    return String(c.confOrdine || '').trim() === confOrdine;
+                }) || null;
+            } else if (already.length === 1) {
+                target = already[0];
+            } else {
+                // Più omonimi senza una CONF. corrispondente: aggiorniamo solo
+                // i dati comuni (indirizzo/provincia/regione), senza sovrascrivere
+                // i dati specifici dei diversi ordini.
+                target = null;
             }
-            const inPrep = inPrepList.length > 0;
-            return {
-                ok: false,
-                reason: inPrep ? 'già in Pre-pianificazione' : 'già in Note Clienti',
-                nome: nomeVal
-            };
+
+            const updateCommonOnly = !target && already.length > 1;
+
+            try {
+                const loc = await resolvePrepLocation(localitaVal, {
+                    provinciaHint: fields.provinciaHint || '',
+                    query: fields.localitaQuery || ''
+                });
+                const targets = target ? [target] : already;
+                let changed = false;
+                targets.forEach(function(c) {
+                    // Aggiorna SEMPRE l'indirizzo completo proveniente da LED Manager.
+                    if (localitaVal && c.localita !== localitaVal) {
+                        c.localita = localitaVal;
+                        changed = true;
+                    }
+                    if (loc.provincia && c.provincia !== loc.provincia) {
+                        c.provincia = loc.provincia;
+                        changed = true;
+                    }
+                    if (loc.regione && c.regione !== loc.regione) {
+                        c.regione = loc.regione;
+                        changed = true;
+                    }
+                    if (!updateCommonOnly && scadenzaVal && c.scadenza !== scadenzaVal) {
+                        c.scadenza = scadenzaVal;
+                        changed = true;
+                    }
+                    if (!updateCommonOnly && montaggioVal && c.montaggio !== montaggioVal) {
+                        c.montaggio = montaggioVal;
+                        changed = true;
+                    }
+                    if (!updateCommonOnly && confOrdine && String(c.confOrdine || '').trim() !== confOrdine) {
+                        c.confOrdine = confOrdine;
+                        changed = true;
+                    }
+                    if (!updateCommonOnly && modelloVal) {
+                        const oldModels = Array.isArray(c.modelli) ? c.modelli : [];
+                        const oldFirst = oldModels[0] || {};
+                        if (String(oldFirst.nome || '').trim() !== modelloVal || parseInt(oldFirst.qta, 10) !== qtaVal || oldModels.length !== 1) {
+                            c.modelli = [{ nome: modelloVal, qta: qtaVal }];
+                            changed = true;
+                        }
+                    }
+                });
+                if (changed) {
+                    saveToLocalStorage();
+                    try { render(); } catch (e) {}
+                    try { renderPrepPage(); } catch (e) {}
+                }
+                return {
+                    ok: true,
+                    updated: true,
+                    nome: nomeVal,
+                    confOrdine: confOrdine,
+                    qta: qtaVal,
+                    count: targets.length
+                };
+            } catch (e) {
+                return { ok: false, reason: 'aggiornamento non riuscito', nome: nomeVal };
+            }
         }
 
         const loc = await resolvePrepLocation(localitaVal, {
@@ -10538,7 +10589,7 @@
                 saveToLocalStorage();
                 try { render(); } catch (e) {}
                 try { renderPrepPage(); } catch (e) {}
-                setPrepOcrStatus('✅ Cliente <strong>' + String(r.nome).replace(/</g, '&lt;') + '</strong> aggiunto in Pre-pianificazione.<br>Altri in lista? Scorri e premi <strong>Cattura altri</strong>.', 'ok');
+                setPrepOcrStatus((r.updated ? '🔄 Cliente <strong>' : '✅ Cliente <strong>') + String(r.nome).replace(/</g, '&lt;') + '</strong> ' + (r.updated ? 'aggiornato in Pre-pianificazione.' : 'aggiunto in Pre-pianificazione.') + '<br>Altri in lista? Scorri e premi <strong>Cattura altri</strong>.', 'ok');
             } else {
                 setPrepOcrStatus(
                     '📋 Campi compilati nel form. Aggiunta automatica non riuscita (' + (r.reason || '?') + '). Controlla e premi Aggiungi.',
@@ -10573,10 +10624,10 @@
         })(items);
 
         setPrepOcrStatus('⏳ Trovate <strong>' + items.length + '</strong> schede: aggiunta in corso…', 'work');
-        let okN = 0, skip = [], fail = [];
+        let okN = 0, updN = 0, skip = [], fail = [];
         for (let i = 0; i < items.length; i++) {
             const r = await addPrepClientFromOcrFields(items[i]);
-            if (r.ok) okN++;
+            if (r.ok) { if (r.updated) updN++; else okN++; }
             else if (r.reason && (String(r.reason).indexOf('già presente') === 0 || String(r.reason).indexOf('già in clienti') === 0)) skip.push(r.nome || '');
             else fail.push((r.nome || '—') + ' (' + (r.reason || '?') + ')');
         }
@@ -10585,7 +10636,7 @@
             try { render(); } catch (e) {}
             try { renderPrepPage(); } catch (e) {}
         }
-        let msg = '✅ Aggiunti <strong>' + okN + '</strong> di ' + items.length + ' clienti in Pre-pianificazione.';
+        let msg = '✅ Aggiunti <strong>' + okN + '</strong> e aggiornati <strong>' + updN + '</strong> di ' + items.length + ' clienti in Pre-pianificazione.';
         if (skip.length) msg += '<br>⏭ Già in elenco (Note/Prep): ' + skip.map(function(n){ return String(n).replace(/</g,'&lt;'); }).join(', ');
         if (fail.length) msg += '<br>⚠️ Non aggiunti: ' + fail.map(function(n){ return String(n).replace(/</g,'&lt;'); }).join(', ');
         if (okN) msg += '<br><span style="font-weight:600;">Altri clienti più in basso?</span> Scorri in LED Manager e premi <strong>Cattura altri</strong>.';
