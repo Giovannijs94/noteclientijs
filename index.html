@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <title>JS Insegne Digitali — Note Clienti</title>
-    <meta name="note-clienti-build" content="2026-10-28-login-full-theme">
+    <meta name="note-clienti-build" content="2026-11-03-prep-match-nome-modello-conf-ordine">
     <style>
         /* APP LOCK: no horizontal page scroll; vertical wheel OK */
         html {
@@ -10188,6 +10188,19 @@
         if (mOrd) out.confOrdine = mOrd[1];
         else out.confOrdine = '';
 
+        // "Ordine N" accanto a CONF. ORDINE (es. "CONF. ORDINE: 23679203 · Ordine 2")
+        // Priorità: subito dopo il numero CONF, poi qualsiasi "Ordine N" nella scheda
+        out.ordineNum = '';
+        if (mOrd) {
+            const afterConf = fullOne.slice(mOrd.index + mOrd[0].length);
+            const mNear = afterConf.match(/^\s*[·•\-–—|]?\s*ordine\s*(\d{1,3})\b/i);
+            if (mNear) out.ordineNum = mNear[1];
+        }
+        if (!out.ordineNum) {
+            const mAny = fullOne.match(/\bordine\s*(\d{1,3})\b/i);
+            if (mAny) out.ordineNum = mAny[1];
+        }
+
         return out;
     }
 
@@ -10212,47 +10225,24 @@
             if (f && f.nome) rawList.push(f);
         }
 
-        // Raggruppa: stesso nome + stesso CONF. ORDINE → un solo record con quantità = occorrenze
-        // stesso nome + CONF. diversi → restano separati (Ordine 1, 2, …)
-        const groups = {};
-        const orderKeys = [];
+        // NON raggruppiamo più per stesso nome + stesso CONF. ORDINE.
+        // Ogni scheda LED Manager resta separata: se stesso cliente (anche stesso CONF)
+        // verranno create più schede con "— ORDINE 1", "— ORDINE 2", ecc.
+        // (la numerazione avviene in assignBatchOrdineSeq / addPrepClientFromOcrFields)
+        const results = [];
         rawList.forEach(function(f) {
-            const base = (typeof prepNormalizeClientName === 'function')
-                ? prepNormalizeClientName(f.nome)
-                : String(f.nome || '').toLowerCase().trim();
-            const conf = String(f.confOrdine || '').trim();
-            const key = base + '||' + conf;
-            if (!groups[key]) {
-                groups[key] = {
-                    nome: f.nome,
-                    modello: f.modello || '',
-                    localita: f.localita || '',
-                    scadenza: f.scadenza || '',
-                    montaggio: f.montaggio || '',
-                    confOrdine: conf,
-                    qta: 0,
-                    _count: 0
-                };
-                orderKeys.push(key);
-            }
-            const g = groups[key];
-            g._count += 1;
-            // accumula quantità esplicita OCR o +1 per occorrenza scheda
-            const addQ = parseInt(f.qta, 10);
-            g.qta += (addQ > 0 ? addQ : 1);
-            // preferisci campi più completi
-            if (!g.modello && f.modello) g.modello = f.modello;
-            if (!g.localita && f.localita) g.localita = f.localita;
-            if (!g.scadenza && f.scadenza) g.scadenza = f.scadenza;
-            if (!g.montaggio && f.montaggio) g.montaggio = f.montaggio;
-            // se stesso conf e modelli diversi in OCR confuso, tieni il primo non vuoto
-            if (f.modello && g.modello && f.modello.length > g.modello.length) g.modello = f.modello;
-        });
-
-        const results = orderKeys.map(function(k) {
-            const g = groups[k];
-            if (!g.qta || g.qta < 1) g.qta = g._count || 1;
-            return g;
+            const q = parseInt(f.qta, 10);
+            const ordN = parseInt(f.ordineNum, 10);
+            results.push({
+                nome: f.nome,
+                modello: f.modello || '',
+                localita: f.localita || '',
+                scadenza: f.scadenza || '',
+                montaggio: f.montaggio || '',
+                confOrdine: String(f.confOrdine || '').trim(),
+                qta: (q > 0 ? q : 1),
+                ordineNum: (ordN > 0 ? ordN : '')
+            });
         });
         return results;
     }
@@ -10399,90 +10389,98 @@
         if (!localitaVal) return { ok: false, reason: 'indirizzo mancante', nome: nomeVal };
         if (!scadenzaVal) return { ok: false, reason: 'scadenza mancante', nome: nomeVal };
 
-        // Se il cliente è già presente, NON lo scartiamo: l'incolla successivo
-        // deve aggiornare i dati importati da LED Manager. Per evitare di modificare
-        // l'ordine sbagliato in caso di omonimi, con CONF. ORDINE cerchiamo prima
-        // la corrispondenza esatta; senza CONF. ORDINE aggiorniamo l'unico omonimo.
+                // Già presente SOLO se coincidono TUTTI: nome + modello + CONF. ORDINE + numero Ordine.
+        // Qualsiasi differenza → inserisce una nuova scheda.
         const baseKey = prepNormalizeClientName(nomeVal);
+        const incomingOrdine = parseInt(fields._batchOrdineSeq, 10) || parseInt(fields.ordineNum, 10) || 0;
         const already = (clients || []).filter(function(c) {
             return prepNormalizeClientName(c.nome) === baseKey;
         });
         if (already.length) {
-            let target = null;
-            if (confOrdine) {
-                target = already.find(function(c) {
-                    return String(c.confOrdine || '').trim() === confOrdine;
-                }) || null;
-            } else if (already.length === 1) {
-                target = already[0];
-            } else {
-                // Più omonimi senza una CONF. corrispondente: aggiorniamo solo
-                // i dati comuni (indirizzo/provincia/regione), senza sovrascrivere
-                // i dati specifici dei diversi ordini.
-                target = null;
-            }
+            const target = already.find(function(c) {
+                // 1) CONF. ORDINE
+                const cConf = String(c.confOrdine || '').trim();
+                if (confOrdine || cConf) {
+                    if (cConf !== confOrdine) return false;
+                }
+                // 2) Numero Ordine
+                let n = parseInt(c.ordineSeq, 10) || 0;
+                const m = String(c.nome || '').match(/\bORDINE\s*(\d+)\s*$/i);
+                if (m) n = parseInt(m[1], 10) || n;
+                if (incomingOrdine > 0 || n > 0) {
+                    if (n !== incomingOrdine) return false;
+                }
+                // 3) Modello
+                const modE = (c.modelli && c.modelli[0] && c.modelli[0].nome)
+                    ? String(c.modelli[0].nome).trim().toLowerCase()
+                    : '';
+                const modF = String(modelloVal || '').trim().toLowerCase();
+                if (modE || modF) {
+                    if (modE !== modF) return false;
+                }
+                return true;
+            }) || null;
 
-            const updateCommonOnly = !target && already.length > 1;
-
-            try {
-                const loc = await resolvePrepLocation(localitaVal, {
-                    provinciaHint: fields.provinciaHint || '',
-                    query: fields.localitaQuery || ''
-                });
-                const targets = target ? [target] : already;
-                let changed = false;
-                targets.forEach(function(c) {
-                    // Aggiorna SEMPRE l'indirizzo completo proveniente da LED Manager.
-                    if (localitaVal && c.localita !== localitaVal) {
-                        c.localita = localitaVal;
+            if (target) {
+                try {
+                    const loc = await resolvePrepLocation(localitaVal, {
+                        provinciaHint: fields.provinciaHint || '',
+                        query: fields.localitaQuery || ''
+                    });
+                    let changed = false;
+                    if (localitaVal && target.localita !== localitaVal) {
+                        target.localita = localitaVal;
                         changed = true;
                     }
-                    if (loc.provincia && c.provincia !== loc.provincia) {
-                        c.provincia = loc.provincia;
+                    if (loc.provincia && target.provincia !== loc.provincia) {
+                        target.provincia = loc.provincia;
                         changed = true;
                     }
-                    if (loc.regione && c.regione !== loc.regione) {
-                        c.regione = loc.regione;
+                    if (loc.regione && target.regione !== loc.regione) {
+                        target.regione = loc.regione;
                         changed = true;
                     }
-                    if (!updateCommonOnly && scadenzaVal && c.scadenza !== scadenzaVal) {
-                        c.scadenza = scadenzaVal;
+                    if (scadenzaVal && target.scadenza !== scadenzaVal) {
+                        target.scadenza = scadenzaVal;
                         changed = true;
                     }
-                    if (!updateCommonOnly && montaggioVal && c.montaggio !== montaggioVal) {
-                        c.montaggio = montaggioVal;
+                    if (montaggioVal && target.montaggio !== montaggioVal) {
+                        target.montaggio = montaggioVal;
                         changed = true;
                     }
-                    if (!updateCommonOnly && confOrdine && String(c.confOrdine || '').trim() !== confOrdine) {
-                        c.confOrdine = confOrdine;
+                    if (confOrdine && String(target.confOrdine || '').trim() !== confOrdine) {
+                        target.confOrdine = confOrdine;
                         changed = true;
                     }
-                    if (!updateCommonOnly && modelloVal) {
-                        const oldModels = Array.isArray(c.modelli) ? c.modelli : [];
+                    if (modelloVal) {
+                        const oldModels = Array.isArray(target.modelli) ? target.modelli : [];
                         const oldFirst = oldModels[0] || {};
                         if (String(oldFirst.nome || '').trim() !== modelloVal || parseInt(oldFirst.qta, 10) !== qtaVal || oldModels.length !== 1) {
-                            c.modelli = [{ nome: modelloVal, qta: qtaVal }];
+                            target.modelli = [{ nome: modelloVal, qta: qtaVal }];
                             changed = true;
                         }
                     }
-                });
-                if (changed) {
-                    saveToLocalStorage();
-                    try { render(); } catch (e) {}
-                    try { renderPrepPage(); } catch (e) {}
+                    if (changed) {
+                        saveToLocalStorage();
+                        try { render(); } catch (e) {}
+                        try { renderPrepPage(); } catch (e) {}
+                    }
+                    return {
+                        ok: true,
+                        updated: true,
+                        nome: nomeVal,
+                        confOrdine: confOrdine,
+                        qta: qtaVal,
+                        count: 1
+                    };
+                } catch (e) {
+                    return { ok: false, reason: 'aggiornamento non riuscito', nome: nomeVal };
                 }
-                return {
-                    ok: true,
-                    updated: true,
-                    nome: nomeVal,
-                    confOrdine: confOrdine,
-                    qta: qtaVal,
-                    count: targets.length
-                };
-            } catch (e) {
-                return { ok: false, reason: 'aggiornamento non riuscito', nome: nomeVal };
             }
+            // target non trovato → prosegui e crea nuova scheda
         }
+
+
 
         const loc = await resolvePrepLocation(localitaVal, {
             provinciaHint: fields.provinciaHint || '',
@@ -10600,8 +10598,9 @@
         }
 
         // Più clienti: aggiungi tutti automaticamente (nessuno screenshot salvato)
-        // Pre-numera solo omonimi con CONF. ORDINE diversi (modelli/ordini diversi)
-        // Stesso CONF è già stato unito in quantità da extractAllPrepClientsFromText
+        // Pre-numera omonimi (stesso cliente): crea più schede con ORDINE N
+        // Usa il numero "Ordine N" letto dalla scheda LED Manager se presente,
+        // altrimenti numera in sequenza 1, 2, 3…
         (function assignBatchOrdineSeq(list) {
             const groups = {};
             list.forEach(function(f) {
@@ -10612,13 +10611,26 @@
             });
             Object.keys(groups).forEach(function(k) {
                 const arr = groups[k];
-                if (arr.length < 2) return;
-                // verifica che abbiano conf diversi
-                const confs = arr.map(function(f) { return String(f.confOrdine || ''); });
-                const uniqueConfs = confs.filter(function(c, i) { return confs.indexOf(c) === i; });
-                if (uniqueConfs.length < 2) return; // stesso conf → quantità, non ordini multipli
-                arr.forEach(function(f, i) {
-                    f._batchOrdineSeq = i + 1;
+                if (arr.length < 2) {
+                    // Anche una sola scheda: se ha "Ordine N" lo rispettiamo
+                    if (arr.length === 1) {
+                        const n = parseInt(arr[0].ordineNum, 10);
+                        if (n > 0) arr[0]._batchOrdineSeq = n;
+                    }
+                    return;
+                }
+                // Preferisci il numero reale dalla scheda; fallback sequenziale
+                let fallback = 1;
+                const used = {};
+                arr.forEach(function(f) {
+                    let n = parseInt(f.ordineNum, 10);
+                    if (!(n > 0) || used[n]) {
+                        while (used[fallback]) fallback++;
+                        n = fallback;
+                        fallback++;
+                    }
+                    used[n] = true;
+                    f._batchOrdineSeq = n;
                 });
             });
         })(items);
