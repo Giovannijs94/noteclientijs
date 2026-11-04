@@ -4636,6 +4636,43 @@
             font-size: 0.8rem;
             white-space: nowrap;
         }
+        .prep-multi-bar {
+            display: none;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+            padding: 10px 12px;
+            background: linear-gradient(135deg, #fef2f2 0%, #fff7ed 100%);
+            border: 1px solid #fecaca;
+            border-radius: 10px;
+        }
+        .prep-multi-bar.active { display: flex; }
+        .prep-multi-bar .prep-multi-count {
+            font-weight: 700;
+            color: #b91c1c;
+            font-size: 0.9rem;
+            margin-right: 4px;
+        }
+        .prep-mini-row.prep-selected {
+            background: #fef2f2;
+            border-radius: 8px;
+            padding-left: 6px;
+            padding-right: 6px;
+        }
+        .prep-mini-check {
+            flex-shrink: 0;
+            width: 22px;
+            height: 22px;
+            margin-right: 8px;
+            accent-color: #dc2626;
+            cursor: pointer;
+        }
+        .prep-multi-toggle.active {
+            background: #fee2e2 !important;
+            border-color: #fca5a5 !important;
+            color: #b91c1c !important;
+        }
         @media (max-width: 600px) {
             .prep-mini-row {
                 flex-direction: column;
@@ -5940,8 +5977,17 @@
     </div>
 
     <div class="card prep-mini-list-card" id="prepMiniListCard" style="margin-bottom:16px; display:none;">
-        <div class="card-title" style="margin-bottom:8px;">Clienti per regione</div>
+        <div class="card-title" style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+            <span>Clienti per regione</span>
+            <button type="button" class="btn prep-multi-toggle" id="prepMultiToggleBtn" onclick="togglePrepMultiSelect()" title="Attiva selezione multipla per eliminare più clienti">☑️ Selezione multipla</button>
+        </div>
         <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:10px;">Raggruppati per regione. Su ogni cliente: <strong>→ Note</strong>, spedizione al <strong>tecnico di zona</strong> (se copre la zona), spedizione al <strong>cliente stesso</strong> se montaggio Piantana/Carrello.</p>
+        <div class="prep-multi-bar" id="prepMultiBar">
+            <span class="prep-multi-count" id="prepMultiCount">0 selezionati</span>
+            <button type="button" class="btn" onclick="prepSelectAllVisible()" style="min-height:36px;padding:6px 12px;font-size:0.82rem;">Seleziona tutti</button>
+            <button type="button" class="btn" onclick="prepDeselectAll()" style="min-height:36px;padding:6px 12px;font-size:0.82rem;">Deseleziona</button>
+            <button type="button" class="btn btn-danger-solid" id="prepMultiDeleteBtn" onclick="prepDeleteSelected()" style="min-height:36px;padding:6px 14px;font-size:0.82rem;" disabled>🗑️ Elimina selezionati</button>
+        </div>
         <div id="prepMiniList"></div>
     </div>
 </div><!-- /#viewPrep -->
@@ -6222,6 +6268,19 @@
         <div class="confirm-actions">
             <button type="button" class="btn" onclick="closeConfirmDelete()">Annulla</button>
             <button type="button" class="btn btn-danger-solid" onclick="confirmDeleteClient()">Sì, elimina</button>
+        </div>
+    </div>
+</div>
+
+<div id="confirmDeleteMultiModal" class="modal-overlay confirm-modal confirm-danger">
+    <div class="modal">
+        <div class="confirm-icon">🗑️</div>
+        <h3>Eliminare i clienti selezionati?</h3>
+        <div class="confirm-name" id="confirmDeleteMultiCount"></div>
+        <p class="confirm-desc">L'operazione non si può annullare.<br>Tutti i clienti selezionati verranno rimossi definitivamente da Pre-pianificazione.</p>
+        <div class="confirm-actions">
+            <button type="button" class="btn" onclick="closeConfirmDeleteMulti()">Annulla</button>
+            <button type="button" class="btn btn-danger-solid" onclick="confirmDeleteMultiClients()">Sì, elimina tutti</button>
         </div>
     </div>
 </div>
@@ -8449,6 +8508,93 @@
     };
     window.confirmRenameClient = function() { return confirmEditClient(); };
 
+    // --- Selezione multipla Pre-pianificazione ---
+    let prepMultiSelectMode = false;
+    let prepSelectedIds = {}; // id -> true
+
+    window.togglePrepMultiSelect = function() {
+        prepMultiSelectMode = !prepMultiSelectMode;
+        if (!prepMultiSelectMode) {
+            prepSelectedIds = {};
+        }
+        const btn = document.getElementById('prepMultiToggleBtn');
+        const bar = document.getElementById('prepMultiBar');
+        if (btn) btn.classList.toggle('active', prepMultiSelectMode);
+        if (btn) btn.textContent = prepMultiSelectMode ? '☑️ Selezione attiva' : '☑️ Selezione multipla';
+        if (bar) bar.classList.toggle('active', prepMultiSelectMode);
+        updatePrepMultiBar();
+        try { renderPrepPage(); } catch (e) {}
+    };
+
+    window.togglePrepClientSelect = function(id, checked) {
+        id = String(id);
+        if (checked) prepSelectedIds[id] = true;
+        else delete prepSelectedIds[id];
+        updatePrepMultiBar();
+        // aggiorna classe visiva senza re-render completo
+        const row = document.querySelector('.prep-mini-row[data-client-id="' + id + '"]');
+        if (row) row.classList.toggle('prep-selected', !!checked);
+    };
+
+    window.prepSelectAllVisible = function() {
+        document.querySelectorAll('.prep-mini-check').forEach(function(cb) {
+            cb.checked = true;
+            prepSelectedIds[String(cb.getAttribute('data-id'))] = true;
+            const row = cb.closest('.prep-mini-row');
+            if (row) row.classList.add('prep-selected');
+        });
+        updatePrepMultiBar();
+    };
+
+    window.prepDeselectAll = function() {
+        prepSelectedIds = {};
+        document.querySelectorAll('.prep-mini-check').forEach(function(cb) {
+            cb.checked = false;
+            const row = cb.closest('.prep-mini-row');
+            if (row) row.classList.remove('prep-selected');
+        });
+        updatePrepMultiBar();
+    };
+
+    function updatePrepMultiBar() {
+        const n = Object.keys(prepSelectedIds).length;
+        const countEl = document.getElementById('prepMultiCount');
+        const delBtn = document.getElementById('prepMultiDeleteBtn');
+        if (countEl) countEl.textContent = n + (n === 1 ? ' selezionato' : ' selezionati');
+        if (delBtn) delBtn.disabled = n === 0;
+    }
+
+    window.prepDeleteSelected = function() {
+        const ids = Object.keys(prepSelectedIds);
+        if (!ids.length) return;
+        const el = document.getElementById('confirmDeleteMultiCount');
+        if (el) el.textContent = ids.length + (ids.length === 1 ? ' cliente' : ' clienti');
+        document.getElementById('confirmDeleteMultiModal').style.display = 'flex';
+    };
+
+    window.closeConfirmDeleteMulti = function() {
+        document.getElementById('confirmDeleteMultiModal').style.display = 'none';
+    };
+
+    window.confirmDeleteMultiClients = function() {
+        const ids = Object.keys(prepSelectedIds);
+        if (!ids.length) {
+            closeConfirmDeleteMulti();
+            return;
+        }
+        const idSet = {};
+        ids.forEach(function(id) { idSet[String(id)] = true; });
+        clients = clients.filter(function(c) { return !idSet[String(c.id)]; });
+        prepSelectedIds = {};
+        saveToLocalStorage();
+        closeConfirmDeleteMulti();
+        updatePrepMultiBar();
+        try { render(); } catch (e) {}
+        try { if (typeof renderPrepPage === 'function') renderPrepPage(); } catch (e) {}
+        try { if (typeof renderStandbyPage === 'function') renderStandbyPage(); } catch (e) {}
+        try { if (typeof renderInstallatiPage === 'function') renderInstallatiPage(); } catch (e) {}
+    };
+
     window.deleteClient = function(id) {
         const client = clients.find(c => String(c.id) === String(id));
         if (!client) return;
@@ -9885,14 +10031,23 @@
         function extractNameTail(prevText) {
             const t = String(prevText || '').trim();
             if (!t) return '';
-            // Cerca "NOME COGNOME (12345)" tipico LED Manager in coda al pezzo precedente
-            const mId = t.match(/([A-ZÀ-Ù][A-ZÀ-Ùa-zà-ù'’\s.-]{2,60}?\s*\(\s*\d{3,}\s*\))\s*$/);
+            // Cerca "NOME... (12345)" tipico LED Manager in coda al pezzo precedente.
+            // Supporta nomi lunghi (ragioni sociali) e caratteri comuni: & , / ° ecc.
+            const mId = t.match(/([A-ZÀ-Ù0-9][A-ZÀ-Ùa-zà-ù0-9'’\s.\-&\,\/°]{2,120}?\s*\(\s*\d{3,}\s*\))\s*$/);
             if (mId) return mId[1].trim();
+            // Prova anche su una riga intera che contiene (id) vicino alla fine
+            const linesAll = t.split(/\n+/).map(function(L) { return L.trim(); }).filter(Boolean);
+            for (let li = linesAll.length - 1; li >= 0 && li >= linesAll.length - 4; li--) {
+                const L = linesAll[li];
+                if (/^(modifica|elimina|avvia|priorit|necessaria|struttura|calendarizz|installatore|indirizzo|montaggio)/i.test(L)) continue;
+                const m = L.match(/^([A-ZÀ-Ù0-9][A-ZÀ-Ùa-zà-ù0-9'’\s.\-&\,\/°]{2,120}?\s*\(\s*\d{3,}\s*\))\s*/);
+                if (m) return m[1].trim();
+            }
             // Altrimenti ultime 1-2 righe non-rumore
-            const prevLines = t.split(/\n+/).filter(function(L) {
-                L = L.trim();
+            const prevLines = linesAll.filter(function(L) {
                 if (!L || L.length < 3) return false;
                 if (/^(modifica|elimina|avvia|priorit|necessaria|struttura|calendarizz)/i.test(L)) return false;
+                if (/^(conf\.?\s*ordine|nulla\s*osta|cauzione|scadenza)\b/i.test(L)) return false;
                 return true;
             });
             return prevLines.slice(-2).join('\n');
@@ -9917,17 +10072,23 @@
             cards.push(chunk);
         }
 
-        // Dedup: usa CONF + Ordine N se presenti, altrimenti primi 100 char
+        // Dedup: CONF + Ordine N (se presente) → schede distinte anche con stesso CONF
         const uniq = [];
         const seen = {};
         cards.forEach(function(c) {
             const confM = c.match(/\bconf\.?\s*ordine\s*[:\-–]?\s*(\d{4,})/i);
-            const ordM = c.match(/\bconf\.?\s*ordine\s*[:\-–]?\s*\d{4,}\s*[·•\-–—|,]?\s*ordine\s*(\d{1,3})\b/i);
+            let ordNum = '';
+            if (confM) {
+                const after = c.slice(confM.index + confM[0].length, confM.index + confM[0].length + 60);
+                const om = after.match(/\bordine\s*(\d{1,3})\b/i);
+                if (om) ordNum = om[1];
+            }
             let key;
-            if (confM && ordM) {
-                key = 'c' + confM[1] + '-o' + ordM[1];
+            if (confM && ordNum) {
+                // Stesso CONF + Ordine diverso = schede diverse (es. Ordine 1 e Ordine 2)
+                key = 'c' + confM[1] + '-o' + ordNum;
             } else if (confM) {
-                key = 'c' + confM[1] + '-' + c.slice(0, 60).toLowerCase().replace(/\s+/g, ' ');
+                key = 'c' + confM[1];
             } else {
                 key = c.slice(0, 100).toLowerCase().replace(/\s+/g, ' ');
             }
@@ -9968,11 +10129,14 @@
         // Nome: SOLO in alto a sinistra del riquadro — pulito da UI (mod.bipiemme, installati, ecc.)
         function cleanLedClientName(s) {
             let t = String(s || '').replace(/\s+/g, ' ').trim();
+            // Taglia tutto ciò che sta sulla stessa riga a destra del nome (header LED Manager)
             t = t.split(/\bCONF\.?\s*ORDINE\b/i)[0];
             t = t.split(/\bNULLA\s*OSTA\b/i)[0];
             t = t.split(/\bSCADENZA\s*:/i)[0];
+            t = t.split(/\bSCADENZA\b/i)[0];
             t = t.split(/\bIN\s*CODA\b/i)[0];
             t = t.split(/\bCAUZIONE\b/i)[0];
+            t = t.split(/\bInstallatore\s*:/i)[0];
             // etichette UI LED Manager — mai nomi cliente
             t = t.replace(/mod\.?\s*bipiemme/ig, ' ');
             t = t.replace(/bipiemme(?:\s*communication)?/ig, ' ');
@@ -9995,11 +10159,13 @@
             t = t.replace(/\belimina\b/ig, ' ');
             t = t.replace(/\bavvia\b/ig, ' ');
             t = t.replace(/\bmod\.\b/ig, ' ');
+            // rimuovi residui di badge / stato
+            t = t.replace(/\b(in\s*lavorazione|stand-?by|installato|completato)\b/ig, ' ');
             t = t.replace(/\s{2,}/g, ' ').trim();
             t = t.replace(/^[\s\-–—|:,]+/, '').replace(/[\s\-–—|:,]+$/, '').trim();
             // se dopo la pulizia resta solo SI/NO o etichetta → scarta
             if (/^(s[iì]|no|sì)$/i.test(t)) return '';
-            if (/^(cauzione|nulla\s*osta|scadenza|ordine|montaggio|indirizzo)$/i.test(t)) return '';
+            if (/^(cauzione|nulla\s*osta|scadenza|ordine|montaggio|indirizzo|installatore)$/i.test(t)) return '';
             return t;
         }
         function stripUiRight(s) { return cleanLedClientName(s); }
@@ -10010,14 +10176,11 @@
             const L = lines[i];
             if (/^installatore\b/i.test(L)) break;
             if (/^(modifica|elimina|avvia|misura|passo|cabinet|montaggio|indirizzo|contratto|tipologia)\b/i.test(L)) continue;
-            if (/^\s*conf\.?\s*ordine\b/i.test(L)) continue;
-            if (/^\s*nulla\s*osta\b/i.test(L)) continue;
-            if (/^\s*scadenza\s*:/i.test(L)) continue;
-            if (/\bin\s*coda\b/i.test(L) && !/\([0-9]{3,}\)/.test(L)) continue;
-            if (/\b(dashboard|elenco|filtri?|ricerca|led\s*manager\s*pro|totale)\b/i.test(L) && !/\([0-9]{3,}\)/.test(L)) continue;
-            // non usare righe che sono solo rumore (mod.bipiemme / installati)
-            const onlyNoise = /^(mod\.?\s*)?bipiemme$|^installati$|^installatore$|^mod\.$|^cauzione\b.*|^nulla\s*osta\b.*|^(s[iì]|no)$/i.test(L.trim());
-            if (onlyNoise) continue;
+            if (/^(conf\.?\s*ordine|nulla\s*osta|cauzione|scadenza|in\s*coda)\b/i.test(L)) continue;
+            if (/\b(INDOOR|OUTDOOR)\b/i.test(L) && /(?:SMD|CM|DV|FC\d|\/\d)/i.test(L)) continue;
+            if (/^(FC|PH|P)\d/i.test(L) && L.length > 8) continue;
+            // salta righe che sono solo etichette / numeri
+            if (!/[A-Za-zÀ-ù]{3,}/.test(L)) continue;
             if (/\bcauzione\b/i.test(L) && !/\([0-9]{3,}\)/.test(L) && L.length < 40) continue;
             if (/^(cauzione|nulla\s*osta|scadenza|conf\.?\s*ordine)\b/i.test(L)) continue;
             if (/\b(mod\.?\s*bipiemme|bipiemme)\b/i.test(L) && !/[A-Za-zÀ-ù]{4,}/.test(L.replace(/\b(mod\.?\s*)?bipiemme\b/ig, ''))) continue;
@@ -10026,32 +10189,45 @@
                 if (cleaned.length >= 3) preInstall.push(L);
             }
         }
-        // 1) riga con codice (id) tra parentesi
+        // 1) Preferisci riga con codice id tra parentesi: "NOME (12345)" — pattern più affidabile LED Manager
         for (let i = 0; i < preInstall.length; i++) {
             if (/\(\s*\d{3,}\s*\)/.test(preInstall[i])) {
                 ledNome = stripUiRight(preInstall[i]);
-                if (i > 0 && preInstall[i - 1].length >= 3 && preInstall[i - 1].length <= 48
+                // Se la riga precedente è continuazione del nome (ragione sociale spezzata)
+                if (i > 0 && preInstall[i - 1].length >= 3 && preInstall[i - 1].length <= 80
                     && !/\(\s*\d{3,}\s*\)/.test(preInstall[i - 1])
                     && !/^(conf|nulla|scadenza|mod\.?|bipiemme|install)/i.test(preInstall[i - 1])) {
                     const prev = stripUiRight(preInstall[i - 1]);
-                    if (prev && ledNome.toLowerCase().indexOf(prev.toLowerCase()) < 0) {
+                    // unisci solo se sembra parte del nome (non un modello / indirizzo)
+                    if (prev && ledNome.toLowerCase().indexOf(prev.toLowerCase()) < 0
+                        && !/\b(via|viale|piazza|corso|indoor|outdoor|smd)\b/i.test(prev)) {
                         ledNome = (prev + ' ' + ledNome).replace(/\s{2,}/g, ' ').trim();
                     }
                 }
                 break;
             }
         }
-        // 2) eventuale nome spezzato
-        if (!ledNome && preInstall.length >= 2 && preInstall[0].length <= 28 && preInstall[1].length <= 48) {
+        // 1b) Pattern globale sul testo grezzo: "QUALCOSA (12345)" prima di Installatore / CONF
+        if (!ledNome) {
+            const head = fullOne.split(/\bInstallatore\s*:/i)[0].split(/\bCONF\.?\s*ORDINE\b/i)[0];
+            const mHead = head.match(/([A-ZÀ-Ù0-9][A-ZÀ-Ùa-zà-ù0-9'’\s.\-&\,\/°]{2,120}?\s*\(\s*\d{3,}\s*\))/);
+            if (mHead) {
+                const n = cleanLedClientName(mHead[1]);
+                if (n.length >= 3) ledNome = n;
+            }
+        }
+        // 2) eventuale nome spezzato su 2 righe (senza id)
+        if (!ledNome && preInstall.length >= 2 && preInstall[0].length <= 40 && preInstall[1].length <= 60) {
             const j = stripUiRight(preInstall[0] + ' ' + preInstall[1]);
-            if (j.length >= 6) ledNome = j;
+            if (j.length >= 6 && !/\b(via|viale|indoor|outdoor)\b/i.test(j)) ledNome = j;
         }
         // 3) prima riga utile
         if (!ledNome && preInstall.length) ledNome = stripUiRight(preInstall[0]);
         if (ledNome) {
             let n = cleanLedClientName(ledNome);
-            n = n.replace(/([A-Za-zÀ-ù])\(\s*(\d{3,})\s*\)/g, '$1 ($2)');
-            n = n.trim();
+            // normalizza spazio prima della parentesi id: "NOME(123)" → "NOME (123)"
+            n = n.replace(/([A-Za-zÀ-ù0-9])\(\s*(\d{3,})\s*\)/g, '$1 ($2)');
+            n = n.replace(/\s{2,}/g, ' ').trim();
             // non accettare etichette residue come nome
             if (n && !/cauzione/i.test(n) && !/^(s[iì]|no)$/i.test(n) && n.length >= 3) {
                 out.nome = n;
@@ -10063,6 +10239,7 @@
                 const L = lines[i];
                 if (!/\(\s*\d{3,}\s*\)/.test(L)) continue;
                 if (/\bcauzione\b/i.test(L)) continue;
+                if (/^(conf|nulla|scadenza|installatore|indirizzo|montaggio)\b/i.test(L)) continue;
                 let n = cleanLedClientName(L);
                 if (n.length >= 3) { out.nome = n; break; }
             }
@@ -10203,20 +10380,35 @@
         if (qm) out.qta = qm[1];
 
         // Numero ordine LED Manager: CONF. ORDINE: 23667103 · Ordine 2
+        // Accetta vari separatori e formati copiati da LED Manager
         const mOrd = fullOne.match(/\bconf\.?\s*ordine\s*[:\-–]?\s*(\d{4,})/i);
         if (mOrd) out.confOrdine = mOrd[1];
         else out.confOrdine = '';
 
-        // "Ordine N" SOLO se appare accanto al CONF (es. "23679203 · Ordine 2")
-        // Non prendere generici "ordine" sparsi nel testo
+        // "Ordine N" SOLO se appare accanto al CONF (es. "23681645 · Ordine 2")
+        // Non prendere generici "ordine" sparsi nel testo (es. "CONF. ORDINE" stesso)
         out.ordineNum = '';
         if (mOrd) {
-            const afterConf = fullOne.slice(mOrd.index + mOrd[0].length, mOrd.index + mOrd[0].length + 40);
-            const mNear = afterConf.match(/^\s*[·•\-–—|,]?\s*ordine\s*(\d{1,3})\b/i);
+            const afterConf = fullOne.slice(mOrd.index + mOrd[0].length, mOrd.index + mOrd[0].length + 60);
+            // Pattern robusto: separatore opzionale (punto medio, bullet, trattino, pipe, virgola)
+            // poi la parola "Ordine" / "ORDINE" e il numero
+            let mNear = afterConf.match(/^\s*[\s·•\u00B7\u2022\u2219\u22C5\-–—|,\/]+\s*ordine\s*(\d{1,3})\b/i);
+            if (!mNear) mNear = afterConf.match(/^\s*ordine\s*(\d{1,3})\b/i);
+            if (!mNear) mNear = afterConf.match(/\bordine\s*(\d{1,3})\b/i);
             if (mNear) out.ordineNum = mNear[1];
         }
-        // Fallback: pattern completo "CONF. ORDINE: 123 · Ordine N" già catturato sopra;
-        // se non trovato, lascia vuoto (niente suffisso automatico)
+        // Fallback globale sulla scheda: "CONF. ORDINE: 123456 · Ordine 2" in una riga
+        if (!out.ordineNum && out.confOrdine) {
+            const mFull = fullOne.match(
+                new RegExp(
+                    'conf\\.?\\s*ordine\\s*[:\\-–]?\\s*' + out.confOrdine.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+                    '\\s*[\\s·•\u00B7\u2022\\-–—|,/]*\\s*ordine\\s*(\\d{1,3})\\b',
+                    'i'
+                )
+            );
+            if (mFull) out.ordineNum = mFull[1];
+        }
+        // Se non trovato vicino al CONF, lascia vuoto (niente suffisso automatico)
 
         return out;
     }
@@ -10242,10 +10434,9 @@
             if (f && f.nome) rawList.push(f);
         }
 
-        // NON raggruppiamo più per stesso nome + stesso CONF. ORDINE.
-        // Ogni scheda LED Manager resta separata: se stesso cliente (anche stesso CONF)
-        // verranno create più schede con "— ORDINE 1", "— ORDINE 2", ecc.
-        // (la numerazione avviene in assignBatchOrdineSeq / addPrepClientFromOcrFields)
+        // REGOLA: stesso CONF. ORDINE → non creare doppioni (gestito in addPrepClientFromOcrFields).
+        // Solo se sulla scheda c'è esplicitamente "Ordine N" diverso si creano più schede
+        // con suffisso "— ORDINE N" (numerazione in assignBatchOrdineSeq).
         const results = [];
         rawList.forEach(function(f) {
             const q = parseInt(f.qta, 10);
@@ -10438,114 +10629,134 @@
         if (!localitaVal) return { ok: false, reason: 'indirizzo mancante', nome: nomeVal };
         if (!scadenzaVal) return { ok: false, reason: 'scadenza mancante', nome: nomeVal };
 
-                        // Già presente se stesso cliente e i campi valorizzati coincidono.
-        // Campi vuoti non bloccano il match (evita doppioni se CONF/modello mancava al primo import).
-        // Se c'è "Ordine N" diverso → scheda nuova.
-        const baseKey = prepNormalizeClientName(nomeVal);
+        // ============================================================
+        // REGOLA IMPORT LED MANAGER (Pre-pianificazione):
+        // A) Stesso CONF. ORDINE + stesso/assente "Ordine N" → NON reinserire
+        // B) Stesso CONF. ORDINE + "Ordine N" DIVERSO → crea nuova scheda
+        // C) CONF nuovo → crea una (o più) schede
+        // ============================================================
         const incomingOrdine = parseInt(fields._batchOrdineSeq, 10) || parseInt(fields.ordineNum, 10) || 0;
-        const already = (clients || []).filter(function(c) {
-            return prepNormalizeClientName(c.nome) === baseKey;
-        });
-        if (already.length) {
-            const target = already.find(function(c) {
-                // CONF. ORDINE: se entrambi valorizzati, devono coincidere
-                const cConf = String(c.confOrdine || '').trim();
-                if (confOrdine && cConf && cConf !== confOrdine) return false;
 
-                // Numero Ordine: se entrambi valorizzati, devono coincidere
-                let n = parseInt(c.ordineSeq, 10) || 0;
-                const m = String(c.nome || '').match(/\bORDINE\s*(\d+)\s*$/i);
-                if (m) n = parseInt(m[1], 10) || n;
-                if (incomingOrdine > 0 && n > 0 && n !== incomingOrdine) return false;
-                // Se in ingresso c'è Ordine N e l'esistente non ce l'ha (o viceversa) → considera diverso solo
-                // quando stiamo importando esplicitamente più ordini (incomingOrdine > 0 && n === 0 e esistono già altri)
-                // Per il caso normale senza Ordine N: match ok
-                if (incomingOrdine > 0 && n === 0) {
-                    // c'è già una scheda base senza ordine: non è lo stesso "Ordine N"
-                    // ma se è l'unica e stiamo re-incollando la stessa, meglio aggiornare
-                    // → match solo se non ci sono altre schede con ordini di questo cliente
-                    const siblingsWithOrd = already.filter(function(x) {
-                        const xn = parseInt(x.ordineSeq, 10) || 0;
-                        const xm = String(x.nome || '').match(/\bORDINE\s*(\d+)\s*$/i);
-                        return (xm ? parseInt(xm[1], 10) : xn) > 0;
-                    });
-                    if (siblingsWithOrd.length) return false;
+        function readOrdineSeq(c) {
+            let n = parseInt(c.ordineSeq, 10) || 0;
+            const m = String(c.nome || '').match(/\bORDINE\s*(\d+)\s*$/i);
+            if (m) n = parseInt(m[1], 10) || n;
+            return n;
+        }
+
+        // --- Priorità assoluta: match per CONF. ORDINE ---
+        let target = null;
+        if (confOrdine) {
+            const sameConf = (clients || []).filter(function(c) {
+                return String(c.confOrdine || '').trim() === confOrdine;
+            });
+            if (sameConf.length) {
+                if (incomingOrdine > 0) {
+                    // Cerca SOLO la scheda con lo stesso numero Ordine
+                    target = sameConf.find(function(c) {
+                        return readOrdineSeq(c) === incomingOrdine;
+                    }) || null;
+                    // Se non c'è ancora quella con Ordine N → target resta null → si CREA
+                } else {
+                    // In ingresso NESSUN "Ordine N":
+                    // - se esiste già qualsiasi scheda con questo CONF → non reinserire
+                    //   (preferisci quella senza numero ordine, altrimenti la prima)
+                    target = sameConf.find(function(c) { return readOrdineSeq(c) === 0; }) || sameConf[0] || null;
                 }
+            }
+        }
 
-                // Modello: se entrambi valorizzati, devono coincidere
-                const modE = (c.modelli && c.modelli[0] && c.modelli[0].nome)
-                    ? String(c.modelli[0].nome).trim().toLowerCase()
-                    : '';
-                const modF = String(modelloVal || '').trim().toLowerCase();
-                if (modE && modF && modE !== modF) return false;
+        // Fallback: se non c'è CONF. ORDINE, match per nome
+        if (!target && !confOrdine) {
+            const baseKey = prepNormalizeClientName(nomeVal);
+            const already = (clients || []).filter(function(c) {
+                return prepNormalizeClientName(c.nome) === baseKey;
+            });
+            if (already.length) {
+                if (incomingOrdine > 0) {
+                    target = already.find(function(c) {
+                        return readOrdineSeq(c) === incomingOrdine;
+                    }) || null;
+                } else {
+                    target = already.find(function(c) { return readOrdineSeq(c) === 0; }) || already[0] || null;
+                }
+            }
+        }
 
-                return true;
-            }) || null;
-
-            if (target) {
-                try {
-                    const loc = await resolvePrepLocation(localitaVal, {
-                        provinciaHint: fields.provinciaHint || '',
-                        query: fields.localitaQuery || '',
-                        fast: true
-                    });
-                    let changed = false;
-                    if (localitaVal && target.localita !== localitaVal) {
-                        target.localita = localitaVal;
+        if (target) {
+            try {
+                const loc = await resolvePrepLocation(localitaVal, {
+                    provinciaHint: fields.provinciaHint || '',
+                    query: fields.localitaQuery || '',
+                    fast: true
+                });
+                let changed = false;
+                if (localitaVal && target.localita !== localitaVal) {
+                    target.localita = localitaVal;
+                    changed = true;
+                }
+                if (loc && loc.provincia && target.provincia !== loc.provincia) {
+                    target.provincia = loc.provincia;
+                    changed = true;
+                }
+                if (loc && loc.regione && target.regione !== loc.regione) {
+                    target.regione = loc.regione;
+                    changed = true;
+                }
+                if (scadenzaVal && target.scadenza !== scadenzaVal) {
+                    target.scadenza = scadenzaVal;
+                    changed = true;
+                }
+                if (montaggioVal && target.montaggio !== montaggioVal) {
+                    target.montaggio = montaggioVal;
+                    changed = true;
+                }
+                if (confOrdine && String(target.confOrdine || '').trim() !== confOrdine) {
+                    target.confOrdine = confOrdine;
+                    changed = true;
+                }
+                if (modelloVal) {
+                    const oldModels = Array.isArray(target.modelli) ? target.modelli : [];
+                    const oldFirst = oldModels[0] || {};
+                    if (String(oldFirst.nome || '').trim() !== modelloVal || parseInt(oldFirst.qta, 10) !== qtaVal || oldModels.length !== 1) {
+                        target.modelli = [{ nome: modelloVal, qta: qtaVal }];
                         changed = true;
                     }
-                    if (loc.provincia && target.provincia !== loc.provincia) {
-                        target.provincia = loc.provincia;
-                        changed = true;
-                    }
-                    if (loc.regione && target.regione !== loc.regione) {
-                        target.regione = loc.regione;
-                        changed = true;
-                    }
-                    if (scadenzaVal && target.scadenza !== scadenzaVal) {
-                        target.scadenza = scadenzaVal;
-                        changed = true;
-                    }
-                    if (montaggioVal && target.montaggio !== montaggioVal) {
-                        target.montaggio = montaggioVal;
-                        changed = true;
-                    }
-                    if (confOrdine && String(target.confOrdine || '').trim() !== confOrdine) {
-                        target.confOrdine = confOrdine;
-                        changed = true;
-                    }
-                    if (modelloVal) {
-                        const oldModels = Array.isArray(target.modelli) ? target.modelli : [];
-                        const oldFirst = oldModels[0] || {};
-                        if (String(oldFirst.nome || '').trim() !== modelloVal || parseInt(oldFirst.qta, 10) !== qtaVal || oldModels.length !== 1) {
-                            target.modelli = [{ nome: modelloVal, qta: qtaVal }];
-                            changed = true;
-                        }
-                    }
-                    // Allinea ordineSeq se in ingresso c'è e sul target manca
-                    if (incomingOrdine > 0 && !(parseInt(target.ordineSeq, 10) > 0)) {
-                        target.ordineSeq = incomingOrdine;
-                        changed = true;
-                    }
-                    if (changed) {
-                        saveToLocalStorage();
-                        try { render(); } catch (e) {}
-                        try { renderPrepPage(); } catch (e) {}
-                    }
+                }
+                // Allinea ordineSeq se in ingresso c'è e sul target manca
+                if (incomingOrdine > 0 && !(parseInt(target.ordineSeq, 10) > 0)) {
+                    target.ordineSeq = incomingOrdine;
+                    changed = true;
+                }
+                if (changed) {
+                    saveToLocalStorage();
+                    try { render(); } catch (e) {}
+                    try { renderPrepPage(); } catch (e) {}
                     return {
                         ok: true,
                         updated: true,
-                        nome: nomeVal,
+                        action: 'updated',
+                        nome: target.nome || nomeVal,
                         confOrdine: confOrdine,
                         qta: qtaVal,
                         count: 1
                     };
-                } catch (e) {
-                    return { ok: false, reason: 'aggiornamento non riuscito', nome: nomeVal };
                 }
+                // Stesso CONF / stessa scheda già presente → non fare nulla
+                return {
+                    ok: true,
+                    skipped: true,
+                    action: 'skipped',
+                    nome: target.nome || nomeVal,
+                    confOrdine: confOrdine,
+                    reason: 'già presente' + (confOrdine ? ' (CONF. ' + confOrdine + ')' : ''),
+                    count: 0
+                };
+            } catch (e) {
+                return { ok: false, reason: 'aggiornamento non riuscito', nome: nomeVal };
             }
-            // target non trovato → prosegui e crea nuova scheda
         }
+        // target non trovato → prosegui e crea nuova scheda
 
         // Risolvi località (fast: DB locale + pattern, niente Nominatim in import massivo)
         const loc = await resolvePrepLocation(localitaVal, {
@@ -10627,7 +10838,14 @@
             standby: false,
             inPrep: true
         });
-        return { ok: true, nome: nomeSalvataggio, confOrdine: confOrdine, qta: qtaVal };
+        return {
+            ok: true,
+            action: 'created',
+            nome: nomeSalvataggio,
+            confOrdine: confOrdine,
+            ordineSeq: ordineSeq > 0 ? ordineSeq : 0,
+            qta: qtaVal
+        };
     }
 
     async function applyPrepOcrClients(list) {
@@ -10641,15 +10859,31 @@
         if (items.length === 1) {
             applyPrepOcrFieldsToForm(items[0]);
             const r = await addPrepClientFromOcrFields(items[0]);
-            if (r.ok) {
-                saveToLocalStorage();
-                try { render(); } catch (e) {}
-                try { renderPrepPage(); } catch (e) {}
-                setPrepOcrStatus((r.updated ? '🔄 Cliente <strong>' : '✅ Cliente <strong>') + String(r.nome).replace(/</g, '&lt;') + '</strong> ' + (r.updated ? 'aggiornato in Pre-pianificazione.' : 'aggiunto in Pre-pianificazione.') + '<br>Altri in lista? Scorri e premi <strong>Cattura altri</strong>.', 'ok');
+            const confBit = (r && r.confOrdine) ? (' <span style="opacity:.8;">[CONF. ' + String(r.confOrdine).replace(/</g,'&lt;') + ']</span>') : '';
+            if (r && r.ok) {
+                if (r.skipped || r.action === 'skipped') {
+                    setPrepOcrStatus(
+                        '⏭ Cliente <strong>' + String(r.nome || '').replace(/</g, '&lt;') + '</strong>' + confBit +
+                        ' <strong>già presente</strong> — nessuna nuova scheda creata.<br>Altri in lista? Scorri e premi <strong>Cattura altri</strong>.',
+                        'work'
+                    );
+                } else {
+                    saveToLocalStorage();
+                    try { render(); } catch (e) {}
+                    try { renderPrepPage(); } catch (e) {}
+                    const isUpd = r.updated || r.action === 'updated';
+                    setPrepOcrStatus(
+                        (isUpd ? '🔄 Cliente <strong>' : '✅ Cliente <strong>') +
+                        String(r.nome || '').replace(/</g, '&lt;') + '</strong>' + confBit + ' ' +
+                        (isUpd ? 'aggiornato in Pre-pianificazione.' : 'aggiunto in Pre-pianificazione.') +
+                        '<br>Altri in lista? Scorri e premi <strong>Cattura altri</strong>.',
+                        'ok'
+                    );
+                }
             } else {
                 setPrepOcrStatus(
-                    '📋 Campi compilati nel form. Aggiunta automatica non riuscita (' + (r.reason || '?') + '). Controlla e premi Aggiungi.',
-                    (String(r.reason || '').indexOf('già') === 0) ? 'work' : 'err'
+                    '📋 Campi compilati nel form. Aggiunta automatica non riuscita (' + ((r && r.reason) || '?') + '). Controlla e premi Aggiungi.',
+                    (r && String(r.reason || '').indexOf('già') === 0) ? 'work' : 'err'
                 );
             }
             return;
@@ -10657,12 +10891,14 @@
 
         // Più clienti: aggiungi tutti automaticamente (nessuno screenshot salvato)
         // "Ordine N" SOLO se presente sulla scheda LED Manager.
-        // Più schede stesso cliente SENZA "Ordine N" → possibili doppioni di split: non numerare.
-        // Più schede con "Ordine N" (o misto) → usa i numeri reali / sequenza.
+        // Stesso CONF. ORDINE senza "Ordine N" diverso → non crea doppioni (gestito in addPrepClientFromOcrFields).
+        // Più schede con "Ordine N" → usa i numeri reali / sequenza.
         (function assignBatchOrdineSeq(list) {
             const groups = {};
             list.forEach(function(f) {
-                const k = prepNormalizeClientName(f.nome || '');
+                // Raggruppa preferibilmente per CONF. ORDINE, altrimenti per nome
+                const conf = String(f.confOrdine || '').trim();
+                const k = conf ? ('CONF:' + conf) : prepNormalizeClientName(f.nome || '');
                 if (!k) return;
                 if (!groups[k]) groups[k] = [];
                 groups[k].push(f);
@@ -10694,29 +10930,71 @@
             });
         })(items);
 
-        setPrepOcrStatus('⏳ Trovate <strong>' + items.length + '</strong> schede: aggiunta in corso…', 'work');
-        let okN = 0, updN = 0, skip = [], fail = [];
+        setPrepOcrStatus('⏳ Trovate <strong>' + items.length + '</strong> schede: elaborazione in corso…', 'work');
+        let okN = 0, updN = 0, skipN = 0;
+        const created = [], updated = [], skipped = [], fail = [];
         for (let i = 0; i < items.length; i++) {
             const r = await addPrepClientFromOcrFields(items[i]);
-            if (r.ok) { if (r.updated) updN++; else okN++; }
-            else if (r.reason && (String(r.reason).indexOf('già presente') === 0 || String(r.reason).indexOf('già in clienti') === 0)) skip.push(r.nome || '');
-            else fail.push((r.nome || '—') + ' (' + (r.reason || '?') + ')');
-            // lascia respirare la UI ogni scheda
+            const label = (r && r.nome) ? String(r.nome) : '—';
+            const confBit = (r && r.confOrdine) ? (' [CONF. ' + r.confOrdine + ']') : '';
+            if (r && r.ok) {
+                if (r.skipped || r.action === 'skipped') {
+                    skipN++;
+                    skipped.push(label + confBit);
+                } else if (r.updated || r.action === 'updated') {
+                    updN++;
+                    updated.push(label + confBit);
+                } else {
+                    okN++;
+                    created.push(label + confBit);
+                }
+            } else if (r && r.reason && (String(r.reason).indexOf('già presente') === 0 || String(r.reason).indexOf('già in clienti') === 0)) {
+                skipN++;
+                skipped.push(label + confBit);
+            } else {
+                fail.push(label + ' (' + ((r && r.reason) || '?') + ')');
+            }
             if (i % 1 === 0) await new Promise(function(res) { setTimeout(res, 0); });
             if (items.length > 3 && (i + 1) % 3 === 0) {
                 setPrepOcrStatus('⏳ Import: <strong>' + (i + 1) + '</strong>/' + items.length + ' schede…', 'work');
             }
         }
-        if (okN) {
+        if (okN || updN) {
             saveToLocalStorage();
             try { render(); } catch (e) {}
             try { renderPrepPage(); } catch (e) {}
         }
-        let msg = '✅ Aggiunti <strong>' + okN + '</strong> e aggiornati <strong>' + updN + '</strong> di ' + items.length + ' clienti in Pre-pianificazione.';
-        if (skip.length) msg += '<br>⏭ Già in elenco (Note/Prep): ' + skip.map(function(n){ return String(n).replace(/</g,'&lt;'); }).join(', ');
-        if (fail.length) msg += '<br>⚠️ Non aggiunti: ' + fail.map(function(n){ return String(n).replace(/</g,'&lt;'); }).join(', ');
-        if (okN) msg += '<br><span style="font-weight:600;">Altri clienti più in basso?</span> Scorri in LED Manager e premi <strong>Cattura altri</strong>.';
-        setPrepOcrStatus(msg, okN ? 'ok' : 'err');
+        // Messaggio esplicito sui 3 casi
+        let msg = '<strong>Risultato import LED Manager</strong> (' + items.length + ' schede riconosciute):';
+        if (okN) {
+            msg += '<br>✅ <strong>Nuove schede create: ' + okN + '</strong>';
+            if (created.length && created.length <= 8) {
+                msg += ' — ' + created.map(function(n){ return String(n).replace(/</g,'&lt;'); }).join(', ');
+            }
+        }
+        if (updN) {
+            msg += '<br>🔄 <strong>Aggiornate: ' + updN + '</strong>';
+            if (updated.length && updated.length <= 6) {
+                msg += ' — ' + updated.map(function(n){ return String(n).replace(/</g,'&lt;'); }).join(', ');
+            }
+        }
+        if (skipN) {
+            msg += '<br>⏭ <strong>Già presenti (nessuna nuova scheda): ' + skipN + '</strong>';
+            if (skipped.length && skipped.length <= 8) {
+                msg += ' — ' + skipped.map(function(n){ return String(n).replace(/</g,'&lt;'); }).join(', ');
+            }
+        }
+        if (fail.length) {
+            msg += '<br>⚠️ <strong>Non gestite: ' + fail.length + '</strong> — ' +
+                fail.map(function(n){ return String(n).replace(/</g,'&lt;'); }).join(', ');
+        }
+        if (okN || updN) {
+            msg += '<br><span style="font-weight:600;">Altri clienti più in basso?</span> Scorri in LED Manager e premi <strong>Cattura altri</strong>.';
+        } else if (!fail.length && skipN) {
+            msg += '<br><span style="color:#64748b;">Tutte le schede erano già in Pre-pianificazione.</span>';
+        }
+        const statusKind = (okN || updN) ? 'ok' : (fail.length && !skipN ? 'err' : 'work');
+        setPrepOcrStatus(msg, statusKind);
     }
 
     function applyPrepOcrFieldsToForm(fields) {
@@ -12182,7 +12460,17 @@
                     ? ('<div class="prep-mini-tech" style="margin-top:6px;">' + hint + '</div>')
                     : '';
 
-                return '<div class="prep-mini-row" style="display:flex;gap:10px;justify-content:space-between;">' +
+                const isSel = !!(prepMultiSelectMode && prepSelectedIds[String(c.id)]);
+                const checkHtml = prepMultiSelectMode
+                    ? ('<input type="checkbox" class="prep-mini-check" data-id="' + safeId + '" ' +
+                       (isSel ? 'checked ' : '') +
+                       'onchange="togglePrepClientSelect(\'' + safeId + '\', this.checked)" ' +
+                       'onclick="event.stopPropagation();" title="Seleziona per eliminazione">')
+                    : '';
+
+                return '<div class="prep-mini-row' + (isSel ? ' prep-selected' : '') +
+                    '" data-client-id="' + safeId + '" style="display:flex;gap:10px;justify-content:space-between;align-items:flex-start;">' +
+                    checkHtml +
                     '<div class="prep-mini-info" style="min-width:0;flex:1;">' +
                     '<div class="prep-mini-name">' + String(c.nome || '').replace(/</g, '&lt;') + '</div>' +
                     '<div class="prep-mini-meta">' +
@@ -12211,6 +12499,22 @@
         if (countEl) countEl.textContent = allPrep.length;
         // Solo lista clienti per regione (niente consigli zona / montaggio)
         renderPrepMiniList(allPrep);
+        // Mantieni stato barra selezione multipla + pulisci id non più presenti
+        if (prepSelectedIds && typeof prepSelectedIds === 'object') {
+            const still = {};
+            allPrep.forEach(function(c) {
+                if (prepSelectedIds[String(c.id)]) still[String(c.id)] = true;
+            });
+            prepSelectedIds = still;
+        }
+        const btn = document.getElementById('prepMultiToggleBtn');
+        const bar = document.getElementById('prepMultiBar');
+        if (btn) {
+            btn.classList.toggle('active', !!prepMultiSelectMode);
+            btn.textContent = prepMultiSelectMode ? '☑️ Selezione attiva' : '☑️ Selezione multipla';
+        }
+        if (bar) bar.classList.toggle('active', !!prepMultiSelectMode);
+        if (typeof updatePrepMultiBar === 'function') updatePrepMultiBar();
     }
 
 
