@@ -5981,7 +5981,7 @@
             <span>Clienti per regione</span>
             <button type="button" class="btn prep-multi-toggle" id="prepMultiToggleBtn" onclick="togglePrepMultiSelect()" title="Attiva selezione multipla per eliminare più clienti">☑️ Selezione multipla</button>
         </div>
-        <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:10px;">Raggruppati per regione. Su ogni cliente: <strong>→ Note</strong>, spedizione al <strong>tecnico di zona</strong> (se copre la zona), spedizione al <strong>cliente stesso</strong> se montaggio Piantana/Carrello.</p>
+        <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:10px;">Raggruppati per regione. Su ogni cliente: <strong>📦 Spedisci</strong> (al cliente stesso o a un tecnico di zona) oppure <strong>→ Note</strong> con tappa.</p>
         <div class="prep-multi-bar" id="prepMultiBar">
             <span class="prep-multi-count" id="prepMultiCount">0 selezionati</span>
             <button type="button" class="btn" onclick="prepSelectAllVisible()" style="min-height:36px;padding:6px 12px;font-size:0.82rem;">Seleziona tutti</button>
@@ -6281,6 +6281,19 @@
         <div class="confirm-actions">
             <button type="button" class="btn" onclick="closeConfirmDeleteMulti()">Annulla</button>
             <button type="button" class="btn btn-danger-solid" onclick="confirmDeleteMultiClients()">Sì, elimina tutti</button>
+        </div>
+    </div>
+</div>
+
+<div id="prepShipModal" class="modal-overlay confirm-modal">
+    <div class="modal" style="max-width:420px;">
+        <div class="confirm-icon" style="background:linear-gradient(135deg,#dbeafe,#bfdbfe);">📦</div>
+        <h3>Spedizione cliente</h3>
+        <p class="confirm-desc" style="margin-bottom:8px;">Cliente: <strong id="prepShipClientName"></strong></p>
+        <p class="confirm-desc" style="margin-bottom:12px;font-size:0.82rem;color:#64748b;">Scegli dove spedire. Il cliente uscirà da Pre-pianificazione e comparirà in <strong>Note clienti</strong> sotto la spedizione scelta.</p>
+        <div id="prepShipOptions" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;"></div>
+        <div class="confirm-actions">
+            <button type="button" class="btn" onclick="closePrepShipModal()">Annulla</button>
         </div>
     </div>
 </div>
@@ -12165,25 +12178,121 @@
         return order.map(function(k) { return groups[k]; }).filter(Boolean);
     }
 
-    window.applyPrepSuggestedSpedizione = function(ids, tecnico) {
-        const name = toAppUpper(tecnico || '');
-        if (!name) return;
+    window.applyPrepSuggestedSpedizione = function(ids, tecnico, opts) {
+        opts = opts || {};
+        const isClienteStesso = !!opts.clienteStesso;
+        let name = String(tecnico || '').trim();
+        if (typeof toAppUpper === 'function') name = toAppUpper(name);
+        if (!isClienteStesso && !name) return;
         const idSet = new Set((ids || []).map(String));
         let n = 0;
         clients.forEach(function(c) {
             if (!idSet.has(String(c.id))) return;
-            c.spedizione = name;
+            // Se "cliente stesso", la spedizione prende il nome del cliente
+            if (isClienteStesso) {
+                let cn = String(c.nome || name).trim();
+                if (typeof toAppUpper === 'function') cn = toAppUpper(cn);
+                if (!cn) return;
+                c.spedizione = cn;
+            } else {
+                c.spedizione = name;
+            }
             c.tappa = '';
             c.inPrep = false;
             n++;
         });
-        try {
-            if (typeof window.autoSaveNewSpedizione === 'function') window.autoSaveNewSpedizione(name);
-        } catch (e) {}
+        // Non memorizzare come spedizione "fissa" se è il nome del cliente stesso
+        if (!isClienteStesso) {
+            try {
+                if (typeof window.autoSaveNewSpedizione === 'function') window.autoSaveNewSpedizione(name);
+            } catch (e) {}
+        }
         saveToLocalStorage();
         render();
         if (typeof renderPrepPage === 'function') renderPrepPage();
-        alert('Assegnati ' + n + ' clienti come spedizione al tecnico «' + name + '». Li trovi in Note (gruppo spedizione).');
+        if (isClienteStesso) {
+            alert('Spedizione al cliente stesso impostata per ' + n + ' scheda/e.\nLi trovi in Note clienti sotto la spedizione con il nome del cliente.');
+        } else {
+            alert('Assegnati ' + n + ' clienti come spedizione a «' + name + '».\nLi trovi in Note clienti (gruppo spedizione).');
+        }
+    };
+
+    /** Elenco tecnici di zona noti */
+    function getAllZoneTecnici() {
+        return [
+            { nome: 'Candela', zona: 'Palermo' },
+            { nome: 'Aleandro', zona: 'Roma' },
+            { nome: 'Wood Metal Russo', zona: 'Benevento / Avellino' },
+            { nome: 'Alario Maurizio', zona: 'Ragusa / Agrigento' },
+            { nome: 'Di Lonardo Raffaele', zona: 'Pescara / Teramo' }
+        ];
+    }
+
+    let _prepShipClientId = null;
+
+    window.openPrepShipModal = function(id) {
+        const client = (clients || []).find(function(c) { return String(c.id) === String(id); });
+        if (!client) return;
+        _prepShipClientId = String(id);
+        const nameEl = document.getElementById('prepShipClientName');
+        if (nameEl) nameEl.textContent = client.nome || '—';
+        const box = document.getElementById('prepShipOptions');
+        if (!box) return;
+
+        const zone = (typeof getZoneRecommendation === 'function') ? getZoneRecommendation(client) : null;
+        const safeId = String(id).replace(/'/g, "\\'");
+        let html = '';
+
+        // 1) Cliente stesso — sempre disponibile
+        html += '<button type="button" class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;background:#b45309;border:none;" ' +
+            'onclick="confirmPrepShipClienteStesso()">' +
+            '📦 Al cliente stesso<br><span style="font-weight:500;font-size:0.78rem;opacity:.9;">In Note comparirà la spedizione con il nome del cliente</span></button>';
+
+        // 2) Tecnico di zona suggerito
+        if (zone && zone.tecnico) {
+            html += '<button type="button" class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;" ' +
+                'onclick="confirmPrepShipTecnico(' + JSON.stringify(zone.tecnico) + ')">' +
+                '🗺️ Tecnico di zona: «' + String(zone.tecnico).replace(/</g, '&lt;') + '»' +
+                '<br><span style="font-weight:500;font-size:0.78rem;opacity:.9;">Zona ' + String(zone.tappaName || '').replace(/</g, '&lt;') + '</span></button>';
+        }
+
+        // 3) Altri tecnici
+        const allTech = getAllZoneTecnici();
+        const suggested = zone && zone.tecnico ? String(zone.tecnico).toLowerCase() : '';
+        const others = allTech.filter(function(t) { return String(t.nome).toLowerCase() !== suggested; });
+        if (others.length) {
+            html += '<div style="font-size:0.78rem;font-weight:700;color:#64748b;margin-top:6px;">Altri tecnici</div>';
+            others.forEach(function(t) {
+                html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:10px;" ' +
+                    'onclick="confirmPrepShipTecnico(' + JSON.stringify(t.nome) + ')">' +
+                    '📦 «' + String(t.nome).replace(/</g, '&lt;') + '»' +
+                    (t.zona ? (' <span style="color:#64748b;font-weight:500;">— ' + String(t.zona).replace(/</g, '&lt;') + '</span>') : '') +
+                    '</button>';
+            });
+        }
+
+        box.innerHTML = html;
+        document.getElementById('prepShipModal').style.display = 'flex';
+    };
+
+    window.closePrepShipModal = function() {
+        _prepShipClientId = null;
+        const m = document.getElementById('prepShipModal');
+        if (m) m.style.display = 'none';
+    };
+
+    window.confirmPrepShipClienteStesso = function() {
+        if (!_prepShipClientId) return;
+        const id = _prepShipClientId;
+        closePrepShipModal();
+        applyPrepSuggestedSpedizione([id], '', { clienteStesso: true });
+    };
+
+    window.confirmPrepShipTecnico = function(tecnico) {
+        if (!_prepShipClientId) return;
+        const id = _prepShipClientId;
+        closePrepShipModal();
+        applyPrepSuggestedSpedizione([id], tecnico, { clienteStesso: false });
     };
 
     function renderPrepAutoSpedizione(allPrep) {
@@ -12428,33 +12537,24 @@
                 const safeId = String(c.id).replace(/'/g, "\\'");
 
                 // Azioni sulla barra cliente (per ogni cliente):
+                // - 📦 Spedisci (sempre): scegli cliente stesso o tecnico di zona
                 // - → Note (sempre)
-                // - 📦 Tecnico di zona (se in zona: Palermo/Candela, Roma/Aleandro, …)
-                // - 📦 Cliente stesso (se montaggio Piantana o Carrello)
-                // - se Piantana/Carrello + zona: entrambi i pulsanti spedizione
                 let hint = '';
                 let actions = '';
 
                 if (montSpecial) {
-                    actions +=
-                        '<button type="button" class="btn btn-primary" style="background:#b45309;border:none;" title="Spedizione al cliente stesso (montaggio ' + String(mont).replace(/"/g, '') + ')" onclick=\'applyPrepSuggestedSpedizione(' +
-                        idsJson + ', ' + JSON.stringify(toAppUpper(c.nome || '')) + ')\'>📦 Cliente stesso</button>';
                     hint += '<span class="prep-tech-badge" style="background:#fffbeb;color:#b45309;border-color:#fde68a;">🔧 Montaggio ' +
                         String(mont).replace(/</g, '&lt;') + '</span>';
                 }
                 if (zone && zone.tecnico) {
-                    actions +=
-                        '<button type="button" class="btn btn-primary" title="Spedizione al tecnico di zona" onclick=\'applyPrepSuggestedSpedizione(' +
-                        idsJson + ', ' + JSON.stringify(zone.tecnico) + ')\'>📦 Tecnico «' +
-                        String(zone.tecnico).replace(/</g, '&lt;') + '»</button>';
                     hint += '<span class="prep-tech-badge ' + (zone.badgeClass || '') + '">🗺️ Zona ' +
                         String(zone.tappaName || zone.tecnico).replace(/</g, '&lt;') + '</span>';
                 }
                 actions +=
+                    '<button type="button" class="btn btn-primary prep-mini-btn" onclick="openPrepShipModal(\'' + safeId + '\')" title="Scegli spedizione: cliente stesso o tecnico">📦 Spedisci</button>' +
                     '<button type="button" class="btn prep-mini-btn" onclick="editClient(\'' + safeId + '\')" title="Modifica scheda">✏️ Modifica</button>' +
                     '<button type="button" class="btn-icon danger prep-mini-btn" onclick="deleteClient(\'' + safeId + '\')" title="Elimina">🗑️</button>' +
-                    '<button type="button" class="btn' + ((montSpecial || (zone && zone.tecnico)) ? '' : ' btn-primary') +
-                    ' prep-mini-btn" onclick="movePrepClientToNote(\'' + safeId + '\')">→ Note</button>';
+                    '<button type="button" class="btn prep-mini-btn" onclick="movePrepClientToNote(\'' + safeId + '\')">→ Note</button>';
 
                 const hintHtml = hint
                     ? ('<div class="prep-mini-tech" style="margin-top:6px;">' + hint + '</div>')
