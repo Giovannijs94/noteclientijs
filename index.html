@@ -6797,7 +6797,24 @@
     let clients = JSON.parse(localStorage.getItem('note_clienti_data')) || [
         { id: '1', nome: 'Esempio Cliente', modelli: [{nome: 'Modello Alpha', qta: 2}], localita: 'Casamassima', provincia: 'BA', regione: 'Puglia', tappa: 'Bari', spedizione: '', data: '2026-06-01', calendarizzato: false, preavviso: false, disponibilita: false, notaDisponibilita: '', installato: false, standby: false }
     ];
-    let savedModels = JSON.parse(localStorage.getItem('note_clienti_modelli')) || ["Modello Alpha", "Modello Beta", "Modello Gamma"];
+    let savedModels = JSON.parse(localStorage.getItem('note_clienti_modelli')) || ["Modello Alpha", "Modello Beta", "Modello Gamma", "LCD TOUCH"];
+    // Assicura modelli di sistema anche su installazioni già esistenti
+    (function ensureSystemModels() {
+        const systemModels = ["LCD TOUCH"];
+        let changed = false;
+        systemModels.forEach(function(m) {
+            const exists = (savedModels || []).some(function(x) {
+                return String(x).trim().toLowerCase() === String(m).toLowerCase();
+            });
+            if (!exists) {
+                savedModels.push(m);
+                changed = true;
+            }
+        });
+        if (changed) {
+            try { localStorage.setItem('note_clienti_modelli', JSON.stringify(savedModels)); } catch (e) {}
+        }
+    })();
     let savedSpedizioni = JSON.parse(localStorage.getItem('note_clienti_spedizioni')) || [];
     let activeInlineAddId = null;
     let prepGroupMode = localStorage.getItem('note_clienti_prep_group') || 'regione';
@@ -9803,11 +9820,47 @@
                 const montChip = (client.montaggio || '').trim()
                     ? `<span class="info-chip chip-montaggio" style="display:inline-block;margin-top:4px;">🔧 ${String(client.montaggio).replace(/</g, '&lt;')}</span>`
                     : '';
+                // Scadenza + numero ordine (CONF. ORDINE / Ordine N)
+                let scadRaw = String(client.scadenza || '').trim();
+                let scadLabel = '';
+                if (scadRaw) {
+                    // Supporta YYYY-MM-DD e DD/MM/YYYY
+                    let dObj = null;
+                    if (/^\d{4}-\d{2}-\d{2}$/.test(scadRaw)) {
+                        const p = scadRaw.split('-');
+                        dObj = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+                    } else if (/^\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}$/.test(scadRaw)) {
+                        const p = scadRaw.split(/[\/.\-]/);
+                        const y = Number(p[2].length === 2 ? ('20' + p[2]) : p[2]);
+                        dObj = new Date(y, Number(p[1]) - 1, Number(p[0]));
+                    }
+                    if (dObj && !isNaN(dObj.getTime())) {
+                        scadLabel = dObj.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                    } else {
+                        scadLabel = scadRaw;
+                    }
+                }
+                const confOrd = String(client.confOrdine || '').trim();
+                let ordN = parseInt(client.ordineSeq, 10) || 0;
+                if (!ordN) {
+                    const mOrdNome = String(client.nome || '').match(/\bORDINE\s*(\d+)\s*$/i);
+                    if (mOrdNome) ordN = parseInt(mOrdNome[1], 10) || 0;
+                }
+                let metaChips = '';
+                if (scadLabel) {
+                    metaChips += `<span class="info-chip" style="display:inline-block;margin-top:4px;margin-right:6px;background:#fef3c7;color:#92400e;border:1px solid #fde68a;">📅 Scadenza: ${String(scadLabel).replace(/</g, '&lt;')}</span>`;
+                }
+                if (confOrd) {
+                    metaChips += `<span class="info-chip" style="display:inline-block;margin-top:4px;margin-right:6px;background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;">🧾 CONF. ${String(confOrd).replace(/</g, '&lt;')}${ordN > 0 ? (' · Ordine ' + ordN) : ''}</span>`;
+                } else if (ordN > 0) {
+                    metaChips += `<span class="info-chip" style="display:inline-block;margin-top:4px;margin-right:6px;background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;">🧾 Ordine ${ordN}</span>`;
+                }
                 tableHTML += `
                     <tr class="client-row" id="client-row-${client.id}">
                         <td class="client-info" data-label="Cliente">
                             <strong title="Doppio click per rinominare" ondblclick="renameClientName('${client.id}')" style="cursor:pointer">${client.nome}</strong>
                             ${montChip}
+                            ${metaChips ? `<div style="margin-top:2px;">${metaChips}</div>` : ''}
                             <div class="models-list">
                                 ${modelsHTML}
                                 <button class="btn-add-inline" onclick="toggleInlineAddModel('${client.id}')">+ modello</button>
@@ -11204,7 +11257,8 @@
                 ['totem_glass', 'Totem Glass'],
                 ['totem_flip', 'Totem Flip'],
                 ['lcd_standard', 'LCD'],
-                ['lcd_bright', 'LCD Bright']
+                ['lcd_bright', 'LCD Bright'],
+                ['lcd_touch', 'LCD TOUCH']
             ];
         }
         const prev = sub.value;
@@ -11520,7 +11574,8 @@
             totem_flip: 'Totem Flip',
             lcd: 'LCD',
             lcd_standard: 'LCD',
-            lcd_bright: 'LCD Bright'
+            lcd_bright: 'LCD Bright',
+            lcd_touch: 'LCD TOUCH'
         };
         return map[o.sottotipo] || ordineTipoLabel(o.tipo);
     }
