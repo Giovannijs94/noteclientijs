@@ -6341,6 +6341,31 @@
 
 
 
+
+<div id="prepToNoteModal" class="modal-overlay confirm-modal">
+    <div class="modal" style="max-width:440px;">
+        <div class="confirm-icon" style="background:linear-gradient(135deg,#dbeafe,#bfdbfe);">📋</div>
+        <h3>Porta in Note clienti</h3>
+        <p class="confirm-desc" style="margin-bottom:8px;">Cliente: <strong id="prepToNoteClientName"></strong></p>
+        <p class="confirm-desc" style="margin-bottom:12px;font-size:0.82rem;color:#64748b;">Scegli la <strong>tappa</strong> (esistente o nuova) e la <strong>data di installazione</strong>.</p>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;text-align:left;">
+            <div>
+                <label style="font-size:0.78rem;font-weight:700;color:#64748b;display:block;margin-bottom:4px;">Tappa</label>
+                <input type="text" id="prepToNoteTappaInput" class="input-control" list="tappeDatalist" placeholder="Scrivi o seleziona tappa..." style="text-align:left;" autocomplete="off">
+                <div id="prepToNoteTappeList" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
+            </div>
+            <div>
+                <label style="font-size:0.78rem;font-weight:700;color:#64748b;display:block;margin-bottom:4px;">Data installazione</label>
+                <input type="date" id="prepToNoteDataInput" class="input-control" style="text-align:left;">
+            </div>
+        </div>
+        <div class="confirm-actions">
+            <button type="button" class="btn" onclick="closePrepToNoteModal()">Annulla</button>
+            <button type="button" class="btn btn-primary" onclick="confirmPrepToNote()">Conferma → Note</button>
+        </div>
+    </div>
+</div>
+
 <div id="editTappaPrepModal" class="modal-overlay confirm-modal">
     <div class="modal">
         <div class="confirm-icon" style="background:linear-gradient(135deg,#dcfce7,#bbf7d0);">🚩</div>
@@ -12891,20 +12916,118 @@
 
 
 
+    let _prepToNoteClientId = null;
+
+    window.closePrepToNoteModal = function() {
+        _prepToNoteClientId = null;
+        const m = document.getElementById('prepToNoteModal');
+        if (m) m.style.display = 'none';
+    };
+
+    function getExistingTappeList() {
+        const set = {};
+        (clients || []).forEach(function(c) {
+            if (c.installato || c.standby) return;
+            // tappe usate in Note (non in prep, o comunque valorizzate)
+            const t = String(c.tappa || '').trim();
+            if (!t) return;
+            // escludi chi è ancora solo in prep senza essere in note? includiamo tutte le tappe note
+            if (c.inPrep === true || c.inPrep === 'true') {
+                // se ha già una tappa impostata la consideriamo comunque
+            }
+            set[t] = (set[t] || 0) + 1;
+        });
+        return Object.keys(set).sort(function(a, b) { return a.localeCompare(b, 'it'); });
+    }
+
     window.movePrepClientToNote = function(id) {
-        const client = clients.find(c => String(c.id) === String(id));
+        const client = clients.find(function(c) { return String(c.id) === String(id); });
         if (!client) return;
-        const suggested = (client.localita || client.nome || 'Tappa').trim();
-        const name = prompt('Nome tappa per portare il cliente in Note clienti:', suggested);
-        if (name === null) return;
-        const tappa = toAppUpper(name || suggested);
-        if (!tappa) return;
+        _prepToNoteClientId = String(id);
+        const nameEl = document.getElementById('prepToNoteClientName');
+        if (nameEl) nameEl.textContent = client.nome || '—';
+
+        const tappaInp = document.getElementById('prepToNoteTappaInput');
+        const dataInp = document.getElementById('prepToNoteDataInput');
+        const listEl = document.getElementById('prepToNoteTappeList');
+
+        const suggested = String(client.tappa || client.localita || '').trim();
+        if (tappaInp) tappaInp.value = suggested ? ((typeof toAppUpper === 'function') ? toAppUpper(suggested) : suggested) : '';
+
+        // Data: usa data già presente, oppure scadenza come suggerimento
+        if (dataInp) {
+            let d = String(client.data || '').trim();
+            if (!d && client.scadenza) {
+                const s = String(client.scadenza).trim();
+                if (/^\d{4}-\d{2}-\d{2}$/.test(s)) d = s;
+                else if (/^\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}$/.test(s)) {
+                    const p = s.split(/[\/.\-]/);
+                    const y = p[2].length === 2 ? ('20' + p[2]) : p[2];
+                    d = y + '-' + String(p[1]).padStart(2, '0') + '-' + String(p[0]).padStart(2, '0');
+                }
+            }
+            dataInp.value = d || '';
+        }
+
+        // Pulsanti tappe esistenti
+        if (listEl) {
+            const tappe = getExistingTappeList();
+            if (!tappe.length) {
+                listEl.innerHTML = '<span style="font-size:0.78rem;color:#94a3b8;">Nessuna tappa già presente — scrivine una nuova.</span>';
+            } else {
+                listEl.innerHTML = tappe.map(function(t) {
+                    return '<button type="button" class="btn" style="padding:6px 10px;font-size:0.78rem;min-height:32px;" data-tappa="' +
+                        String(t).replace(/"/g, '&quot;').replace(/</g, '&lt;') + '">🚩 ' +
+                        String(t).replace(/</g, '&lt;') + '</button>';
+                }).join('');
+                listEl.querySelectorAll('[data-tappa]').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        if (tappaInp) {
+                            tappaInp.value = btn.getAttribute('data-tappa') || '';
+                            try { tappaInp.focus(); } catch (e) {}
+                        }
+                    });
+                });
+            }
+        }
+
+        const modal = document.getElementById('prepToNoteModal');
+        if (modal) modal.style.display = 'flex';
+        try {
+            if (tappaInp) { tappaInp.focus(); }
+        } catch (e) {}
+    };
+
+    window.confirmPrepToNote = function() {
+        if (!_prepToNoteClientId) return;
+        const client = clients.find(function(c) { return String(c.id) === String(_prepToNoteClientId); });
+        if (!client) {
+            closePrepToNoteModal();
+            return;
+        }
+        const tappaInp = document.getElementById('prepToNoteTappaInput');
+        const dataInp = document.getElementById('prepToNoteDataInput');
+        let tappa = String((tappaInp && tappaInp.value) || '').trim();
+        if (!tappa) {
+            alert('Inserisci o seleziona una tappa.');
+            if (tappaInp) try { tappaInp.focus(); } catch (e) {}
+            return;
+        }
+        if (typeof toAppUpper === 'function') tappa = toAppUpper(tappa);
+        const dataVal = String((dataInp && dataInp.value) || '').trim();
+
         client.tappa = tappa;
         client.spedizione = '';
+        client.spedizioneGruppo = '';
         client.inPrep = false;
+        client.installato = false;
+        client.standby = false;
+        if (dataVal) client.data = dataVal;
+
+        closePrepToNoteModal();
         saveToLocalStorage();
-        render();
-        renderPrepPage();
+        try { render(); } catch (e) {}
+        try { if (typeof renderPrepPage === 'function') renderPrepPage(); } catch (e) {}
     };
 
     function renderPrepMiniList(allPrep) {
