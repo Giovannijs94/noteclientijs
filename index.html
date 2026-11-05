@@ -4673,6 +4673,35 @@
             border-color: #fca5a5 !important;
             color: #b91c1c !important;
         }
+        .sped-subgruppo-header {
+            background: linear-gradient(90deg, #fdf2f8 0%, #fff 100%);
+            border-left: 4px solid #9d174d;
+            padding: 8px 12px;
+            margin: 8px 0 4px;
+            font-weight: 800;
+            font-size: 0.85rem;
+            color: #9d174d;
+            border-radius: 0 8px 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .sped-subgruppo-header .sped-sub-count {
+            background: #9d174d;
+            color: #fff;
+            font-size: 0.72rem;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-weight: 700;
+        }
+        tr.sped-subgruppo-row td {
+            background: linear-gradient(90deg, #fdf2f8 0%, #fff 100%) !important;
+            border-left: 4px solid #9d174d;
+            padding: 8px 12px !important;
+            font-weight: 800;
+            font-size: 0.85rem;
+            color: #9d174d;
+        }
         @media (max-width: 600px) {
             .prep-mini-row {
                 flex-direction: column;
@@ -6290,10 +6319,22 @@
         <div class="confirm-icon" style="background:linear-gradient(135deg,#dbeafe,#bfdbfe);">📦</div>
         <h3>Spedizione cliente</h3>
         <p class="confirm-desc" style="margin-bottom:8px;">Cliente: <strong id="prepShipClientName"></strong></p>
-        <p class="confirm-desc" style="margin-bottom:12px;font-size:0.82rem;color:#64748b;">Scegli dove spedire. Il cliente uscirà da Pre-pianificazione e comparirà in <strong>Note clienti</strong> sotto la spedizione scelta.</p>
+        <p class="confirm-desc" style="margin-bottom:12px;font-size:0.82rem;color:#64748b;">Scegli dove spedire. Con i tecnici puoi creare <strong>gruppi interni</strong> (es. dentro Candela: prima e seconda spedizione) senza mescolare i clienti.</p>
         <div id="prepShipOptions" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;"></div>
         <div class="confirm-actions">
             <button type="button" class="btn" onclick="closePrepShipModal()">Annulla</button>
+        </div>
+    </div>
+</div>
+
+<div id="spedGruppoModal" class="modal-overlay confirm-modal">
+    <div class="modal" style="max-width:420px;">
+        <div class="confirm-icon" style="background:linear-gradient(135deg,#fce7f3,#fbcfe8);">📁</div>
+        <h3 id="spedGruppoModalTitle">Gruppo spedizione</h3>
+        <p class="confirm-desc" style="margin-bottom:8px;" id="spedGruppoModalDesc"></p>
+        <div id="spedGruppoModalBody" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;"></div>
+        <div class="confirm-actions">
+            <button type="button" class="btn" onclick="closeSpedGruppoModal()">Annulla</button>
         </div>
     </div>
 </div>
@@ -8754,6 +8795,156 @@
     };
 
 
+    
+    // --- Gruppi interni dentro una spedizione tecnico ---
+    let _spedGruppoCtx = null; // { mode: 'move'|'rename', clientId?, spedizione, gruppo }
+
+    window.closeSpedGruppoModal = function() {
+        _spedGruppoCtx = null;
+        const m = document.getElementById('spedGruppoModal');
+        if (m) m.style.display = 'none';
+    };
+
+    function listSpedizioneGruppi(spedizione) {
+        let sp = String(spedizione || '').trim();
+        if (typeof toAppUpper === 'function') sp = toAppUpper(sp);
+        const set = {};
+        (clients || []).forEach(function(c) {
+            if (c.installato || c.standby) return;
+            const csp = String(c.spedizione || '').trim();
+            const cspU = (typeof toAppUpper === 'function') ? toAppUpper(csp) : csp.toUpperCase();
+            if (cspU !== sp) return;
+            const g = String(c.spedizioneGruppo || '').trim();
+            if (g) set[g] = (set[g] || 0) + 1;
+            else set[''] = (set[''] || 0) + 1;
+        });
+        return set;
+    }
+
+    window.openMoveClientSpedGruppo = function(clientId) {
+        const client = (clients || []).find(function(c) { return String(c.id) === String(clientId); });
+        if (!client) return;
+        const sped = String(client.spedizione || '').trim();
+        if (!sped) {
+            alert('Questo cliente non è in una spedizione.');
+            return;
+        }
+        _spedGruppoCtx = {
+            mode: 'move',
+            clientId: String(clientId),
+            spedizione: sped,
+            gruppo: String(client.spedizioneGruppo || '').trim()
+        };
+        const title = document.getElementById('spedGruppoModalTitle');
+        const desc = document.getElementById('spedGruppoModalDesc');
+        const body = document.getElementById('spedGruppoModalBody');
+        if (title) title.textContent = 'Sposta in un altro gruppo';
+        if (desc) desc.innerHTML = 'Cliente: <strong>' + String(client.nome || '').replace(/</g, '&lt;') +
+            '</strong><br>Spedizione: <strong>' + String(sped).replace(/</g, '&lt;') + '</strong>';
+        const groups = listSpedizioneGruppi(sped);
+        const current = String(client.spedizioneGruppo || '').trim();
+        let html = '';
+        html += '<label style="font-size:0.78rem;font-weight:700;color:#64748b;">Nuovo gruppo</label>';
+        html += '<input type="text" id="spedGruppoNewInput" class="input-control" placeholder="es. 05/11/2026 oppure SPEDIZIONE 2" style="text-align:left;">';
+        html += '<button type="button" class="btn btn-primary" style="width:100%;justify-content:center;" id="spedGruppoConfirmNew">✅ Sposta in nuovo gruppo</button>';
+        const keys = Object.keys(groups).filter(function(k) { return k !== ''; }).sort(function(a,b){ return a.localeCompare(b,'it'); });
+        if (keys.length || groups['']) {
+            html += '<div style="font-size:0.78rem;font-weight:700;color:#64748b;margin-top:6px;">Gruppi esistenti</div>';
+            keys.forEach(function(g) {
+                const disabled = (g === current) ? ' opacity:.55;' : '';
+                html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:10px;' + disabled + '" data-gruppo="' +
+                    String(g).replace(/"/g, '&quot;').replace(/</g, '&lt;') + '">📁 ' + String(g).replace(/</g, '&lt;') +
+                    ' <span style="color:#64748b;font-weight:600;">(' + groups[g] + ')</span>' +
+                    (g === current ? ' · attuale' : '') + '</button>';
+            });
+            if (groups[''] && current !== '') {
+                html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:10px;" data-gruppo="">📁 Senza gruppo <span style="color:#64748b;font-weight:600;">(' + groups[''] + ')</span></button>';
+            }
+        }
+        if (body) body.innerHTML = html;
+        if (body) {
+            const inp = document.getElementById('spedGruppoNewInput');
+            const btnNew = document.getElementById('spedGruppoConfirmNew');
+            if (btnNew) btnNew.addEventListener('click', function() {
+                let g = (inp && inp.value || '').trim();
+                if (!g) { alert('Scrivi il nome del nuovo gruppo.'); return; }
+                if (typeof toAppUpper === 'function') g = toAppUpper(g);
+                applyClientSpedGruppo(clientId, g);
+            });
+            if (inp) inp.addEventListener('keydown', function(ev) {
+                if (ev.key === 'Enter') { ev.preventDefault(); if (btnNew) btnNew.click(); }
+            });
+            body.querySelectorAll('[data-gruppo]').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    const g = btn.getAttribute('data-gruppo');
+                    if (g === current) return;
+                    applyClientSpedGruppo(clientId, g || '');
+                });
+            });
+        }
+        document.getElementById('spedGruppoModal').style.display = 'flex';
+    };
+
+    function applyClientSpedGruppo(clientId, nuovoGruppo) {
+        const client = (clients || []).find(function(c) { return String(c.id) === String(clientId); });
+        if (!client) return;
+        let g = String(nuovoGruppo || '').trim();
+        if (g && typeof toAppUpper === 'function') g = toAppUpper(g);
+        client.spedizioneGruppo = g;
+        saveToLocalStorage();
+        closeSpedGruppoModal();
+        try { render(); } catch (e) {}
+    }
+
+    window.renameSpedizioneGruppo = function(spedizione, oldGruppo) {
+        const sped = String(spedizione || '').trim();
+        const oldG = String(oldGruppo || '').trim();
+        if (!sped || !oldG) return;
+        _spedGruppoCtx = { mode: 'rename', spedizione: sped, gruppo: oldG };
+        const title = document.getElementById('spedGruppoModalTitle');
+        const desc = document.getElementById('spedGruppoModalDesc');
+        const body = document.getElementById('spedGruppoModalBody');
+        if (title) title.textContent = 'Rinomina gruppo';
+        if (desc) desc.innerHTML = 'Spedizione: <strong>' + String(sped).replace(/</g, '&lt;') +
+            '</strong><br>Gruppo attuale: <strong>' + String(oldG).replace(/</g, '&lt;') + '</strong>';
+        let html = '';
+        html += '<label style="font-size:0.78rem;font-weight:700;color:#64748b;">Nuovo nome gruppo</label>';
+        html += '<input type="text" id="spedGruppoRenameInput" class="input-control" value="' +
+            String(oldG).replace(/"/g, '&quot;') + '" style="text-align:left;">';
+        html += '<button type="button" class="btn btn-primary" style="width:100%;justify-content:center;" id="spedGruppoRenameConfirm">✅ Salva nuovo nome</button>';
+        if (body) body.innerHTML = html;
+        const inp = document.getElementById('spedGruppoRenameInput');
+        const btn = document.getElementById('spedGruppoRenameConfirm');
+        function doRename() {
+            let g = (inp && inp.value || '').trim();
+            if (!g) { alert('Il nome del gruppo non può essere vuoto.'); return; }
+            if (typeof toAppUpper === 'function') g = toAppUpper(g);
+            if (g === oldG) { closeSpedGruppoModal(); return; }
+            let n = 0;
+            const spedU = (typeof toAppUpper === 'function') ? toAppUpper(sped) : sped.toUpperCase();
+            (clients || []).forEach(function(c) {
+                const csp = String(c.spedizione || '').trim();
+                const cspU = (typeof toAppUpper === 'function') ? toAppUpper(csp) : csp.toUpperCase();
+                if (cspU !== spedU) return;
+                if (String(c.spedizioneGruppo || '').trim() !== oldG) return;
+                c.spedizioneGruppo = g;
+                n++;
+            });
+            saveToLocalStorage();
+            closeSpedGruppoModal();
+            try { render(); } catch (e) {}
+            if (n) alert('Gruppo rinominato: «' + oldG + '» → «' + g + '» (' + n + ' clienti).');
+        }
+        if (btn) btn.addEventListener('click', doRename);
+        if (inp) {
+            inp.addEventListener('keydown', function(ev) {
+                if (ev.key === 'Enter') { ev.preventDefault(); doRename(); }
+            });
+            try { inp.focus(); inp.select(); } catch (e) {}
+        }
+        document.getElementById('spedGruppoModal').style.display = 'flex';
+    };
+
     window.deleteSpedizione = function(spedName) {
         if (confirm(`Eliminare l'intera spedizione "${spedName}"?`)) {
             clients = clients.filter(c => (c.spedizione || '').trim() !== spedName);
@@ -9536,6 +9727,9 @@
                 '<input type="text" class="note-input" placeholder="Note..." value="' + (client.notaDisponibilita || '').replace(/"/g, '&quot;') + '" data-note-id="' + client.id + '">' +
               '</div>' +
               '<div class="info-card-actions">' +
+                (isSpedizione
+                    ? ('<button type="button" class="btn" style="background:#9d174d;color:#fff;border:none;" onclick="openMoveClientSpedGruppo(\'' + client.id + '\')">📁 Gruppo</button>')
+                    : '') +
                 '<button type="button" class="btn" style="background:#2563eb;color:#fff;border:none;" onclick="moveToPrep(\'' + client.id + '\')">📋 Pre-pianif.</button>' +
                 '<button type="button" class="btn" style="background:#16a34a;color:#fff;border:none;" onclick="markInstallato(\'' + client.id + '\')">✅ Installato</button>' +
                 '<button type="button" class="btn" style="background:#d97706;color:#fff;border:none;" onclick="markStandby(\'' + client.id + '\')">⏸️ Stand-by</button>' +
@@ -9761,10 +9955,55 @@
                 </div>
             `;
 
+            // Per spedizioni: ordina e prepara sottogruppi interni (es. dentro CANDELA)
+            function clientSpedGruppo(c) {
+                return String((c && c.spedizioneGruppo) || '').trim();
+            }
+            if (isSpedizione) {
+                groupClients = [...groupClients].sort(function(a, b) {
+                    const ga = clientSpedGruppo(a);
+                    const gb = clientSpedGruppo(b);
+                    // senza gruppo in fondo
+                    if (!ga && gb) return 1;
+                    if (ga && !gb) return -1;
+                    const cg = ga.localeCompare(gb, 'it');
+                    if (cg) return cg;
+                    const da = a.data || '';
+                    const db = b.data || '';
+                    if (da && db) return da.localeCompare(db);
+                    if (da) return -1;
+                    if (db) return 1;
+                    return (a.nome || '').localeCompare(b.nome || '', 'it');
+                });
+            }
+            const colCount = isSpedizione ? 7 : 6;
+
             // iPhone / mobile: card come Stand-by
             if (isMobileAppView()) {
                 let cardsHTML = headerHTML + '<div class="cards-list cards-list-note">';
+                let lastG = null;
                 groupClients.forEach(client => {
+                    if (isSpedizione) {
+                        const g = clientSpedGruppo(client);
+                        const key = g || '';
+                        if (key !== lastG) {
+                            lastG = key;
+                            if (g) {
+                                const cnt = groupClients.filter(function(x) { return clientSpedGruppo(x) === g; }).length;
+                                const gSafe = String(g).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                                const spSafe = String(groupName).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                                cardsHTML += '<div class="sped-subgruppo-header" style="justify-content:space-between;">' +
+                                    '<span>📁 ' + String(g).replace(/</g, '&lt;') + ' <span class="sped-sub-count">' + cnt + '</span></span>' +
+                                    '<button type="button" class="btn" style="padding:4px 10px;font-size:0.75rem;min-height:32px;" onclick="event.stopPropagation();renameSpedizioneGruppo(\'' + spSafe + '\',\'' + gSafe + '\')">✏️ Rinomina</button>' +
+                                    '</div>';
+                            } else {
+                                const cnt = groupClients.filter(function(x) { return !clientSpedGruppo(x); }).length;
+                                if (groupClients.some(function(x) { return clientSpedGruppo(x); })) {
+                                    cardsHTML += '<div class="sped-subgruppo-header" style="border-left-color:#94a3b8;color:#64748b;background:linear-gradient(90deg,#f8fafc,#fff);">📁 Senza gruppo <span class="sped-sub-count" style="background:#94a3b8;">' + cnt + '</span></div>';
+                                }
+                            }
+                        }
+                    }
                     cardsHTML += buildNoteClientCardHTML(client, isSpedizione);
                 });
                 const groupDataJSON = JSON.stringify(groupClients).replace(/'/g, "&apos;");
@@ -9794,7 +10033,29 @@
                     <tbody>
             `;
 
+            let _lastSpedSub = null;
             groupClients.forEach(client => {
+                if (isSpedizione) {
+                    const g = clientSpedGruppo(client);
+                    const key = g || '';
+                    if (key !== _lastSpedSub) {
+                        _lastSpedSub = key;
+                        if (g) {
+                            const cnt = groupClients.filter(function(x) { return clientSpedGruppo(x) === g; }).length;
+                            const gSafe = String(g).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                            const spSafe = String(groupName).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                            tableHTML += `<tr class="sped-subgruppo-row"><td colspan="${colCount}">
+                                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                                    <span>📁 ${String(g).replace(/</g, '&lt;')} <span class="sped-sub-count" style="background:#9d174d;color:#fff;font-size:0.72rem;padding:2px 8px;border-radius:999px;margin-left:6px;">${cnt}</span></span>
+                                    <button type="button" class="btn" style="padding:4px 10px;font-size:0.75rem;min-height:32px;" onclick="event.stopPropagation();renameSpedizioneGruppo('${spSafe}','${gSafe}')" title="Rinomina questo gruppo">✏️ Rinomina gruppo</button>
+                                </div>
+                            </td></tr>`;
+                        } else if (groupClients.some(function(x) { return clientSpedGruppo(x); })) {
+                            const cnt = groupClients.filter(function(x) { return !clientSpedGruppo(x); }).length;
+                            tableHTML += `<tr class="sped-subgruppo-row"><td colspan="${colCount}" style="color:#64748b;border-left-color:#94a3b8;">📁 Senza gruppo <span class="sped-sub-count" style="background:#94a3b8;color:#fff;font-size:0.72rem;padding:2px 8px;border-radius:999px;margin-left:6px;">${cnt}</span></td></tr>`;
+                        }
+                    }
+                }
                 const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(client.localita || '')}`;
                 const modelsHTML = (client.modelli || []).map((mod, idx) => `
                     <span class="model-badge">
@@ -9942,6 +10203,7 @@
                         </td>
                         <td class="actions-cell" data-label="Azioni">
                             <div class="client-actions-row">
+                                ${isSpedizione ? `<button class="btn" style="padding:8px 10px; font-size:0.75rem; background:#9d174d; color:white; border:none;" onclick="openMoveClientSpedGruppo('${client.id}')" title="Sposta in un altro gruppo interno">📁 Gruppo</button>` : ''}
                                 <button class="btn" style="padding:8px 10px; font-size:0.75rem; background:#2563eb; color:white; border:none;" onclick="moveToPrep('${client.id}')">📋 Pre-pianif.</button>
                                 <button class="btn" style="padding:8px 10px; font-size:0.75rem; background:#16a34a; color:white; border:none;" onclick="markInstallato('${client.id}')">✅ Installato</button>
                                 <button class="btn" style="padding:8px 10px; font-size:0.75rem; background:#d97706; color:white; border:none;" onclick="markStandby('${client.id}')">⏸️ Stand-by</button>
@@ -12238,6 +12500,9 @@
         const isClienteStesso = !!opts.clienteStesso;
         let name = String(tecnico || '').trim();
         if (typeof toAppUpper === 'function') name = toAppUpper(name);
+        // Gruppo interno dentro la spedizione tecnico (es. dentro CANDELA)
+        let gruppoInterno = String(opts.gruppo || opts.spedizioneGruppo || '').trim();
+        if (gruppoInterno && typeof toAppUpper === 'function') gruppoInterno = toAppUpper(gruppoInterno);
         if (!isClienteStesso && !name) return;
         const idSet = new Set((ids || []).map(String));
         let n = 0;
@@ -12249,13 +12514,19 @@
                 if (typeof toAppUpper === 'function') cn = toAppUpper(cn);
                 if (!cn) return;
                 c.spedizione = cn;
+                c.spedizioneGruppo = '';
             } else {
                 c.spedizione = name;
+                c.spedizioneGruppo = gruppoInterno || '';
             }
             c.tappa = '';
-            c.inPrep = false;
+            c.inPrep = false; // esce da Pre-pianificazione
             n++;
         });
+        if (!n) {
+            alert('Cliente non trovato. Aggiorna la pagina e riprova.');
+            return;
+        }
         // Non memorizzare come spedizione "fissa" se è il nome del cliente stesso
         if (!isClienteStesso) {
             try {
@@ -12267,6 +12538,8 @@
         if (typeof renderPrepPage === 'function') renderPrepPage();
         if (isClienteStesso) {
             alert('Spedizione al cliente stesso impostata per ' + n + ' scheda/e.\nLi trovi in Note clienti sotto la spedizione con il nome del cliente.');
+        } else if (gruppoInterno) {
+            alert('Assegnati ' + n + ' clienti a «' + name + '» → gruppo «' + gruppoInterno + '».\nLi trovi in Note clienti dentro la spedizione del tecnico.');
         } else {
             alert('Assegnati ' + n + ' clienti come spedizione a «' + name + '».\nLi trovi in Note clienti (gruppo spedizione).');
         }
@@ -12300,13 +12573,13 @@
 
         // 1) Cliente stesso — sempre disponibile
         html += '<button type="button" class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;background:#b45309;border:none;" ' +
-            'onclick="confirmPrepShipClienteStesso()">' +
+            'data-ship-action="cliente">' +
             '📦 Al cliente stesso<br><span style="font-weight:500;font-size:0.78rem;opacity:.9;">In Note comparirà la spedizione con il nome del cliente</span></button>';
 
         // 2) Tecnico di zona suggerito
         if (zone && zone.tecnico) {
             html += '<button type="button" class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;" ' +
-                'onclick="confirmPrepShipTecnico(' + JSON.stringify(zone.tecnico) + ')">' +
+                'data-ship-action="tecnico" data-ship-tecnico="' + String(zone.tecnico).replace(/"/g, '&quot;').replace(/</g, '&lt;') + '">' +
                 '🗺️ Tecnico di zona: «' + String(zone.tecnico).replace(/</g, '&lt;') + '»' +
                 '<br><span style="font-weight:500;font-size:0.78rem;opacity:.9;">Zona ' + String(zone.tappaName || '').replace(/</g, '&lt;') + '</span></button>';
         }
@@ -12319,7 +12592,7 @@
             html += '<div style="font-size:0.78rem;font-weight:700;color:#64748b;margin-top:6px;">Altri tecnici</div>';
             others.forEach(function(t) {
                 html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:10px;" ' +
-                    'onclick="confirmPrepShipTecnico(' + JSON.stringify(t.nome) + ')">' +
+                    'data-ship-action="tecnico" data-ship-tecnico="' + String(t.nome).replace(/"/g, '&quot;').replace(/</g, '&lt;') + '">' +
                     '📦 «' + String(t.nome).replace(/</g, '&lt;') + '»' +
                     (t.zona ? (' <span style="color:#64748b;font-weight:500;">— ' + String(t.zona).replace(/</g, '&lt;') + '</span>') : '') +
                     '</button>';
@@ -12327,6 +12600,20 @@
         }
 
         box.innerHTML = html;
+        // Binding sicuro (evita problemi con virgolette nei nomi tecnici)
+        box.querySelectorAll('[data-ship-action]').forEach(function(btn) {
+            btn.addEventListener('click', function(ev) {
+                ev.preventDefault();
+                ev.stopPropagation();
+                const action = btn.getAttribute('data-ship-action');
+                if (action === 'cliente') {
+                    confirmPrepShipClienteStesso();
+                } else if (action === 'tecnico') {
+                    const tech = btn.getAttribute('data-ship-tecnico') || '';
+                    confirmPrepShipTecnico(tech);
+                }
+            });
+        });
         document.getElementById('prepShipModal').style.display = 'flex';
     };
 
@@ -12337,18 +12624,144 @@
     };
 
     window.confirmPrepShipClienteStesso = function() {
-        if (!_prepShipClientId) return;
+        if (!_prepShipClientId) {
+            alert('Cliente non selezionato. Riapri il menu Spedisci.');
+            return;
+        }
         const id = _prepShipClientId;
         closePrepShipModal();
         applyPrepSuggestedSpedizione([id], '', { clienteStesso: true });
     };
 
+    /** Suggerisce nome gruppo INTERNO dentro il tecnico (solo data / contatore, non il nome tecnico) */
+    function suggestSpedizioneGroupName(tecnico) {
+        let tech = String(tecnico || '').trim();
+        if (typeof toAppUpper === 'function') tech = toAppUpper(tech);
+        const now = new Date();
+        const dd = String(now.getDate()).padStart(2, '0');
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const yyyy = now.getFullYear();
+        const base = dd + '/' + mm + '/' + yyyy;
+        const existing = {};
+        (clients || []).forEach(function(c) {
+            const sp = String(c.spedizione || '').trim();
+            if (typeof toAppUpper === 'function' ? toAppUpper(sp) !== tech : sp.toUpperCase() !== tech) return;
+            const g = String(c.spedizioneGruppo || '').trim();
+            if (g) existing[g.toLowerCase()] = true;
+        });
+        if (!existing[base.toLowerCase()]) return base;
+        let n = 2;
+        while (existing[(base + ' (' + n + ')').toLowerCase()]) n++;
+        return base + ' (' + n + ')';
+    }
+
+    /** Gruppi interni già usati dentro la spedizione di un tecnico */
+    function existingSpedizioneGroupsForTecnico(tecnico) {
+        let tech = String(tecnico || '').trim();
+        if (typeof toAppUpper === 'function') tech = toAppUpper(tech);
+        const set = {};
+        (clients || []).forEach(function(c) {
+            if (c.installato || c.standby) return;
+            const sp = String(c.spedizione || '').trim();
+            const spU = (typeof toAppUpper === 'function') ? toAppUpper(sp) : sp.toUpperCase();
+            if (spU !== tech) return;
+            const g = String(c.spedizioneGruppo || '').trim();
+            if (g) set[g] = true;
+        });
+        return Object.keys(set).sort(function(a, b) { return a.localeCompare(b, 'it'); });
+    }
+
     window.confirmPrepShipTecnico = function(tecnico) {
-        if (!_prepShipClientId) return;
-        const id = _prepShipClientId;
-        closePrepShipModal();
-        applyPrepSuggestedSpedizione([id], tecnico, { clienteStesso: false });
+        if (!_prepShipClientId) {
+            alert('Cliente non selezionato. Riapri il menu Spedisci.');
+            return;
+        }
+        const tech = String(tecnico || '').trim();
+        if (!tech) {
+            alert('Tecnico non valido.');
+            return;
+        }
+        // Secondo step: gruppo INTERNO dentro il tecnico (es. dentro CANDELA)
+        showPrepShipGroupStep(tech);
     };
+
+    function showPrepShipGroupStep(tecnico) {
+        const box = document.getElementById('prepShipOptions');
+        if (!box) return;
+        const suggested = suggestSpedizioneGroupName(tecnico);
+        const existing = existingSpedizioneGroupsForTecnico(tecnico);
+        let techLabel = String(tecnico || '');
+        if (typeof toAppUpper === 'function') techLabel = toAppUpper(techLabel);
+
+        let html = '';
+        html += '<p style="margin:0 0 8px;font-size:0.85rem;color:#334155;line-height:1.4;">Spedizione tecnico: <strong>' +
+            techLabel.replace(/</g, '&lt;') +
+            '</strong><br>Crea un <strong>gruppo interno</strong> (es. prima/seconda spedizione) così i clienti restano sotto «' +
+            techLabel.replace(/</g, '&lt;') + '» ma separati.</p>';
+
+        html += '<label style="font-size:0.78rem;font-weight:700;color:#64748b;display:block;margin-bottom:4px;">Nuovo gruppo interno</label>';
+        html += '<input type="text" id="prepShipGroupInput" class="input-control" value="' +
+            String(suggested).replace(/"/g, '&quot;') +
+            '" style="margin-bottom:8px;text-align:left;" placeholder="es. 05/11/2026 oppure SPEDIZIONE 1">';
+        html += '<button type="button" class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;margin-bottom:10px;" id="prepShipGroupConfirmNew">' +
+            '✅ Conferma gruppo interno</button>';
+
+        if (existing.length) {
+            html += '<div style="font-size:0.78rem;font-weight:700;color:#64748b;margin:6px 0 4px;">Oppure aggiungi a un gruppo già presente in «' +
+                techLabel.replace(/</g, '&lt;') + '»</div>';
+            existing.forEach(function(g) {
+                html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:10px;margin-bottom:6px;" data-ship-group="' +
+                    String(g).replace(/"/g, '&quot;').replace(/</g, '&lt;') + '">📁 ' +
+                    String(g).replace(/</g, '&lt;') + '</button>';
+            });
+        }
+
+        html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:10px;margin-top:4px;" id="prepShipGroupBack">← Indietro</button>';
+
+        box.innerHTML = html;
+
+        const input = document.getElementById('prepShipGroupInput');
+        const btnNew = document.getElementById('prepShipGroupConfirmNew');
+        const btnBack = document.getElementById('prepShipGroupBack');
+        if (btnNew) {
+            btnNew.addEventListener('click', function() {
+                let g = (input && input.value || '').trim();
+                if (!g) {
+                    alert('Inserisci un nome per il gruppo interno.');
+                    return;
+                }
+                if (typeof toAppUpper === 'function') g = toAppUpper(g);
+                const id = _prepShipClientId;
+                closePrepShipModal();
+                // spedizione = nome tecnico, gruppo = interno
+                applyPrepSuggestedSpedizione([id], tecnico, { clienteStesso: false, gruppo: g });
+            });
+        }
+        if (input) {
+            input.addEventListener('keydown', function(ev) {
+                if (ev.key === 'Enter') {
+                    ev.preventDefault();
+                    if (btnNew) btnNew.click();
+                }
+            });
+            try { input.focus(); input.select(); } catch (e) {}
+        }
+        box.querySelectorAll('[data-ship-group]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const g = btn.getAttribute('data-ship-group') || '';
+                if (!g) return;
+                const id = _prepShipClientId;
+                closePrepShipModal();
+                applyPrepSuggestedSpedizione([id], tecnico, { clienteStesso: false, gruppo: g });
+            });
+        });
+        if (btnBack) {
+            btnBack.addEventListener('click', function() {
+                const id = _prepShipClientId;
+                if (id) openPrepShipModal(id);
+            });
+        }
+    }
 
     function renderPrepAutoSpedizione(allPrep) {
         const groups = groupPrepByZone(allPrep);
