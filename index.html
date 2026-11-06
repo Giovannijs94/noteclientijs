@@ -4824,6 +4824,22 @@
         }
         .note-compact-table .nc-input-sm { max-width: 48px; text-transform: uppercase; }
         .note-compact-table .nc-input-date { max-width: 132px; }
+        .note-compact-table .nc-luogo-under {
+            display: flex;
+            flex-direction: row;
+            gap: 6px;
+            align-items: center;
+            margin-top: 6px;
+            width: 100%;
+            min-width: 180px;
+        }
+        .note-compact-table .nc-input-luogo {
+            flex: 1;
+            min-width: 140px;
+            max-width: none;
+            width: 100%;
+        }
+
         .note-compact-table .nc-edit-stack {
             display: flex;
             flex-direction: column;
@@ -10392,15 +10408,14 @@
 
             // Campi modificabili inline
             const luogoHtml =
-                '<div class="nc-edit-stack">' +
-                '<input type="text" class="nc-input" value="' + locVal + '" placeholder="Località" ' +
+                '<div class="nc-luogo-under">' +
+                '<input type="text" class="nc-input nc-input-luogo" value="' + locVal + '" placeholder="Località / luogo" ' +
                 'onchange="updateLocalita(\'' + safeId + '\', this.value, true)" ' +
                 'onkeydown="if(event.key===\'Enter\'){this.blur();}">' +
                 '<input type="text" class="nc-input nc-input-sm" value="' + provVal + '" placeholder="Prov" maxlength="2" ' +
                 'onchange="updateProvincia(\'' + safeId + '\', this.value.toUpperCase())" ' +
                 'onkeydown="if(event.key===\'Enter\'){this.blur();}" title="Provincia (sigla)">' +
                 '</div>';
-
             const dataHtml =
                 '<input type="date" class="nc-input nc-input-date" value="' + dataVal + '" ' +
                 'onchange="updateDate(\'' + safeId + '\', this.value, false)" ' +
@@ -10444,8 +10459,7 @@
                 (c.montaggio ? ('<span class="nc-sub">🔧 ' + String(c.montaggio).replace(/</g, '&lt;') + '</span>') : '') +
                 (whereExtra ? ('<span style="margin-left:6px;display:inline-block;vertical-align:middle;max-width:140px;">' + whereExtra + '</span>') : '') +
                 '</td>' +
-                '<td>' + modelsHtml + '</td>' +
-                '<td>' + luogoHtml + '</td>' +
+                '<td class="nc-wrap">' + modelsHtml + luogoHtml + '</td>' +
                 '<td>' + dataHtml + '</td>' +
                 '<td>' + scadHtml + '</td>' +
                 '<td>' + ordHtml + '</td>' +
@@ -10457,7 +10471,7 @@
         function tableFor(clientsArr, isSpedizione) {
             const sorted = sortClients(clientsArr);
             let h = '<div class="note-compact-wrap"><table class="note-compact-table"><thead><tr>' +
-                '<th>Cliente</th><th>Modelli</th><th>Luogo</th><th>Data</th><th>Scadenza</th><th>Ordine</th><th>Stato</th><th></th>' +
+                '<th>Cliente</th><th>Modelli / Luogo</th><th>Data</th><th>Scadenza</th><th>Ordine</th><th>Stato</th><th></th>' +
                 '</tr></thead><tbody>';
             let lastG = null;
             const hasAnyGruppo = isSpedizione && sorted.some(function(c) { return String(c.spedizioneGruppo || '').trim(); });
@@ -10469,11 +10483,11 @@
                         lastG = key;
                         if (g) {
                             const cnt = sorted.filter(function(x) { return String(x.spedizioneGruppo || '').trim() === g; }).length;
-                            h += '<tr class="note-compact-subhead"><td colspan="8">📁 ' + String(g).replace(/</g, '&lt;') +
+                            h += '<tr class="note-compact-subhead"><td colspan="7">📁 ' + String(g).replace(/</g, '&lt;') +
                                 ' <span class="nc-badge conf" style="margin-left:6px;">' + cnt + '</span></td></tr>';
                         } else {
                             const cnt = sorted.filter(function(x) { return !String(x.spedizioneGruppo || '').trim(); }).length;
-                            h += '<tr class="note-compact-subhead tappa-none"><td colspan="8">📁 Senza gruppo <span class="nc-badge conf" style="margin-left:6px;">' + cnt + '</span></td></tr>';
+                            h += '<tr class="note-compact-subhead tappa-none"><td colspan="7">📁 Senza gruppo <span class="nc-badge conf" style="margin-left:6px;">' + cnt + '</span></td></tr>';
                         }
                     }
                 }
