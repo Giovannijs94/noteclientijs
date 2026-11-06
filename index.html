@@ -4805,6 +4805,44 @@
             padding: 4px 8px;
             font-size: 0.72rem;
         }
+        .note-compact-table .nc-input {
+            width: 100%;
+            max-width: 140px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 4px 6px;
+            font-size: 0.78rem;
+            background: #fff;
+            color: #0f172a;
+        }
+        .note-compact-table .nc-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(37,99,235,0.15);
+        }
+        .note-compact-table .nc-input-sm { max-width: 48px; text-transform: uppercase; }
+        .note-compact-table .nc-input-date { max-width: 132px; }
+        .note-compact-table .nc-edit-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .note-compact-table .nc-dot-btn {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 1px solid #cbd5e1;
+            background: #e2e8f0;
+            padding: 0;
+            cursor: pointer;
+        }
+        .note-compact-table .nc-dot-btn.on {
+            background: #16a34a;
+            border-color: #15803d;
+        }
+        .note-compact-table .nc-dot-btn:hover {
+            transform: scale(1.15);
+        }
         .note-compact-section {
             margin-bottom: 14px;
             background: #fff;
@@ -6494,6 +6532,19 @@
 
 
 
+
+
+<div id="compactActionModal" class="modal-overlay confirm-modal">
+    <div class="modal" style="max-width:400px;">
+        <div class="confirm-icon" style="background:linear-gradient(135deg,#e2e8f0,#cbd5e1);">⚙️</div>
+        <h3>Azioni cliente</h3>
+        <p class="confirm-desc" style="margin-bottom:12px;">Cliente: <strong id="compactActionClientName"></strong></p>
+        <div id="compactActionBody" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
+        <div class="confirm-actions">
+            <button type="button" class="btn" onclick="closeCompactActionModal()">Annulla</button>
+        </div>
+    </div>
+</div>
 
 <div id="prepToNoteModal" class="modal-overlay confirm-modal">
     <div class="modal" style="max-width:440px;">
@@ -8467,6 +8518,75 @@
         if (doRender) render();
     }
 
+    window.updateLocalita = function(id, newLoc, doRender) {
+        const client = clients.find(c => String(c.id) === String(id));
+        if (!client) return;
+        client.localita = String(newLoc || '').trim();
+        saveToLocalStorage();
+        if (doRender) render();
+    }
+
+    window.updateScadenzaInline = function(id, newScad, doRender) {
+        const client = clients.find(c => String(c.id) === String(id));
+        if (!client) return;
+        client.scadenza = newScad || '';
+        saveToLocalStorage();
+        if (doRender) render();
+    }
+
+    window.toggleClientFlag = function(id, field) {
+        const client = clients.find(c => String(c.id) === String(id));
+        if (!client) return;
+        const allowed = { calendarizzato:1, preavviso:1, disponibilita:1, spedito:1, consegnato:1 };
+        if (!allowed[field]) return;
+        client[field] = !client[field];
+        saveToLocalStorage();
+        try { render(); } catch (e) {}
+    }
+
+    let _compactActionClientId = null;
+    window.closeCompactActionModal = function() {
+        _compactActionClientId = null;
+        const m = document.getElementById('compactActionModal');
+        if (m) m.style.display = 'none';
+    };
+    window.openCompactActionMenu = function(id) {
+        const client = (clients || []).find(function(c) { return String(c.id) === String(id); });
+        if (!client) return;
+        _compactActionClientId = String(id);
+        const nameEl = document.getElementById('compactActionClientName');
+        if (nameEl) nameEl.textContent = client.nome || '—';
+        const body = document.getElementById('compactActionBody');
+        if (!body) return;
+        const isSped = !!(client.spedizione || '').trim();
+        let html = '';
+        html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;background:#16a34a;color:#fff;border:none;" data-act="installato">✅ Segna come Installato</button>';
+        html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;background:#d97706;color:#fff;border:none;" data-act="standby">⏸️ Metti in Stand-by</button>';
+        html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;background:#2563eb;color:#fff;border:none;" data-act="prep">📋 Porta in Pre-pianificazione</button>';
+        if (isSped) {
+            html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;background:#9d174d;color:#fff;border:none;" data-act="gruppo">📁 Cambia gruppo spedizione</button>';
+        }
+        html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;" data-act="edit">✏️ Modifica scheda completa</button>';
+        html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;color:#b91c1c;border-color:#fca5a5;" data-act="delete">🗑️ Elimina cliente</button>';
+        body.innerHTML = html;
+        body.querySelectorAll('[data-act]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const act = btn.getAttribute('data-act');
+                const cid = _compactActionClientId;
+                closeCompactActionModal();
+                if (!cid) return;
+                if (act === 'installato') markInstallato(cid);
+                else if (act === 'standby') markStandby(cid);
+                else if (act === 'prep') moveToPrep(cid);
+                else if (act === 'gruppo') openMoveClientSpedGruppo(cid);
+                else if (act === 'edit') editClient(cid);
+                else if (act === 'delete') deleteClient(cid);
+            });
+        });
+        const modal = document.getElementById('compactActionModal');
+        if (modal) modal.style.display = 'flex';
+    };
+
     window.updateNote = function(id, text) {
         const client = clients.find(c => c.id === id);
         if (client) {
@@ -10033,8 +10153,8 @@
                     return '<span class="nc-badge mod">' + String(m).replace(/</g, '&lt;') + '</span>';
                 }).join(' ')
                 : '<span class="nc-sub">—</span>';
-            const luogo = [c.localita || '', c.provincia ? ('(' + c.provincia + ')') : ''].filter(Boolean).join(' ');
             const sped = String(c.spedizione || '').trim();
+            const tappa = String(c.tappa || '').trim();
             const isSped = !!sped;
             const conf = String(c.confOrdine || '').trim();
             let ordN = parseInt(c.ordineSeq, 10) || 0;
@@ -10048,36 +10168,70 @@
                 if (conf) ordHtml += '<span class="nc-badge conf">CONF. ' + conf.replace(/</g, '&lt;') + '</span>';
                 if (ordN) ordHtml += '<span class="nc-badge conf">Ord. ' + ordN + '</span>';
             }
-            const scad = formatNoteDateShort(c.scadenza);
-            const data = formatNoteDateShort(c.data);
-            const scadHtml = c.scadenza
-                ? ('<span class="nc-badge scad">' + scad.replace(/</g, '&lt;') + '</span>')
-                : '—';
-            const dots = [];
-            dots.push('<span class="nc-dot' + (c.calendarizzato ? ' on' : '') + '" title="Calendarizzato"></span>');
-            dots.push('<span class="nc-dot' + (c.preavviso ? ' on' : '') + '" title="Preavviso"></span>');
-            if (isSped) {
-                dots.push('<span class="nc-dot' + (c.spedito ? ' on' : '') + '" title="Spedito"></span>');
-                dots.push('<span class="nc-dot' + (c.consegnato ? ' on' : '') + '" title="Consegnato"></span>');
-            } else {
-                dots.push('<span class="nc-dot' + (c.disponibilita ? ' on' : '') + '" title="Disponibilità"></span>');
-            }
             const safeId = String(c.id).replace(/'/g, "\\'");
-            const actions = '<div class="nc-actions">' +
-                (isSped
-                    ? ('<button type="button" class="btn" style="background:#9d174d;color:#fff;border:none;" onclick="openMoveClientSpedGruppo(\'' + safeId + '\')" title="Gruppo">📁</button>')
-                    : '') +
-                '<button type="button" class="btn-icon" onclick="editClient(\'' + safeId + '\')" title="Modifica">✏️</button>' +
-                '<button type="button" class="btn-icon danger" onclick="deleteClient(\'' + safeId + '\')" title="Elimina">🗑️</button>' +
+            const locVal = String(c.localita || '').replace(/"/g, '&quot;');
+            const provVal = String(c.provincia || '').replace(/"/g, '&quot;');
+            const dataVal = String(c.data || '').replace(/"/g, '&quot;');
+            const scadVal = String(c.scadenza || '').replace(/"/g, '&quot;');
+            const tappaVal = String(tappa || '').replace(/"/g, '&quot;');
+
+            // Campi modificabili inline
+            const luogoHtml =
+                '<div class="nc-edit-stack">' +
+                '<input type="text" class="nc-input" value="' + locVal + '" placeholder="Località" ' +
+                'onchange="updateLocalita(\'' + safeId + '\', this.value, true)" ' +
+                'onkeydown="if(event.key===\'Enter\'){this.blur();}">' +
+                '<input type="text" class="nc-input nc-input-sm" value="' + provVal + '" placeholder="Prov" maxlength="2" ' +
+                'onchange="updateProvincia(\'' + safeId + '\', this.value.toUpperCase())" ' +
+                'onkeydown="if(event.key===\'Enter\'){this.blur();}" title="Provincia (sigla)">' +
                 '</div>';
+
+            const dataHtml =
+                '<input type="date" class="nc-input nc-input-date" value="' + dataVal + '" ' +
+                'onchange="updateDate(\'' + safeId + '\', this.value, false)" ' +
+                'onblur="updateDate(\'' + safeId + '\', this.value, true)" title="Data installazione">';
+
+            const scadHtml =
+                '<input type="date" class="nc-input nc-input-date" value="' + scadVal + '" ' +
+                'onchange="updateScadenzaInline(\'' + safeId + '\', this.value, false)" ' +
+                'onblur="updateScadenzaInline(\'' + safeId + '\', this.value, true)" title="Scadenza">';
+
+            let whereExtra = '';
+            if (!isSped) {
+                whereExtra =
+                    '<input type="text" class="nc-input" value="' + tappaVal + '" placeholder="Tappa" list="tappeDatalist" ' +
+                    'onchange="updateStage(\'' + safeId + '\', this.value)" ' +
+                    'onkeydown="if(event.key===\'Enter\'){this.blur();}" title="Tappa">';
+            } else {
+                const g = String(c.spedizioneGruppo || '').trim();
+                whereExtra = g
+                    ? ('<span class="nc-sub">📁 ' + g.replace(/</g, '&lt;') + '</span>')
+                    : '<span class="nc-sub">📦 ' + sped.replace(/</g, '&lt;') + '</span>';
+            }
+
+            const dots = [];
+            dots.push('<button type="button" class="nc-dot-btn' + (c.calendarizzato ? ' on' : '') + '" title="Calendarizzato" onclick="toggleClientFlag(\'' + safeId + '\',\'calendarizzato\')"></button>');
+            dots.push('<button type="button" class="nc-dot-btn' + (c.preavviso ? ' on' : '') + '" title="Preavviso" onclick="toggleClientFlag(\'' + safeId + '\',\'preavviso\')"></button>');
+            if (isSped) {
+                dots.push('<button type="button" class="nc-dot-btn' + (c.spedito ? ' on' : '') + '" title="Spedito" onclick="toggleClientFlag(\'' + safeId + '\',\'spedito\')"></button>');
+                dots.push('<button type="button" class="nc-dot-btn' + (c.consegnato ? ' on' : '') + '" title="Consegnato" onclick="toggleClientFlag(\'' + safeId + '\',\'consegnato\')"></button>');
+            } else {
+                dots.push('<button type="button" class="nc-dot-btn' + (c.disponibilita ? ' on' : '') + '" title="Disponibilità" onclick="toggleClientFlag(\'' + safeId + '\',\'disponibilita\')"></button>');
+            }
+
+            const actions = '<div class="nc-actions">' +
+                '<button type="button" class="btn" style="background:#0f172a;color:#fff;border:none;" onclick="openCompactActionMenu(\'' + safeId + '\')" title="Azioni">⚙️ Azioni</button>' +
+                '</div>';
+
             return '<tr>' +
                 '<td><span class="nc-name" ondblclick="renameClientName(\'' + safeId + '\')" title="Doppio click per rinominare">' +
                 String(c.nome || '').replace(/</g, '&lt;') + '</span>' +
                 (c.montaggio ? ('<span class="nc-sub">🔧 ' + String(c.montaggio).replace(/</g, '&lt;') + '</span>') : '') +
+                (whereExtra ? ('<span style="margin-left:6px;display:inline-block;vertical-align:middle;max-width:140px;">' + whereExtra + '</span>') : '') +
                 '</td>' +
                 '<td>' + modelsHtml + '</td>' +
-                '<td>' + String(luogo || '—').replace(/</g, '&lt;') + '</td>' +
-                '<td>' + data + '</td>' +
+                '<td>' + luogoHtml + '</td>' +
+                '<td>' + dataHtml + '</td>' +
                 '<td>' + scadHtml + '</td>' +
                 '<td>' + ordHtml + '</td>' +
                 '<td><div class="nc-dots">' + dots.join('') + '</div></td>' +
