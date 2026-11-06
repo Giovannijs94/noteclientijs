@@ -4702,6 +4702,155 @@
             font-size: 0.85rem;
             color: #9d174d;
         }
+        .note-view-toggle {
+            display: inline-flex;
+            gap: 4px;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+        .note-view-toggle .btn {
+            min-height: 34px;
+            padding: 6px 12px;
+            font-size: 0.78rem;
+        }
+        .note-view-toggle .btn.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+        .note-compact-wrap {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: auto;
+            max-width: 100%;
+        }
+        .note-compact-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+            min-width: 900px;
+        }
+        .note-compact-table thead th {
+            position: sticky;
+            top: 0;
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 700;
+            text-align: left;
+            padding: 8px 10px;
+            border-bottom: 1px solid #e2e8f0;
+            white-space: nowrap;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            z-index: 1;
+        }
+        .note-compact-table tbody td {
+            padding: 7px 10px;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: top;
+            color: #0f172a;
+        }
+        .note-compact-table tbody tr:hover td {
+            background: #f8fafc;
+        }
+        .note-compact-table .nc-name {
+            font-weight: 800;
+            color: var(--primary);
+            cursor: pointer;
+        }
+        .note-compact-table .nc-sub {
+            display: block;
+            font-size: 0.72rem;
+            color: #64748b;
+            font-weight: 500;
+            margin-top: 2px;
+        }
+        .note-compact-table .nc-badge {
+            display: inline-block;
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 6px;
+            margin: 1px 2px 1px 0;
+            white-space: nowrap;
+        }
+        .note-compact-table .nc-badge.tappa { background:#dcfce7; color:#166534; }
+        .note-compact-table .nc-badge.sped { background:#fce7f3; color:#9d174d; }
+        .note-compact-table .nc-badge.mod { background:#e0e7ff; color:#3730a3; }
+        .note-compact-table .nc-badge.scad { background:#fef3c7; color:#92400e; }
+        .note-compact-table .nc-badge.conf { background:#f1f5f9; color:#334155; }
+        .note-compact-table .nc-dots {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        .note-compact-table .nc-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            display: inline-block;
+            title: '';
+        }
+        .note-compact-table .nc-dot.on { background: #16a34a; }
+        .note-compact-table .nc-actions {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        .note-compact-table .nc-actions .btn {
+            min-height: 30px;
+            padding: 4px 8px;
+            font-size: 0.72rem;
+        }
+        .note-compact-section {
+            margin-bottom: 14px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .note-compact-section-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 10px 14px;
+            font-weight: 800;
+            font-size: 0.9rem;
+            color: #fff;
+        }
+        .note-compact-section-head.tappa { background: linear-gradient(90deg, #15803d, #16a34a); }
+        .note-compact-section-head.sped { background: linear-gradient(90deg, #9d174d, #db2777); }
+        .note-compact-section-head .nc-sec-count {
+            background: rgba(255,255,255,0.22);
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+        }
+        .note-compact-section .note-compact-wrap {
+            border: none;
+            border-radius: 0;
+        }
+        .note-compact-subhead td {
+            background: #fdf2f8 !important;
+            color: #9d174d;
+            font-weight: 800;
+            font-size: 0.78rem;
+            border-left: 4px solid #9d174d;
+            padding: 6px 10px !important;
+        }
+        .note-compact-subhead.tappa-none td {
+            background: #f8fafc !important;
+            color: #64748b;
+            border-left-color: #94a3b8;
+        }
+        @media (max-width: 700px) {
+            .note-view-toggle { width: 100%; margin-left: 0; margin-top: 6px; }
+            .note-view-toggle .btn { flex: 1; justify-content: center; }
+        }
         @media (max-width: 600px) {
             .prep-mini-row {
                 flex-direction: column;
@@ -5746,9 +5895,13 @@
 
     <datalist id="modelliDatalist"></datalist>
 
-    <div class="search-card">
+    <div class="search-card" style="flex-wrap:wrap;">
         <span style="font-weight: 700; color: var(--primary);">🔍 Cerca:</span>
         <input type="text" id="searchInput" class="search-input" placeholder="Filtra per cliente, località, provincia, regione, modello o note..." oninput="scheduleRender()">
+        <div class="note-view-toggle" role="group" aria-label="Tipo di vista Note">
+            <button type="button" class="btn active" id="noteViewGroupsBtn" onclick="setNoteViewMode('groups')">📁 Gruppi</button>
+            <button type="button" class="btn" id="noteViewCompactBtn" onclick="setNoteViewMode('compact')">▦ Compatta</button>
+        </div>
     </div>
 
     <div class="note-work-area">
@@ -9417,17 +9570,13 @@
     }
 
     window.scrollToStage = function(stageId) {
-        const el = document.getElementById(`stage-group-${stageId}`);
-        if (el) {
-            el.scrollIntoView({ behavior: 'instant', block: 'start' });
-        }
+        const el = document.getElementById('stage-group-' + stageId) || document.getElementById('compact-tappa-' + stageId);
+        if (el) el.scrollIntoView({ behavior: 'instant', block: 'start' });
     }
 
     window.scrollToSpedizione = function(spedId) {
-        const el = document.getElementById(`sped-group-${spedId}`);
-        if (el) {
-            el.scrollIntoView({ behavior: 'instant', block: 'start' });
-        }
+        const el = document.getElementById('sped-group-' + spedId) || document.getElementById('compact-sped-' + spedId);
+        if (el) el.scrollIntoView({ behavior: 'instant', block: 'start' });
     }
 
 
@@ -9802,6 +9951,197 @@
         if (!all[tappa].dal && !all[tappa].al) delete all[tappa];
         saveTappaRanges(all);
     };
+
+
+    // Vista Note: 'groups' (attuale) | 'compact' (elenco unico compatto)
+    let noteViewMode = (function() {
+        try { return localStorage.getItem('note_clienti_note_view') || 'groups'; }
+        catch (e) { return 'groups'; }
+    })();
+    if (noteViewMode !== 'compact') noteViewMode = 'groups';
+
+    window.setNoteViewMode = function(mode) {
+        noteViewMode = (mode === 'compact') ? 'compact' : 'groups';
+        try { localStorage.setItem('note_clienti_note_view', noteViewMode); } catch (e) {}
+        const gBtn = document.getElementById('noteViewGroupsBtn');
+        const cBtn = document.getElementById('noteViewCompactBtn');
+        if (gBtn) gBtn.classList.toggle('active', noteViewMode === 'groups');
+        if (cBtn) cBtn.classList.toggle('active', noteViewMode === 'compact');
+        try { render(); } catch (e) {}
+    };
+
+    function formatNoteDateShort(dateStr) {
+        if (!dateStr) return '—';
+        const s = String(dateStr).trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+            const p = s.split('-');
+            return p[2] + '/' + p[1] + '/' + p[0];
+        }
+        return s;
+    }
+
+    function renderNoteCompactList(list) {
+        if (!container) return;
+        const items = list || [];
+
+        function sortClients(arr) {
+            return [...arr].sort(function(a, b) {
+                const ga = String(a.spedizioneGruppo || '').trim();
+                const gb = String(b.spedizioneGruppo || '').trim();
+                if (ga && gb && ga !== gb) return ga.localeCompare(gb, 'it');
+                if (ga && !gb) return -1;
+                if (!ga && gb) return 1;
+                const da = a.data || '';
+                const db = b.data || '';
+                if (da && db && da !== db) return da.localeCompare(db);
+                if (da && !db) return -1;
+                if (!da && db) return 1;
+                return (a.nome || '').localeCompare(b.nome || '', 'it');
+            });
+        }
+
+        // Raggruppa: prima tappe, poi spedizioni
+        const tappeMap = {};
+        const spedMap = {};
+        items.forEach(function(c) {
+            const sped = String(c.spedizione || '').trim();
+            const tappa = String(c.tappa || '').trim();
+            if (sped) {
+                if (!spedMap[sped]) spedMap[sped] = [];
+                spedMap[sped].push(c);
+            } else if (tappa) {
+                if (!tappeMap[tappa]) tappeMap[tappa] = [];
+                tappeMap[tappa].push(c);
+            } else {
+                if (!tappeMap['(Senza tappa)']) tappeMap['(Senza tappa)'] = [];
+                tappeMap['(Senza tappa)'].push(c);
+            }
+        });
+        const tappaNames = Object.keys(tappeMap).sort(function(a, b) {
+            if (a === '(Senza tappa)') return 1;
+            if (b === '(Senza tappa)') return -1;
+            return a.localeCompare(b, 'it');
+        });
+        const spedNames = Object.keys(spedMap).sort(function(a, b) { return a.localeCompare(b, 'it'); });
+
+        function rowHtml(c) {
+            const models = (c.modelli || []).map(function(m) {
+                return String(m.nome || '') + (m.qta ? (' ×' + m.qta) : '');
+            }).filter(Boolean);
+            const modelsHtml = models.length
+                ? models.map(function(m) {
+                    return '<span class="nc-badge mod">' + String(m).replace(/</g, '&lt;') + '</span>';
+                }).join(' ')
+                : '<span class="nc-sub">—</span>';
+            const luogo = [c.localita || '', c.provincia ? ('(' + c.provincia + ')') : ''].filter(Boolean).join(' ');
+            const sped = String(c.spedizione || '').trim();
+            const isSped = !!sped;
+            const conf = String(c.confOrdine || '').trim();
+            let ordN = parseInt(c.ordineSeq, 10) || 0;
+            if (!ordN) {
+                const m = String(c.nome || '').match(/\bORDINE\s*(\d+)\s*$/i);
+                if (m) ordN = parseInt(m[1], 10) || 0;
+            }
+            let ordHtml = '—';
+            if (conf || ordN) {
+                ordHtml = '';
+                if (conf) ordHtml += '<span class="nc-badge conf">CONF. ' + conf.replace(/</g, '&lt;') + '</span>';
+                if (ordN) ordHtml += '<span class="nc-badge conf">Ord. ' + ordN + '</span>';
+            }
+            const scad = formatNoteDateShort(c.scadenza);
+            const data = formatNoteDateShort(c.data);
+            const scadHtml = c.scadenza
+                ? ('<span class="nc-badge scad">' + scad.replace(/</g, '&lt;') + '</span>')
+                : '—';
+            const dots = [];
+            dots.push('<span class="nc-dot' + (c.calendarizzato ? ' on' : '') + '" title="Calendarizzato"></span>');
+            dots.push('<span class="nc-dot' + (c.preavviso ? ' on' : '') + '" title="Preavviso"></span>');
+            if (isSped) {
+                dots.push('<span class="nc-dot' + (c.spedito ? ' on' : '') + '" title="Spedito"></span>');
+                dots.push('<span class="nc-dot' + (c.consegnato ? ' on' : '') + '" title="Consegnato"></span>');
+            } else {
+                dots.push('<span class="nc-dot' + (c.disponibilita ? ' on' : '') + '" title="Disponibilità"></span>');
+            }
+            const safeId = String(c.id).replace(/'/g, "\\'");
+            const actions = '<div class="nc-actions">' +
+                (isSped
+                    ? ('<button type="button" class="btn" style="background:#9d174d;color:#fff;border:none;" onclick="openMoveClientSpedGruppo(\'' + safeId + '\')" title="Gruppo">📁</button>')
+                    : '') +
+                '<button type="button" class="btn-icon" onclick="editClient(\'' + safeId + '\')" title="Modifica">✏️</button>' +
+                '<button type="button" class="btn-icon danger" onclick="deleteClient(\'' + safeId + '\')" title="Elimina">🗑️</button>' +
+                '</div>';
+            return '<tr>' +
+                '<td><span class="nc-name" ondblclick="renameClientName(\'' + safeId + '\')" title="Doppio click per rinominare">' +
+                String(c.nome || '').replace(/</g, '&lt;') + '</span>' +
+                (c.montaggio ? ('<span class="nc-sub">🔧 ' + String(c.montaggio).replace(/</g, '&lt;') + '</span>') : '') +
+                '</td>' +
+                '<td>' + modelsHtml + '</td>' +
+                '<td>' + String(luogo || '—').replace(/</g, '&lt;') + '</td>' +
+                '<td>' + data + '</td>' +
+                '<td>' + scadHtml + '</td>' +
+                '<td>' + ordHtml + '</td>' +
+                '<td><div class="nc-dots">' + dots.join('') + '</div></td>' +
+                '<td>' + actions + '</td>' +
+                '</tr>';
+        }
+
+        function tableFor(clientsArr, isSpedizione) {
+            const sorted = sortClients(clientsArr);
+            let h = '<div class="note-compact-wrap"><table class="note-compact-table"><thead><tr>' +
+                '<th>Cliente</th><th>Modelli</th><th>Luogo</th><th>Data</th><th>Scadenza</th><th>Ordine</th><th>Stato</th><th></th>' +
+                '</tr></thead><tbody>';
+            let lastG = null;
+            const hasAnyGruppo = isSpedizione && sorted.some(function(c) { return String(c.spedizioneGruppo || '').trim(); });
+            sorted.forEach(function(c) {
+                if (isSpedizione && hasAnyGruppo) {
+                    const g = String(c.spedizioneGruppo || '').trim();
+                    const key = g || '';
+                    if (key !== lastG) {
+                        lastG = key;
+                        if (g) {
+                            const cnt = sorted.filter(function(x) { return String(x.spedizioneGruppo || '').trim() === g; }).length;
+                            h += '<tr class="note-compact-subhead"><td colspan="8">📁 ' + String(g).replace(/</g, '&lt;') +
+                                ' <span class="nc-badge conf" style="margin-left:6px;">' + cnt + '</span></td></tr>';
+                        } else {
+                            const cnt = sorted.filter(function(x) { return !String(x.spedizioneGruppo || '').trim(); }).length;
+                            h += '<tr class="note-compact-subhead tappa-none"><td colspan="8">📁 Senza gruppo <span class="nc-badge conf" style="margin-left:6px;">' + cnt + '</span></td></tr>';
+                        }
+                    }
+                }
+                h += rowHtml(c);
+            });
+            h += '</tbody></table></div>';
+            return h;
+        }
+
+        let html = '';
+        tappaNames.forEach(function(name) {
+            const arr = tappeMap[name];
+            const safe = String(name).replace(/</g, '&lt;');
+            html += '<div class="note-compact-section" id="compact-tappa-' + String(name).replace(/[^a-zA-Z0-9-_]/g, '_') + '">' +
+                '<div class="note-compact-section-head tappa">' +
+                '<span>🚩 ' + safe + '</span>' +
+                '<span class="nc-sec-count">' + arr.length + '</span>' +
+                '</div>' + tableFor(arr, false) + '</div>';
+        });
+        spedNames.forEach(function(name) {
+            const arr = spedMap[name];
+            const safe = String(name).replace(/</g, '&lt;');
+            html += '<div class="note-compact-section" id="compact-sped-' + String(name).replace(/[^a-zA-Z0-9-_]/g, '_') + '">' +
+                '<div class="note-compact-section-head sped">' +
+                '<span>📦 ' + safe + '</span>' +
+                '<span class="nc-sec-count">' + arr.length + '</span>' +
+                '</div>' + tableFor(arr, true) + '</div>';
+        });
+
+        if (!html) {
+            container.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:40px;">Nessun cliente.</p>';
+            return;
+        }
+        html += '<p style="font-size:0.75rem;color:#94a3b8;margin-top:4px;">' + items.length +
+            ' clienti · Vista compatta suddivisa per tappa / spedizione</p>';
+        container.innerHTML = html;
+    }
 
     function render() {
         clients.forEach(c => {
@@ -10252,27 +10592,39 @@
             container.appendChild(groupEl);
         }
 
-        // Group filtered clients
-        const groupedTappe = {};
-        const groupedSped = {};
-        filteredClients.forEach(c => {
-            const sped = (c.spedizione || '').trim();
-            const tappa = (c.tappa || '').trim();
-            if (sped) {
-                if (!groupedSped[sped]) groupedSped[sped] = [];
-                groupedSped[sped].push(c);
-            } else if (tappa) {
-                if (!groupedTappe[tappa]) groupedTappe[tappa] = [];
-                groupedTappe[tappa].push(c);
-            }
-        });
+        // Aggiorna stato toggle vista
+        const gBtn = document.getElementById('noteViewGroupsBtn');
+        const cBtn = document.getElementById('noteViewCompactBtn');
+        if (gBtn) gBtn.classList.toggle('active', noteViewMode === 'groups');
+        if (cBtn) cBtn.classList.toggle('active', noteViewMode === 'compact');
 
-        Object.keys(groupedTappe).sort((a,b)=>a.localeCompare(b,'it')).forEach(stage => {
-            createGroup(stage, groupedTappe[stage], 'tappa');
-        });
-        Object.keys(groupedSped).sort((a,b)=>a.localeCompare(b,'it')).forEach(sped => {
-            createGroup(sped, groupedSped[sped], 'spedizione');
-        });
+        // Vista compatta: elenco unico di tutti i clienti
+        if (noteViewMode === 'compact') {
+            // Lascia visibili le pill tappe/spedizioni per saltare ai gruppi
+            renderNoteCompactList(filteredClients);
+        } else {
+            // Group filtered clients (vista classica)
+            const groupedTappe = {};
+            const groupedSped = {};
+            filteredClients.forEach(c => {
+                const sped = (c.spedizione || '').trim();
+                const tappa = (c.tappa || '').trim();
+                if (sped) {
+                    if (!groupedSped[sped]) groupedSped[sped] = [];
+                    groupedSped[sped].push(c);
+                } else if (tappa) {
+                    if (!groupedTappe[tappa]) groupedTappe[tappa] = [];
+                    groupedTappe[tappa].push(c);
+                }
+            });
+
+            Object.keys(groupedTappe).sort((a,b)=>a.localeCompare(b,'it')).forEach(stage => {
+                createGroup(stage, groupedTappe[stage], 'tappa');
+            });
+            Object.keys(groupedSped).sort((a,b)=>a.localeCompare(b,'it')).forEach(sped => {
+                createGroup(sped, groupedSped[sped], 'spedizione');
+            });
+        }
 
         if (currentView === 'standby') renderStandbyPage();
         if (currentView === 'installati') renderInstallatiPage();
