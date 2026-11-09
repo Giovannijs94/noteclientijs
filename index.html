@@ -3212,6 +3212,7 @@
         }
         .consigli-toc a:hover { background: #e0e7ff; color: #3730a3; }
         .consigli-route-map { min-height: 220px; }
+        .prep-paesi-banner strong { font-weight: 800; }
         @media (max-width: 600px) {
             .consigli-route-map { height: 200px !important; }
         }
@@ -6375,7 +6376,7 @@
             <div style="display:flex;flex-wrap:wrap;gap:8px;">
                 <button type="button" class="btn btn-primary" onclick="prepImportFromPaste()">📋 Incolla e importa tutti</button>
                 <button type="button" class="btn" onclick="document.getElementById('prepPasteArea').value='';setPrepOcrStatus('', '');">Svuota</button>
-                <button type="button" class="btn" onclick="refreshAllClientProvinces({ onlyPrep: true })" title="Ricontrolla indirizzi e aggiorna provincia solo per clienti in Pre-pianificazione">🌍 Aggiorna province</button>
+                <button type="button" class="btn" onclick="refreshAllClientProvinces({ onlyPrep: true, recordCheck: true })" title="Ricontrolla indirizzi e aggiorna provincia solo per clienti in Pre-pianificazione">🌍 Aggiorna province</button>
             </div>
         </div>
         <div id="prepOcrStatus" class="prep-ocr-status" hidden></div>
@@ -6449,6 +6450,8 @@
         <span style="font-weight: 700; color: var(--primary);">🔍 Cerca:</span>
         <input type="text" id="prepSearchInput" class="search-input" placeholder="Filtra per cliente, località, provincia, regione, modello, nota o tappa..." oninput="renderPrepPage()">
     </div>
+    <div id="prepPaesiCheckBanner" class="prep-paesi-banner" style="margin:8px 0 12px;padding:10px 12px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0;font-size:0.82rem;color:#334155;line-height:1.4;" hidden></div>
+
 
     <div class="card prep-mini-list-card" id="prepMiniListCard" style="margin-bottom:16px; display:none;">
         <div class="card-title" style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
@@ -7387,7 +7390,129 @@
             (clients || []).forEach(normalizeClientUpperFields);
         } catch (e) {}
         localStorage.setItem('note_clienti_data', JSON.stringify(clients));
+        try { notifyPlanningDataChanged(); } catch (e) {}
     }
+
+    // --- Consigli + controllo paesi: restano allineati a Prep/Note ---
+    let _planningDirtyTimer = null;
+    let _prepPaesiCheckTimer = null;
+
+    function getPrepLocationFingerprint() {
+        try {
+            const prep = (clients || []).filter(function(c) {
+                return typeof isInPrep === 'function' ? isInPrep(c) : (c.inPrep === true || c.inPrep === 'true');
+            });
+            return prep.map(function(c) {
+                return [c.id, c.localita || '', c.provincia || '', c.regione || '', c.scadenza || '', c.montaggio || ''].join('|');
+            }).sort().join(';;');
+        } catch (e) { return ''; }
+    }
+
+    function notifyPlanningDataChanged() {
+        try {
+            localStorage.setItem('note_clienti_planning_dirty_at', String(Date.now()));
+        } catch (e) {}
+        // Se siamo su Consigli, ricalcola subito (debounce)
+        if (typeof currentView !== 'undefined' && currentView === 'consigli') {
+            if (_planningDirtyTimer) clearTimeout(_planningDirtyTimer);
+            _planningDirtyTimer = setTimeout(function() {
+                try { if (typeof renderConsigliPage === 'function') renderConsigliPage(); } catch (e) {}
+            }, 250);
+        }
+        // In Prep: programma controllo paesi se i dati località sono cambiati rispetto all'ultimo check
+        if (typeof currentView !== 'undefined' && currentView === 'prep') {
+            if (_prepPaesiCheckTimer) clearTimeout(_prepPaesiCheckTimer);
+            _prepPaesiCheckTimer = setTimeout(function() {
+                try { maybeAutoCheckPrepPaesi({ silent: true }); } catch (e) {}
+            }, 400);
+        }
+        // Aggiorna badge nav consigli
+        try {
+            const badge = document.getElementById('navConsigliCount');
+            if (badge) {
+                const n = (clients || []).filter(function(c) {
+                    return typeof isInPrep === 'function' ? isInPrep(c) : (c.inPrep === true || c.inPrep === 'true');
+                }).length;
+                badge.textContent = String(n);
+            }
+        } catch (e) {}
+    }
+
+    function getLastPaesiCheckMeta() {
+        try {
+            return JSON.parse(localStorage.getItem('note_clienti_last_paesi_check') || 'null') || null;
+        } catch (e) { return null; }
+    }
+
+    function setLastPaesiCheckMeta(meta) {
+        try {
+            localStorage.setItem('note_clienti_last_paesi_check', JSON.stringify(meta || {}));
+        } catch (e) {}
+    }
+
+    function formatPaesiCheckTime(ts) {
+        if (!ts) return 'mai';
+        try {
+            const d = new Date(Number(ts));
+            if (isNaN(d.getTime())) return 'mai';
+            const dd = String(d.getDate()).padStart(2, '0');
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const hh = String(d.getHours()).padStart(2, '0');
+            const mi = String(d.getMinutes()).padStart(2, '0');
+            return dd + '/' + mm + ' ' + hh + ':' + mi;
+        } catch (e) { return 'mai'; }
+    }
+
+    function updatePrepPaesiCheckBanner(info) {
+        const el = document.getElementById('prepPaesiCheckBanner');
+        if (!el) return;
+        const meta = getLastPaesiCheckMeta() || {};
+        const when = formatPaesiCheckTime(meta.at);
+        const fpNow = getPrepLocationFingerprint();
+        const stale = !meta.fp || meta.fp !== fpNow;
+        let msg = '🌍 Controllo paesi: ultimo <strong>' + when + '</strong>';
+        if (meta.updated != null && meta.total != null) {
+            msg += ' · aggiornati <strong>' + meta.updated + '</strong>/' + meta.total;
+        }
+        if (stale) {
+            msg += ' · <span style="color:#b45309;font-weight:700;">dati Prep modificati — ricontrollo consigliato</span>';
+        } else {
+            msg += ' · <span style="color:#047857;font-weight:700;">allineato</span>';
+        }
+        if (info && info.text) msg += ' · ' + info.text;
+        el.innerHTML = msg +
+            ' <button type="button" class="btn" style="margin-left:8px;min-height:32px;padding:4px 10px;font-size:0.75rem;" onclick="refreshAllClientProvinces({ onlyPrep: true, recordCheck: true })">Ricontrolla ora</button>';
+        el.hidden = false;
+    }
+
+    async function maybeAutoCheckPrepPaesi(opts) {
+        opts = opts || {};
+        const meta = getLastPaesiCheckMeta() || {};
+        const fpNow = getPrepLocationFingerprint();
+        if (!fpNow) {
+            updatePrepPaesiCheckBanner();
+            return;
+        }
+        // Auto solo se fingerprint diverso dall'ultimo check
+        if (meta.fp && meta.fp === fpNow) {
+            updatePrepPaesiCheckBanner();
+            return;
+        }
+        // Evita loop continui: max auto ogni 30s
+        const now = Date.now();
+        if (meta.at && (now - Number(meta.at)) < 30000 && meta.fp === fpNow) {
+            updatePrepPaesiCheckBanner();
+            return;
+        }
+        if (!opts.silent && typeof setPrepOcrStatus === 'function') {
+            setPrepOcrStatus('🌍 Controllo paesi dopo ultima modifica…', 'work');
+        }
+        try {
+            await refreshAllClientProvinces({ onlyPrep: true, recordCheck: true, quiet: !!opts.silent });
+        } catch (e) {}
+        updatePrepPaesiCheckBanner();
+    }
+
 
     /** Controlla se esiste già un cliente con lo stesso nome (ignora maiuscole/spazi). */
     function findClientByName(nome) {
@@ -11305,6 +11430,52 @@
         return uniq.length ? uniq : [raw];
     }
 
+
+    /** Estrae comune e provincia da indirizzo LED Manager.
+     *  Es: "via foggia 31, napoli (na)" → comune Napoli, prov NA (non Foggia). */
+    function parseLedManagerAddress(addressText) {
+        const result = { indirizzo: '', provinciaHint: '', query: '', comune: '' };
+        let ind = String(addressText || '').replace(/\s+/g, ' ').trim();
+        if (!ind) return result;
+        ind = ind.replace(/^indirizzo\s*[:\-–]?\s*/i, '').trim();
+        result.indirizzo = ind;
+
+        let mCityProv = ind.match(/,\s*([^,()\d][^,()]{1,60}?)\s*\(\s*([A-Za-z]{2}|[A-Za-zÀ-ù][A-Za-zÀ-ù'’\s-]{1,40})\s*\)\s*$/);
+        if (mCityProv) {
+            result.comune = mCityProv[1].replace(/\s+/g, ' ').trim();
+            result.provinciaHint = mCityProv[2].trim();
+        }
+        if (!result.provinciaHint) {
+            let mProv = ind.match(/\(\s*([A-Za-z]{2})\s*\)\s*$/);
+            if (mProv) result.provinciaHint = mProv[1].toUpperCase();
+            else {
+                mProv = ind.match(/\(\s*([A-Za-zÀ-ù][A-Za-zÀ-ù'’\s-]{1,40}?)\s*\)\s*$/);
+                if (mProv) result.provinciaHint = mProv[1].trim();
+            }
+        }
+        if (!result.comune) {
+            const mCity = ind.match(/,\s*([A-Za-zÀ-ù][A-Za-zÀ-ù'’\s.-]{1,50}?)\s*$/);
+            if (mCity) {
+                const cand = mCity[1].replace(/\s+/g, ' ').trim();
+                if (!/^\d+$/.test(cand) && !/^(via|viale|corso|piazza|contrada|localit[aà])\b/i.test(cand)) {
+                    result.comune = cand;
+                }
+            }
+        }
+        if (!result.comune) {
+            const mCap = ind.match(/\b(\d{5})\s*,?\s*([A-Za-zÀ-ù][A-Za-zÀ-ù'’\s.-]{1,50}?)(?:\s*\(|$)/);
+            if (mCap) result.comune = mCap[2].replace(/\s+/g, ' ').trim();
+        }
+        if (result.comune) {
+            let q = result.comune;
+            if (result.provinciaHint) q += ' ' + result.provinciaHint;
+            result.query = q + ', Italia';
+        } else {
+            result.query = ind;
+        }
+        return result;
+    }
+
     function extractPrepFieldsFromText(ocrText) {
         // Parser ottimizzato per scheda LED Manager Pro + fallback generico
         const raw = String(ocrText || '').replace(/\r/g, '\n');
@@ -13173,17 +13344,56 @@
 
     function prepClientPoint(c) {
         let coords = null;
+        let comune = '';
+        let prov = (c && c.provincia) ? String(c.provincia).trim() : '';
         try {
-            coords = resolveCoordsLocal(c.localita, c.provincia);
+            if (typeof parseLedManagerAddress === 'function' && c && c.localita) {
+                const parsed = parseLedManagerAddress(c.localita);
+                if (parsed) {
+                    if (parsed.comune) comune = parsed.comune;
+                    if (parsed.provinciaHint) {
+                        const h = String(parsed.provinciaHint).trim();
+                        if (/^[A-Za-z]{2}$/.test(h)) prov = h.toUpperCase();
+                        else if (typeof guessProvinciaCode === 'function') {
+                            const g = guessProvinciaCode(h);
+                            if (g) prov = g;
+                        }
+                    }
+                }
+            }
+        } catch (e) {}
+        if (!prov && typeof normalizeProvinciaCode === 'function') {
+            try { prov = normalizeProvinciaCode(c) || prov; } catch (e) {}
+        }
+        try {
+            // Geocoding sul COMUNE reale (Napoli), non sulla via (via Foggia…)
+            const place = comune || c.localita;
+            coords = resolveCoordsLocal(place, prov || c.provincia);
         } catch (e) {}
         if (!coords || coords.lat == null || coords.lng == null) {
-            coords = { lat: 40.9569, lng: 16.9186, approx: true, fallback: true };
+            // fallback: centro provincia se nota
+            if (prov && typeof PROVINCE_COORDS !== 'undefined' && PROVINCE_COORDS[prov]) {
+                coords = { lat: PROVINCE_COORDS[prov][0], lng: PROVINCE_COORDS[prov][1], approx: true };
+            } else {
+                coords = { lat: 40.9569, lng: 16.9186, approx: true, fallback: true };
+            }
+        }
+        let reg = (c.regione || '').trim();
+        if (!reg && comune && typeof resolveLocationData === 'function') {
+            try {
+                const r = resolveLocationData(comune);
+                if (r && r.reg) reg = r.reg;
+            } catch (e) {}
+        }
+        if (!reg && prov && typeof PROVINCE_TO_REGION !== 'undefined' && PROVINCE_TO_REGION[prov]) {
+            reg = PROVINCE_TO_REGION[prov];
         }
         return {
             client: c,
             coords: { lat: Number(coords.lat), lng: Number(coords.lng), approx: !!coords.approx },
             days: daysUntilDate(c.scadenza),
-            reg: (c.regione || '').trim() || 'Senza regione'
+            reg: reg || 'Senza regione',
+            comune: comune || ''
         };
     }
 
@@ -13318,6 +13528,24 @@
 
     function normalizeProvinciaCode(c) {
         if (!c) return '';
+        // Priorità: sigla/comune estratti dall'indirizzo (es. "via foggia 31, napoli (na)" → NA)
+        try {
+            if (typeof parseLedManagerAddress === 'function' && c.localita) {
+                const parsed = parseLedManagerAddress(c.localita);
+                if (parsed && parsed.provinciaHint) {
+                    let h = String(parsed.provinciaHint).trim();
+                    if (/^[A-Za-z]{2}$/.test(h)) return h.toUpperCase();
+                    if (typeof guessProvinciaCode === 'function') {
+                        const g = guessProvinciaCode(h);
+                        if (g) return g;
+                    }
+                }
+                if (parsed && parsed.comune && typeof resolveLocationData === 'function') {
+                    const res = resolveLocationData(parsed.comune);
+                    if (res && res.prov) return String(res.prov).toUpperCase();
+                }
+            }
+        } catch (e) {}
         let p = String(c.provincia || '').trim().toUpperCase();
         if (p.length === 2) return p;
         if (typeof PROVINCE_NAMES !== 'undefined') {
@@ -13328,7 +13556,15 @@
         }
         const loc = String(c.localita || '').toLowerCase();
         const reg = String(c.regione || '').toLowerCase();
-        const blob = (p + ' ' + loc + ' ' + reg).toLowerCase();
+        // Per il blob usa solo il comune se ricavabile, non tutta la via
+        let locForMatch = loc;
+        try {
+            if (typeof parseLedManagerAddress === 'function' && c.localita) {
+                const pr = parseLedManagerAddress(c.localita);
+                if (pr && pr.comune) locForMatch = String(pr.comune).toLowerCase();
+            }
+        } catch (e) {}
+        const blob = (p + ' ' + locForMatch + ' ' + reg).toLowerCase();
         if (blob.indexOf('palermo') >= 0) return 'PA';
         if (blob.indexOf('ragusa') >= 0) return 'RG';
         if (blob.indexOf('agrigento') >= 0) return 'AG';
@@ -13345,14 +13581,14 @@
         const avTowns = ['ariano irpino','solofra','merogliano','atripalda','montoro','cervinara','grottaminarda','bisaccia','lacedonia'];
         const peTowns = ['montesilvano',"città sant'angelo",'penne','spoltore','cepagatti','pineto'];
         const teTowns = ['giulianova','roseto degli abruzzi','martinsicuro','alba adriatica','tortoreto','silvi','atri','castelli'];
-        if (paTowns.some(function(t) { return loc.indexOf(t) >= 0; })) return 'PA';
-        if (rgTowns.some(function(t) { return loc.indexOf(t) >= 0; })) return 'RG';
-        if (agTowns.some(function(t) { return loc.indexOf(t) >= 0; })) return 'AG';
-        if (rmTowns.some(function(t) { return loc.indexOf(t) >= 0; })) return 'RM';
-        if (bnTowns.some(function(t) { return loc.indexOf(t) >= 0; })) return 'BN';
-        if (avTowns.some(function(t) { return loc.indexOf(t) >= 0; })) return 'AV';
-        if (peTowns.some(function(t) { return loc.indexOf(t) >= 0; })) return 'PE';
-        if (teTowns.some(function(t) { return loc.indexOf(t) >= 0; })) return 'TE';
+        if (paTowns.some(function(t) { return locForMatch.indexOf(t) >= 0; })) return 'PA';
+        if (rgTowns.some(function(t) { return locForMatch.indexOf(t) >= 0; })) return 'RG';
+        if (agTowns.some(function(t) { return locForMatch.indexOf(t) >= 0; })) return 'AG';
+        if (rmTowns.some(function(t) { return locForMatch.indexOf(t) >= 0; })) return 'RM';
+        if (bnTowns.some(function(t) { return locForMatch.indexOf(t) >= 0; })) return 'BN';
+        if (avTowns.some(function(t) { return locForMatch.indexOf(t) >= 0; })) return 'AV';
+        if (peTowns.some(function(t) { return locForMatch.indexOf(t) >= 0; })) return 'PE';
+        if (teTowns.some(function(t) { return locForMatch.indexOf(t) >= 0; })) return 'TE';
         return p;
     }
 
@@ -18236,7 +18472,39 @@
         }
         function esc(s) { return String(s == null ? '' : s).replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
         function luogo(c) {
-            return [c.localita || '', c.provincia ? ('(' + c.provincia + ')') : ''].filter(Boolean).join(' ') || '—';
+            let comune = '';
+            try {
+                if (typeof parseLedManagerAddress === 'function' && c.localita) {
+                    const p = parseLedManagerAddress(c.localita);
+                    if (p && p.comune) comune = p.comune;
+                }
+            } catch (e) {}
+            const prov = (typeof normalizeProvinciaCode === 'function') ? (normalizeProvinciaCode(c) || c.provincia || '') : (c.provincia || '');
+            if (comune) {
+                return comune + (prov ? (' (' + prov + ')') : '') +
+                    (c.localita && String(c.localita).toLowerCase().indexOf(comune.toLowerCase()) >= 0
+                        ? ''
+                        : '');
+            }
+            return [c.localita || '', prov ? ('(' + prov + ')') : ''].filter(Boolean).join(' ') || '—';
+        }
+        function clientRegione(c) {
+            let reg = String(c.regione || '').trim();
+            if (reg) return reg;
+            try {
+                if (typeof parseLedManagerAddress === 'function' && c.localita) {
+                    const p = parseLedManagerAddress(c.localita);
+                    if (p && p.comune && typeof resolveLocationData === 'function') {
+                        const r = resolveLocationData(p.comune);
+                        if (r && r.reg) return r.reg;
+                    }
+                }
+            } catch (e) {}
+            const prov = (typeof normalizeProvinciaCode === 'function') ? normalizeProvinciaCode(c) : '';
+            if (prov && typeof PROVINCE_TO_REGION !== 'undefined' && PROVINCE_TO_REGION[prov]) {
+                return PROVINCE_TO_REGION[prov];
+            }
+            return 'Senza regione';
         }
         function sortByScad(arr) {
             return arr.slice().sort(function(a, b) {
@@ -18252,7 +18520,11 @@
                     if (p && p.coords && p.coords.lat != null) return { lat: Number(p.coords.lat), lng: Number(p.coords.lng) };
                 }
             } catch (e) {}
-            const prov = String(c.provincia || '').trim().toUpperCase();
+            let prov = '';
+            try {
+                if (typeof normalizeProvinciaCode === 'function') prov = normalizeProvinciaCode(c) || '';
+            } catch (e) {}
+            if (!prov) prov = String(c.provincia || '').trim().toUpperCase();
             if (typeof PROVINCE_COORDS !== 'undefined' && PROVINCE_COORDS[prov]) {
                 return { lat: PROVINCE_COORDS[prov][0], lng: PROVINCE_COORDS[prov][1] };
             }
@@ -18356,7 +18628,7 @@
         function clusterDiretti(list) {
             const byReg = {};
             list.forEach(function(c) {
-                const reg = String(c.regione || '').trim() || (c.provincia ? ('Prov. ' + c.provincia) : 'Altro');
+                const reg = clientRegione(c) || (c.provincia ? ('Prov. ' + c.provincia) : 'Altro');
                 if (!byReg[reg]) byReg[reg] = [];
                 byReg[reg].push(c);
             });
@@ -18548,7 +18820,7 @@
         }
         html += '</div>';
 
-        html += '<p style="font-size:0.75rem;color:#94a3b8;margin:8px 0 24px;">Partenza percorsi: Casamassima (BA) · Mappe OpenStreetMap (come in Percorso) · Km stimati · Aggiorna dopo modifiche in Prep.</p>';
+        html += '<p style="font-size:0.75rem;color:#94a3b8;margin:8px 0 24px;">Partenza percorsi: Casamassima (BA) · Mappe OpenStreetMap · Si aggiorna automaticamente quando modifichi Prep o Note. </p>';
 
         box.innerHTML = html;
 
@@ -18596,23 +18868,36 @@
     window.refreshAllClientProvinces = async function(opts) {
         opts = opts || {};
         const onlyPrep = (opts.onlyPrep !== false); // default: solo Prep
+        const quiet = !!opts.quiet;
         const list = (clients || []).filter(function(c) {
             if (!c || !(c.localita || '').trim()) return false;
             if (onlyPrep && typeof isInPrep === 'function' && !isInPrep(c)) return false;
             return true;
         });
         if (!list.length) {
-            if (typeof setPrepOcrStatus === 'function') setPrepOcrStatus('Nessun cliente con indirizzo da controllare.', 'work');
+            if (!quiet && typeof setPrepOcrStatus === 'function') setPrepOcrStatus('Nessun cliente con indirizzo da controllare.', 'work');
+            if (opts.recordCheck) {
+                setLastPaesiCheckMeta({ at: Date.now(), updated: 0, total: 0, fp: getPrepLocationFingerprint() });
+                try { updatePrepPaesiCheckBanner(); } catch (e) {}
+            }
             return { updated: 0, total: 0 };
         }
         let updated = 0;
         for (let i = 0; i < list.length; i++) {
             const c = list[i];
-            if (typeof setPrepOcrStatus === 'function') {
+            if (!quiet && typeof setPrepOcrStatus === 'function') {
                 setPrepOcrStatus('🌍 Controllo indirizzi… ' + (i + 1) + '/' + list.length + ' — ' + String(c.nome || '').replace(/</g, '&lt;'), 'work');
             }
             try {
-                const loc = await resolvePrepLocation(c.localita, {});
+                const parsed = (typeof parseLedManagerAddress === 'function')
+                    ? parseLedManagerAddress(c.localita)
+                    : { comune: '', provinciaHint: '', query: c.localita };
+                const loc = await resolvePrepLocation(c.localita, {
+                    provinciaHint: parsed.provinciaHint || '',
+                    query: parsed.query || '',
+                    comune: parsed.comune || '',
+                    fast: list.length > 8 // molti clienti: evita Nominatim lento
+                });
                 let ch = false;
                 // Non sostituire mai l'indirizzo completo con il solo nome del comune.
                 if (loc.provincia && loc.provincia !== c.provincia) { c.provincia = loc.provincia; ch = true; }
@@ -18620,13 +18905,33 @@
                 if ((!c.provincia && loc.provincia) || (!c.regione && loc.regione)) ch = true;
                 if (ch) updated++;
             } catch (e) {}
-            // rate limit Nominatim
-            if (i < list.length - 1) await new Promise(function(r) { setTimeout(r, 1100); });
+            // rate limit Nominatim solo se non fast
+            if (i < list.length - 1 && list.length <= 8) await new Promise(function(r) { setTimeout(r, 1100); });
         }
-        if (updated) saveToLocalStorage();
+        if (updated) {
+            // evita loop notify: salva senza ritrigger infinito
+            try {
+                (clients || []).forEach(normalizeClientUpperFields);
+            } catch (e) {}
+            localStorage.setItem('note_clienti_data', JSON.stringify(clients));
+        }
+        if (opts.recordCheck !== false) {
+            setLastPaesiCheckMeta({
+                at: Date.now(),
+                updated: updated,
+                total: list.length,
+                fp: getPrepLocationFingerprint()
+            });
+        }
         try { render(); } catch (e) {}
         try { if (typeof renderPrepPage === 'function') renderPrepPage(); } catch (e) {}
-        if (typeof setPrepOcrStatus === 'function') {
+        try {
+            if (typeof currentView !== 'undefined' && currentView === 'consigli' && typeof renderConsigliPage === 'function') {
+                renderConsigliPage();
+            }
+        } catch (e) {}
+        try { updatePrepPaesiCheckBanner(); } catch (e) {}
+        if (!quiet && typeof setPrepOcrStatus === 'function') {
             setPrepOcrStatus('✅ Province aggiornate (solo Prep): <strong>' + updated + '</strong> su ' + list.length + ' controllati.', 'ok');
         }
         return { updated: updated, total: list.length };
@@ -18706,8 +19011,18 @@
         }
         if (view === 'meteo') { try { renderMeteoPage(); } catch(e) { console.error(e); } }
         if (view === 'calendario') { try { renderCalendarioPage(); } catch (e) { console.error(e); } }
-        if (view === 'prep') { try { populateDistCitiesDatalist(); } catch(e) {} renderPrepPage(); }
-        if (view === 'consigli') { try { renderConsigliPage(); } catch (e) { console.error(e); } }
+        if (view === 'prep') {
+            try { populateDistCitiesDatalist(); } catch(e) {}
+            renderPrepPage();
+            try { updatePrepPaesiCheckBanner(); } catch (e) {}
+            try { setTimeout(function() { maybeAutoCheckPrepPaesi({ silent: true }); }, 300); } catch (e) {}
+        }
+        if (view === 'consigli') {
+            try {
+                // Ricalcola sempre dalle schede Prep/Note aggiornate
+                renderConsigliPage();
+            } catch (e) { console.error(e); }
+        }
         if (view === 'installati') renderInstallatiPage();
         if (view === 'standby') renderStandbyPage();
         if (view === 'ordini') { try { renderOrdiniPage(); } catch (e) { console.error(e); } }
