@@ -6501,6 +6501,10 @@
             </span>
         </div>
     </div>
+    <div class="search-card" style="margin:0 0 10px;">
+        <span style="font-weight:700;color:var(--primary);">🔍 Cerca:</span>
+        <input type="text" id="installatiSearchInput" class="search-input" placeholder="Filtra per cliente, località, provincia, regione, modello, tappa..." oninput="renderInstallatiPage()">
+    </div>
     <div class="installati-table-wrap">
         <div class="installati-header">Clienti con installazione completata</div>
         <div id="installatiTableContainer"></div>
@@ -6519,6 +6523,10 @@
                 </span><span class="header-jumbo-reg">®</span>
             </span>
         </div>
+    </div>
+    <div class="search-card" style="margin:0 0 10px;">
+        <span style="font-weight:700;color:var(--primary);">🔍 Cerca:</span>
+        <input type="text" id="standbySearchInput" class="search-input" placeholder="Filtra per cliente, località, provincia, regione, modello..." oninput="renderStandbyPage()">
     </div>
     <div class="installati-table-wrap">
         <div class="installati-header">Clienti che hanno rimandato</div>
@@ -13041,14 +13049,33 @@
     // init count
     try { updateOrdiniNavCount(); } catch (e) {}
 
+
+    function clientMatchesSearch(c, q) {
+        if (!q) return true;
+        const models = (c.modelli || []).map(function(m) { return String(m.nome || ''); }).join(' ');
+        const blob = [
+            c.nome, c.localita, c.provincia, c.regione, c.tappa, c.spedizione,
+            c.confOrdine, c.montaggio, c.notaDisponibilita, models
+        ].join(' ').toLowerCase();
+        const words = String(q).toLowerCase().trim().split(/\s+/).filter(Boolean);
+        return words.every(function(w) { return blob.indexOf(w) >= 0; });
+    }
+
     function renderStandbyPage() {
         const box = document.getElementById('standbyTableContainer');
         const countEl = document.getElementById('navStandbyCount');
-        const list = clients.filter(c => c.standby && !c.installato);
-        if (countEl) countEl.textContent = list.length;
+        const qEl = document.getElementById('standbySearchInput');
+        const q = qEl ? String(qEl.value || '').trim() : '';
+        const allList = clients.filter(c => c.standby && !c.installato);
+        if (countEl) countEl.textContent = allList.length;
+        const list = allList.filter(function(c) { return clientMatchesSearch(c, q); });
         if (!box) return;
-        if (list.length === 0) {
+        if (allList.length === 0) {
             box.innerHTML = '<p style="text-align:center; color: var(--text-muted); padding: 40px;">Nessun cliente in stand-by.</p>';
+            return;
+        }
+        if (list.length === 0) {
+            box.innerHTML = '<p style="text-align:center; color: var(--text-muted); padding: 40px;">Nessun risultato per «' + String(q).replace(/</g, '&lt;') + '».</p>';
             return;
         }
         list.sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'it'));
@@ -19066,11 +19093,18 @@
     function renderInstallatiPage() {
         const container = document.getElementById('installatiTableContainer');
         const countEl = document.getElementById('navInstallatiCount');
-        const installati = clients.filter(c => c.installato);
-        if (countEl) countEl.textContent = installati.length;
+        const qEl = document.getElementById('installatiSearchInput');
+        const q = qEl ? String(qEl.value || '').trim() : '';
+        const allInstallati = clients.filter(c => c.installato);
+        if (countEl) countEl.textContent = allInstallati.length;
+        const installati = allInstallati.filter(function(c) { return clientMatchesSearch(c, q); });
 
-        if (installati.length === 0) {
+        if (allInstallati.length === 0) {
             container.innerHTML = '<p style="text-align:center; color: var(--text-muted); padding: 40px;">Nessuna installazione eseguita.</p>';
+            return;
+        }
+        if (installati.length === 0) {
+            container.innerHTML = '<p style="text-align:center; color: var(--text-muted); padding: 40px;">Nessun risultato per «' + String(q).replace(/</g, '&lt;') + '».</p>';
             return;
         }
 
