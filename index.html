@@ -7521,14 +7521,34 @@
     function resolveLocationData(localitaStr) {
         if (!localitaStr) return { prov: "", reg: "" };
         const text = localitaStr.toLowerCase().trim();
-        // Preferisce la chiave più lunga che combacia (es. "reggio calabria" vince su "reggio")
+
+        // Se c'è sigla provincia in coda "(na)" / "(NA)" usala subito
+        const mCode = text.match(/\(\s*([a-z]{2})\s*\)\s*$/);
+        if (mCode) {
+            const code = mCode[1].toUpperCase();
+            // mappa sigla → regione dal database province se possibile
+            let reg = '';
+            for (const item of LOCATION_DATABASE) {
+                if (item.prov === code) { reg = item.reg; break; }
+            }
+            if (reg) return { prov: code, reg: reg };
+        }
+
+        // Preferisci match verso la FINE della stringa (comune dopo la via)
+        // e, a parità di posizione, la chiave più lunga.
+        // Così "via foggia 31, napoli (na)" → Napoli, non Foggia.
         let best = null;
-        let bestLen = 0;
+        let bestScore = -1;
         for (const item of LOCATION_DATABASE) {
             for (const kw of item.keys) {
-                if (text.includes(kw) && kw.length > bestLen) {
+                if (!kw || kw.length < 2) continue;
+                const idx = text.lastIndexOf(kw);
+                if (idx < 0) continue;
+                // score: posizione finale + lunghezza chiave
+                const score = idx * 1000 + kw.length;
+                if (score > bestScore) {
                     best = item;
-                    bestLen = kw.length;
+                    bestScore = score;
                 }
             }
         }
@@ -11462,29 +11482,60 @@
         let ledAddress = '';
         let ledProvHint = '';
         let ledAddressQuery = '';
+        let ledComune = '';
 
         function extractPrepAddressFromText(addressText) {
-            const result = { indirizzo: '', provinciaHint: '', query: '' };
+            // Es: "via foggia 31, napoli (na)" → paese Napoli, provincia NA (Campania).
+            // "via foggia 31" è solo via/civico, NON il comune.
+            const result = { indirizzo: '', provinciaHint: '', query: '', comune: '' };
             let ind = String(addressText || '').replace(/\s+/g, ' ').trim();
             if (!ind) return result;
 
             ind = ind.replace(/^indirizzo\s*[:\-–]?\s*/i, '').trim();
             result.indirizzo = ind;
-            result.query = ind;
 
-            // La provincia viene usata SOLO per provincia/regione; non modifica l'indirizzo salvato.
-            let mProv = ind.match(/\(\s*([A-Za-zÀ-ù][A-Za-zÀ-ù'’\s-]{1,})\s*\)\s*$/);
-            if (mProv) {
-                result.provinciaHint = mProv[1].trim();
-            } else {
-                const mProvTail = ind.match(/(?:,|[-–—])\s*(?:provincia\s+(?:di\s+)?)?([A-Za-zÀ-ù]{2,})\s*$/i);
-                if (mProvTail) {
-                    const maybeProv = mProvTail[1].trim();
-                    const code = (typeof guessProvinciaCode === 'function') ? guessProvinciaCode(maybeProv) : '';
-                    if (code || /^[A-Za-z]{2}$/.test(maybeProv)) {
-                        result.provinciaHint = code || maybeProv.toUpperCase();
+            // 1) Pattern più comune: "... , Comune (XX)" oppure "... , Comune (Provincia)"
+            let mCityProv = ind.match(/,\s*([^,()\d][^,()]{1,60}?)\s*\(\s*([A-Za-z]{2}|[A-Za-zÀ-ù][A-Za-zÀ-ù'’\s-]{1,40})\s*\)\s*$/);
+            if (mCityProv) {
+                result.comune = mCityProv[1].replace(/\s+/g, ' ').trim();
+                result.provinciaHint = mCityProv[2].trim();
+            }
+
+            // 2) Solo provincia in coda: "(NA)" / "(Napoli)"
+            if (!result.provinciaHint) {
+                let mProv = ind.match(/\(\s*([A-Za-z]{2})\s*\)\s*$/);
+                if (mProv) {
+                    result.provinciaHint = mProv[1].toUpperCase();
+                } else {
+                    mProv = ind.match(/\(\s*([A-Za-zÀ-ù][A-Za-zÀ-ù'’\s-]{1,40}?)\s*\)\s*$/);
+                    if (mProv) result.provinciaHint = mProv[1].trim();
+                }
+            }
+
+            // 3) Coda "..., Napoli" senza parentesi
+            if (!result.comune) {
+                const mCity = ind.match(/,\s*([A-Za-zÀ-ù][A-Za-zÀ-ù'’\s.-]{1,50}?)\s*$/);
+                if (mCity) {
+                    const cand = mCity[1].replace(/\s+/g, ' ').trim();
+                    if (!/^\d+$/.test(cand) && !/^(via|viale|corso|piazza|contrada|localit[aà])\b/i.test(cand)) {
+                        result.comune = cand;
                     }
                 }
+            }
+
+            // 4) CAP + comune: "80100 Napoli"
+            if (!result.comune) {
+                const mCap = ind.match(/\b(\d{5})\s*,?\s*([A-Za-zÀ-ù][A-Za-zÀ-ù'’\s.-]{1,50}?)(?:\s*\(|$)/);
+                if (mCap) result.comune = mCap[2].replace(/\s+/g, ' ').trim();
+            }
+
+            // Query geocoding: preferisci comune (+ prov) così non vince "Foggia" dalla via
+            if (result.comune) {
+                let q = result.comune;
+                if (result.provinciaHint) q += ' ' + result.provinciaHint;
+                result.query = q + ', Italia';
+            } else {
+                result.query = ind;
             }
             return result;
         }
@@ -11512,14 +11563,16 @@
             ledAddress = address.indirizzo || '';
             ledProvHint = address.provinciaHint || '';
             ledAddressQuery = address.query || ledAddress;
+            ledComune = address.comune || '';
         }
 
         if (ledAddress) {
-            // Conserva il testo completo dell'indirizzo: via, civico, CAP, comune,
-            // provincia ed eventuali altri dettagli presenti nella barra di LED Manager.
+            // Indirizzo completo in localita; provincia/regione dal COMUNE reale
+            // (es. "via foggia 31, napoli (na)" → Napoli / NA / Campania, non Foggia).
             out.localita = cleanVal(ledAddress);
             if (ledProvHint) out.provinciaHint = ledProvHint;
             out.localitaQuery = ledAddressQuery;
+            if (ledComune) out.comune = cleanVal(ledComune);
         }
 
         // Scadenza
@@ -11662,6 +11715,7 @@
         const loc = String(localitaVal || '').trim();
         const hint = String(opts.provinciaHint || opts.hint || '').trim();
         const queryExtra = String(opts.query || '').trim();
+        const comuneOpt = String(opts.comune || '').trim();
         const fast = !!opts.fast; // durante import multiplo: niente Nominatim
         let provinciaVal = '';
         let regioneVal = '';
@@ -11669,10 +11723,33 @@
 
         if (!loc) return { localita: '', provincia: '', regione: '', name: '' };
 
+        // Priorità: comune esplicito (es. Napoli da "via foggia 31, napoli (na)")
+        if (comuneOpt && typeof resolveLocationData === 'function') {
+            const resC = resolveLocationData(comuneOpt);
+            if (resC && resC.prov) {
+                provinciaVal = resC.prov;
+                regioneVal = resC.reg || '';
+                resolvedName = comuneOpt;
+            }
+        }
+        if (!provinciaVal && queryExtra && typeof resolveLocationData === 'function') {
+            const resQ = resolveLocationData(queryExtra);
+            if (resQ && resQ.prov) {
+                provinciaVal = resQ.prov;
+                regioneVal = resQ.reg || '';
+            }
+        }
+
         // 0) Estrai provincia da pattern tipici LED Manager: "(TP)", "(Foggia)", "FOGGIA (Foggia)"
         try {
-            let mCode = loc.match(/\(\s*([A-Z]{2})\s*\)\s*$/);
+            // case-insensitive: "(na)" → NA
+            let mCode = loc.match(/\(\s*([A-Za-z]{2})\s*\)\s*$/);
             if (mCode) provinciaVal = mCode[1].toUpperCase();
+            // "... napoli (na)" già coperto; se manca ancora, prova comune da queryExtra
+            if (!provinciaVal && queryExtra) {
+                const mq = String(queryExtra).match(/\b([A-Za-z]{2})\b\s*,?\s*Italia\s*$/i);
+                // non usare: troppo generico
+            }
             if (!provinciaVal) {
                 const mName = loc.match(/\(\s*([A-Za-zÀ-ù][A-Za-zÀ-ù'’\s-]{1,40}?)\s*\)\s*$/);
                 if (mName && typeof guessProvinciaCode === 'function') {
@@ -11874,6 +11951,7 @@
                 const loc = await resolvePrepLocation(localitaVal, {
                     provinciaHint: fields.provinciaHint || '',
                     query: fields.localitaQuery || '',
+                    comune: fields.comune || '',
                     fast: true
                 });
                 let changed = false;
@@ -11946,9 +12024,10 @@
 
         // Risolvi località (fast: DB locale + pattern, niente Nominatim in import massivo)
         const loc = await resolvePrepLocation(localitaVal, {
-            provinciaHint: fields.provinciaHint || '',
-            query: fields.localitaQuery || '',
-            fast: true
+                    provinciaHint: fields.provinciaHint || '',
+                    query: fields.localitaQuery || '',
+                    comune: fields.comune || '',
+                    fast: true
         });
 
         const modelli = [];
@@ -11985,10 +12064,13 @@
 
                 if (!(loc && (loc.regione || loc.provincia))) {
             // ultimo tentativo: se l'indirizzo ha (XX) codice provincia
-            const m = String(localitaVal || '').match(/\(\s*([A-Z]{2})\s*\)/);
-            if (m && typeof PROVINCE_TO_REGION !== 'undefined' && PROVINCE_TO_REGION[m[1]]) {
-                loc.provincia = m[1];
-                loc.regione = PROVINCE_TO_REGION[m[1]];
+            const m = String(localitaVal || '').match(/\(\s*([A-Za-z]{2})\s*\)/);
+            if (m && typeof PROVINCE_TO_REGION !== 'undefined') {
+                const code = m[1].toUpperCase();
+                if (PROVINCE_TO_REGION[code]) {
+                    loc.provincia = code;
+                    loc.regione = PROVINCE_TO_REGION[code];
+                }
             }
         }
         if (!(loc && loc.regione) && !(loc && loc.provincia && typeof PROVINCE_TO_REGION !== 'undefined' && PROVINCE_TO_REGION[loc.provincia])) {
