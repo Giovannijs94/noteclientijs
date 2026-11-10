@@ -20,7 +20,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <title>JS Insegne Digitali — Note Clienti</title>
-    <meta name="note-clienti-build" content="2026-11-06-iphone-v85">
+    <meta name="note-clienti-build" content="2026-11-10-iphone-v86-note-fix">
     <style>
         /* APP LOCK: no horizontal page scroll; vertical wheel OK */
         html {
@@ -5874,62 +5874,344 @@
                 bottom: calc(78px + env(safe-area-inset-bottom)) !important;
             }
 
-            /* Compatta su iPhone: scroll orizzontale controllato, nome sticky */
-            .note-compact-wrap {
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
+            /* ===== NOTE CLIENTI iPhone: layout stabile a schede ===== */
+            html, body {
+                overflow-x: hidden !important;
+                max-width: 100vw !important;
+            }
+            #viewNote {
+                max-width: 100%;
+                overflow-x: hidden !important;
+                padding-bottom: 8px;
+            }
+            #viewNote .header-bar {
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-bottom: 8px;
+            }
+            #viewNote .header-bar h1 {
+                font-size: 1.15rem !important;
+            }
+            #viewNote .header-jumbo { display: none !important; }
+            #viewNote .header-actions {
+                width: 100%;
+            }
+            #viewNote .header-actions .settings-menu,
+            #viewNote .header-actions .settings-menu > .btn {
+                width: 100%;
+            }
+            #viewNote .search-card {
+                position: sticky;
+                top: 0;
+                z-index: 30;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                align-items: center;
+                margin: 0 0 10px;
+                padding: 10px 12px;
+                border-radius: 14px;
+                background: rgba(255,255,255,0.96);
+                border: 1px solid #e2e8f0;
+                box-shadow: 0 2px 10px rgba(15,23,42,0.04);
+                -webkit-backdrop-filter: blur(12px);
+                backdrop-filter: blur(12px);
+            }
+            #viewNote .search-card .search-input {
+                flex: 1 1 100%;
+                min-width: 0;
+                min-height: 44px;
+                font-size: 16px; /* no zoom iOS */
                 border-radius: 12px;
             }
-            .note-compact-table {
-                min-width: 720px;
+            #viewNote .note-view-toggle {
+                display: flex;
+                width: 100%;
+                gap: 6px;
             }
-            .note-compact-table thead th:first-child,
-            .note-compact-table tbody td:first-child {
-                position: sticky;
-                left: 0;
-                z-index: 2;
-                background: #fff;
-                box-shadow: 4px 0 8px rgba(15,23,42,0.04);
-            }
-            .note-compact-table thead th:first-child {
-                background: #f8fafc;
-                z-index: 3;
-            }
-            .note-compact-section-head {
-                position: sticky;
-                left: 0;
-                z-index: 1;
-            }
-            .note-compact-table .nc-actions .btn {
+            #viewNote .note-view-toggle .btn {
+                flex: 1;
                 min-height: 40px;
-                padding: 8px 12px;
                 font-size: 0.8rem;
                 border-radius: 10px;
             }
-            .note-compact-table .nc-input,
-            .note-compact-table .nc-input-date {
-                min-height: 36px;
-                font-size: 16px; /* evita zoom iOS su focus */
+            #viewNote .note-work-area {
+                display: block !important;
+                grid-template-columns: 1fr !important;
+                gap: 10px;
+                max-width: 100%;
+                overflow: hidden;
             }
-            .search-card {
+            #viewNote .note-urgent-panel {
+                position: relative !important;
+                top: auto !important;
+                max-height: none !important;
+                margin-bottom: 10px;
+                border-radius: 14px;
+            }
+            #viewNote .note-urgent-list {
+                grid-template-columns: 1fr !important;
+                max-height: 160px;
+            }
+            #viewNote #stagesNavBar,
+            #viewNote #spedizioniNavBar {
                 position: sticky;
                 top: 0;
-                z-index: 20;
-                background: rgba(241,245,249,0.92);
-                -webkit-backdrop-filter: blur(10px);
-                backdrop-filter: blur(10px);
-                padding-top: 8px;
-                padding-bottom: 8px;
+                z-index: 25;
+                margin: 0 0 10px !important;
+                padding: 8px 4px !important;
+                background: rgba(241,245,249,0.96) !important;
+                border-bottom: none !important;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                white-space: nowrap;
+                max-width: 100%;
             }
-            .note-view-toggle .btn {
+            #viewNote #spedizioniNavBar { top: 0; }
+            #viewNote .stage-pill {
+                display: inline-flex;
+                padding: 8px 12px;
+                font-size: 0.78rem;
+                border-radius: 999px;
+            }
+
+            /* Gruppi: niente tabella orizzontale */
+            #viewNote .stage-group {
+                margin: 0 0 12px !important;
+                border-radius: 16px !important;
+                overflow: hidden;
+                border: 1px solid #e2e8f0;
+                background: #fff;
+                box-shadow: 0 2px 12px rgba(15,23,42,0.04);
+                max-width: 100%;
+            }
+            #viewNote .stage-header {
+                flex-wrap: wrap !important;
+                gap: 8px !important;
+                padding: 12px 14px !important;
+            }
+            #viewNote .stage-header-name {
+                font-size: 0.95rem !important;
+                line-height: 1.25;
+                word-break: break-word;
+            }
+            #viewNote .stage-header-actions {
+                width: 100%;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            #viewNote .stage-header-actions .btn,
+            #viewNote .stage-header-actions .btn-icon {
                 min-height: 40px;
-                font-size: 0.8rem;
+                border-radius: 10px;
             }
-            /* Header più compatto */
-            .header-bar h1 {
-                font-size: 1.2rem !important;
+            #viewNote .stage-table {
+                display: block !important;
+                width: 100% !important;
+                max-width: 100% !important;
             }
-            .header-jumbo { display: none; }
+            #viewNote .stage-table thead { display: none !important; }
+            #viewNote .stage-table tbody {
+                display: block !important;
+                width: 100%;
+            }
+            #viewNote .stage-table tbody tr.client-row {
+                display: block !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 12px 14px 14px !important;
+                border-bottom: 1px solid #f1f5f9 !important;
+                background: #fff !important;
+                box-sizing: border-box;
+            }
+            #viewNote .stage-table tbody td {
+                display: block !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                border: none !important;
+                padding: 4px 0 !important;
+                white-space: normal !important;
+                box-sizing: border-box;
+            }
+            #viewNote .stage-table tbody td.client-info {
+                font-size: 0.95rem;
+                font-weight: 800;
+                color: #0f172a;
+                padding-bottom: 6px !important;
+            }
+            #viewNote .stage-table tbody td.status-cell,
+            #viewNote .stage-table tbody td.note-cell {
+                padding: 6px 0 !important;
+            }
+            #viewNote .stage-table tbody td.status-cell::before,
+            #viewNote .stage-table tbody td.note-cell::before {
+                display: inline-block;
+                font-size: 0.7rem;
+                font-weight: 700;
+                color: #64748b;
+                margin-bottom: 4px;
+                width: 100%;
+            }
+            #viewNote .client-actions-row {
+                display: flex !important;
+                flex-wrap: wrap !important;
+                gap: 6px !important;
+                width: 100%;
+            }
+            #viewNote .client-actions-row .btn,
+            #viewNote .client-actions-row .btn-icon {
+                min-height: 40px !important;
+                border-radius: 10px !important;
+                flex: 1 1 auto;
+            }
+            #viewNote .stage-footer {
+                padding: 10px 14px !important;
+            }
+
+            /* Vista COMPATTA: da tabella a schede verticali */
+            #viewNote .note-compact-wrap {
+                overflow: visible !important;
+                max-width: 100% !important;
+                border-radius: 0 !important;
+            }
+            #viewNote .note-compact-section {
+                margin-bottom: 14px;
+                border-radius: 16px;
+                overflow: hidden;
+                border: 1px solid #e2e8f0;
+                background: #fff;
+                box-shadow: 0 2px 12px rgba(15,23,42,0.04);
+            }
+            #viewNote .note-compact-section-head {
+                position: relative !important;
+                left: auto !important;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                padding: 12px 14px;
+                background: linear-gradient(180deg, #f8fafc, #fff);
+                border-bottom: 1px solid #e2e8f0;
+                font-weight: 800;
+                font-size: 0.9rem;
+                color: #0f172a;
+                word-break: break-word;
+            }
+            #viewNote .note-compact-section-head.sped {
+                background: linear-gradient(180deg, #fff7ed, #fff);
+            }
+            #viewNote .note-compact-table {
+                min-width: 0 !important;
+                width: 100% !important;
+                border: none !important;
+            }
+            #viewNote .note-compact-table thead { display: none !important; }
+            #viewNote .note-compact-table tbody {
+                display: block;
+                width: 100%;
+            }
+            #viewNote .note-compact-table tbody tr {
+                display: block;
+                width: 100%;
+                margin: 0;
+                padding: 12px 14px;
+                border-bottom: 1px solid #f1f5f9;
+                box-sizing: border-box;
+                background: #fff;
+            }
+            #viewNote .note-compact-table tbody tr.note-compact-subhead {
+                background: #f8fafc;
+                padding: 8px 14px;
+                font-size: 0.78rem;
+                font-weight: 700;
+                color: #475569;
+            }
+            #viewNote .note-compact-table tbody tr.note-compact-subhead td {
+                display: block;
+                width: 100%;
+                border: none;
+                padding: 0;
+            }
+            #viewNote .note-compact-table tbody td {
+                display: block !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                border: none !important;
+                padding: 4px 0 !important;
+                white-space: normal !important;
+                position: static !important;
+                left: auto !important;
+                background: transparent !important;
+                box-shadow: none !important;
+                box-sizing: border-box;
+            }
+            #viewNote .note-compact-table .nc-name {
+                display: block;
+                font-size: 0.95rem;
+                font-weight: 800;
+                color: #0f172a;
+                line-height: 1.25;
+                word-break: break-word;
+            }
+            #viewNote .note-compact-table .nc-sub {
+                display: inline-block;
+                margin-top: 2px;
+                font-size: 0.75rem;
+                color: #64748b;
+            }
+            #viewNote .note-compact-table .nc-wrap {
+                margin-top: 6px;
+            }
+            #viewNote .note-compact-table .nc-luogo-under {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                margin-top: 6px;
+                width: 100%;
+            }
+            #viewNote .note-compact-table .nc-input,
+            #viewNote .note-compact-table .nc-input-date,
+            #viewNote .note-compact-table .nc-input-luogo,
+            #viewNote .note-compact-table .nc-input-sm {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-height: 40px;
+                font-size: 16px !important;
+                border-radius: 10px;
+                box-sizing: border-box;
+            }
+            #viewNote .note-compact-table .nc-actions {
+                display: flex;
+                width: 100%;
+                margin-top: 8px;
+            }
+            #viewNote .note-compact-table .nc-actions .btn {
+                width: 100%;
+                min-height: 44px;
+                padding: 10px 14px;
+                font-size: 0.85rem;
+                border-radius: 12px;
+            }
+            #viewNote .note-compact-table .nc-dot-btn {
+                width: 28px;
+                height: 28px;
+                min-width: 28px;
+            }
+
+            /* Form aggiungi cliente: stack */
+            #viewNote .form-grid,
+            #viewNote .form-row {
+                grid-template-columns: 1fr !important;
+            }
+            #viewNote input,
+            #viewNote select,
+            #viewNote textarea {
+                font-size: 16px !important;
+            }
+            #viewNote .btn {
+                -webkit-tap-highlight-color: transparent;
+            }
         }
 
     </style>
@@ -10410,7 +10692,8 @@
             if (!isMobileAppView()) return;
             const key = 'note_clienti_note_view';
             const explicit = localStorage.getItem('note_clienti_iphone_view_set');
-            if (!explicit && !localStorage.getItem(key)) {
+            // Default stabile: compact (schede). Solo se l'utente ha scelto groups resta groups.
+            if (explicit !== 'groups') {
                 localStorage.setItem(key, 'compact');
                 if (typeof noteViewMode !== 'undefined') noteViewMode = 'compact';
             }
@@ -10567,6 +10850,7 @@
         noteViewMode = (mode === 'compact') ? 'compact' : 'groups';
         try {
             localStorage.setItem('note_clienti_note_view', noteViewMode);
+            localStorage.setItem('note_clienti_iphone_view_set', noteViewMode);
             localStorage.setItem('note_clienti_iphone_view_set', '1');
         } catch (e) {}
         const gBtn = document.getElementById('noteViewGroupsBtn');

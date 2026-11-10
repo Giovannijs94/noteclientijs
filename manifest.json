@@ -1,15 +1,18 @@
 {
   "name": "JS Insegne Digitali — Note Clienti",
   "short_name": "Note Clienti",
-  "description": "Portale gestione note clienti, tappe, spedizioni e pre-pianificazione — JS Insegne Digitali",
+  "description": "Gestione note clienti ottimizzata anche per iPhone — JS Insegne Digitali",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "orientation": "any",
+  "orientation": "portrait-primary",
   "background_color": "#2f0f26",
   "theme_color": "#2f0f26",
   "lang": "it",
-  "categories": ["business", "productivity"],
+  "categories": [
+    "business",
+    "productivity"
+  ],
   "icons": [
     {
       "src": "favicon.png",
