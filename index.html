@@ -1215,6 +1215,10 @@
         .btn-add-inline { background: #f1f5f9; border: 1px dashed #cbd5e1; color: #475569; border-radius: 12px; padding: 4px 10px; font-size: 0.75rem; font-weight: 700; cursor: pointer; }
         .client-location-link { display: inline-flex; align-items: center; gap: 4px; font-size: 0.85rem; color: var(--accent); font-weight: 600; text-decoration: none; margin-right: 10px; cursor: pointer; }
         .client-location-link:hover { text-decoration: underline; }
+        .prep-mini-meta .client-location-link {
+            color: #1d4ed8;
+            font-weight: 700;
+        }
         .client-badge-meta { display: inline-block; font-size: 0.75rem; background: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--border); font-weight: 600; margin-right: 4px; }
         .edit-controls { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
         .edit-group { display: flex; align-items: center; gap: 4px; }
@@ -14298,7 +14302,20 @@
                 const models = (c.modelli || []).map(function(m) {
                     return (m.nome || '') + (m.qta ? (' ×' + m.qta) : '');
                 }).filter(Boolean).join(', ') || '—';
-                const paese = (c.localita || '—') + (c.provincia ? (' (' + c.provincia + ')') : '');
+                let paese = (c.localita || '—') + (c.provincia ? (' (' + c.provincia + ')') : '');
+                let placeQuery = String(c.localita || '').trim();
+                try {
+                    if (typeof parseLedManagerAddress === 'function' && c.localita) {
+                        const pr = parseLedManagerAddress(c.localita);
+                        if (pr && pr.comune) {
+                            placeQuery = pr.comune + (c.provincia ? (', ' + c.provincia) : '');
+                            paese = pr.comune + (c.provincia ? (' (' + c.provincia + ')') : '');
+                        } else if (pr && pr.query) {
+                            placeQuery = pr.query.replace(/,\s*Italia\s*$/i, '').trim();
+                        }
+                    }
+                } catch (e) {}
+                if (!placeQuery) placeQuery = String(c.localita || '').trim();
                 const mont = String(c.montaggio || '').trim();
                 const zone = (typeof getZoneRecommendation === 'function') ? getZoneRecommendation(c) : null;
                 const montSpecial = (typeof isMontaggioCarrelloOrPiantana === 'function') && isMontaggioCarrelloOrPiantana(c);
@@ -14345,7 +14362,9 @@
                     '<div class="prep-mini-meta">' +
                     '📦 <strong>Modello:</strong> ' + String(models).replace(/</g, '&lt;') + '<br>' +
                     '🔧 <strong>Montaggio:</strong> ' + (mont ? String(mont).replace(/</g, '&lt;') : '—') + '<br>' +
-                    '📍 <strong>Paese:</strong> ' + String(paese).replace(/</g, '&lt;') + '<br>' +
+                    '📍 <strong>Paese:</strong> <a href="#" class="client-location-link" title="Apri in Percorso → Trova paese sulla mappa" data-localita="' +
+                    String(placeQuery).replace(/"/g, '&quot;').replace(/</g, '&lt;') + '">' +
+                    String(paese).replace(/</g, '&lt;') + '</a><br>' +
                     '📅 <strong>Scadenza:</strong> <span style="' + scadCls + '">' + String(scadTxt).replace(/</g, '&lt;') + '</span>' +
                     '</div>' +
                     hintHtml +
@@ -16965,11 +16984,22 @@
 
 
     window.openPaeseInPercorso = function(localita) {
-        const place = String(localita || '').trim();
+        let place = String(localita || '').trim();
         if (!place) {
             alert('Nessun paese indicato per questo cliente.');
             return;
         }
+        // Se arriva un indirizzo completo, usa il comune reale per Trova paese
+        try {
+            if (typeof parseLedManagerAddress === 'function') {
+                const pr = parseLedManagerAddress(place);
+                if (pr && pr.comune) {
+                    place = pr.comune + (pr.provinciaHint ? (', ' + pr.provinciaHint) : '');
+                } else if (pr && pr.query) {
+                    place = String(pr.query).replace(/,\s*Italia\s*$/i, '').trim();
+                }
+            }
+        } catch (e) {}
         // Salva il paese da cercare dopo il cambio vista
         window._pendingPlaceFind = place;
         try {
