@@ -7621,6 +7621,7 @@
                 if (c.montaggio === undefined) c.montaggio = '';
                 normalizeClientUpperFields(c);
             });
+            try { sanitizeAllClientAddresses(); } catch (e) {}
             if (Array.isArray(savedSpedizioni)) {
                 savedSpedizioni = Array.from(new Set(savedSpedizioni.map(toAppUpper).filter(Boolean)))
                     .sort(function(a, b) { return a.localeCompare(b, 'it'); });
@@ -11443,6 +11444,60 @@
     }
 
 
+
+    /** Taglia dall'indirizzo i campi LED Manager che non fanno parte di via/paese/provincia.
+     *  Es: "Via X, 107 - Marausa (Trapani), Contratto: 02/11/2026 Calendarizzato: NO Import API: …"
+     *  → "Via X, 107 - Marausa (Trapani)"
+     *  Vale per TUTTI i clienti.
+     */
+    function cleanLedManagerAddressTail(addr) {
+        let s = String(addr || '').replace(/\s+/g, ' ').trim();
+        if (!s) return '';
+        // Taglia da queste etichette in poi (case-insensitive)
+        const cutRe = /(?:^|[,;]|\s)(?:Contratto|Calendarizzat[oa]|Import\s*API|Nulla\s*Osta|Cauzione|Installatore|Conf\.?\s*Ordine|Scadenza|Montaggio|Modello|Tipologia|Priorit[aà]|Necessaria\s*spedizione|In\s*coda)\s*[:\-–]/i;
+        const m = s.match(cutRe);
+        if (m && typeof m.index === 'number') {
+            s = s.slice(0, m.index).trim();
+        }
+        // Seconda passata: se resta ancora "Contratto" senza match precedente
+        const idx2 = s.search(/\bContratto\b/i);
+        if (idx2 > 0) s = s.slice(0, idx2).trim();
+        const idx3 = s.search(/\bCalendarizzat/i);
+        if (idx3 > 0) s = s.slice(0, idx3).trim();
+        const idx4 = s.search(/\bImport\s*API\b/i);
+        if (idx4 > 0) s = s.slice(0, idx4).trim();
+        s = s.replace(/[\s,;.\-–—]+$/g, '').trim();
+        return s;
+    }
+
+    /** Pulisce localita di tutti i clienti già salvati (via/paese ok, niente Contratto/…). */
+    function sanitizeAllClientAddresses() {
+        let n = 0;
+        (clients || []).forEach(function(c) {
+            if (!c || !c.localita) return;
+            const before = String(c.localita);
+            const after = cleanLedManagerAddressTail(before);
+            if (after && after !== before) {
+                c.localita = after;
+                n++;
+            }
+        });
+        if (n > 0) {
+            try {
+                (clients || []).forEach(function(c) {
+                    if (typeof normalizeClientUpperFields === 'function') normalizeClientUpperFields(c);
+                });
+            } catch (e) {}
+            try {
+                localStorage.setItem('note_clienti_data', JSON.stringify(clients));
+            } catch (e) {}
+            try { if (typeof notifyPlanningDataChanged === 'function') notifyPlanningDataChanged(); } catch (e) {}
+        }
+        return n;
+    }
+    window.cleanLedManagerAddressTail = cleanLedManagerAddressTail;
+    window.sanitizeAllClientAddresses = sanitizeAllClientAddresses;
+
     /** Estrae comune e provincia da indirizzo LED Manager.
      *  Es: "via foggia 31, napoli (na)" → comune Napoli, prov NA (non Foggia). */
     function parseLedManagerAddress(addressText) {
@@ -11450,6 +11505,7 @@
         let ind = String(addressText || '').replace(/\s+/g, ' ').trim();
         if (!ind) return result;
         ind = ind.replace(/^indirizzo\s*[:\-–]?\s*/i, '').trim();
+        if (typeof cleanLedManagerAddressTail === 'function') ind = cleanLedManagerAddressTail(ind);
         result.indirizzo = ind;
 
         let mCityProv = ind.match(/,\s*([^,()\d][^,()]{1,60}?)\s*\(\s*([A-Za-z]{2}|[A-Za-zÀ-ù][A-Za-zÀ-ù'’\s-]{1,40})\s*\)\s*$/);
@@ -11723,36 +11779,59 @@
             return result;
         }
 
-        // LED Manager può copiare l'indirizzo sulla stessa riga dell'etichetta
-        // oppure sulla riga immediatamente successiva: gestiamo entrambi i casi.
+        // LED Manager: copia l'INDIRIZZO COMPLETO così com'è (via + paese + provincia).
+        // Può stare sulla stessa riga di "Indirizzo:" oppure su più righe successive.
         let addressSource = '';
+        const stopAddrRe = /^(conf\.?\s*ordine|scadenza|montaggio|modello|installatore|nulla\s*osta|cauzione|tipologia|priorit|q\.?\s*t[aà]|quantit|note\b|cliente\b|ragione\s*sociale|contratto|calendarizzat|import\s*api)/i;
         for (let ai = 0; ai < lines.length; ai++) {
             const line = String(lines[ai] || '').trim();
             if (!/^indirizzo\b/i.test(line)) continue;
             const afterLabel = line.replace(/^indirizzo\s*[:\-–]?\s*/i, '').trim();
-            if (afterLabel) {
-                addressSource = afterLabel;
-            } else if (lines[ai + 1]) {
-                addressSource = String(lines[ai + 1]).trim();
+            const parts = [];
+            if (afterLabel) parts.push(afterLabel);
+            // continua sulle righe successive finché non arriva un'altra etichetta
+            for (let j = ai + 1; j < lines.length && j <= ai + 4; j++) {
+                const nxt = String(lines[j] || '').trim();
+                if (!nxt) break;
+                if (stopAddrRe.test(nxt)) break;
+                if (/^indirizzo\b/i.test(nxt)) break;
+                // evita di inglobare un nuovo nome cliente tipo "NOME (12345)"
+                if (/\(\s*\d{3,}\s*\)/.test(nxt) && nxt.length < 80) break;
+                parts.push(nxt);
             }
+            addressSource = parts.join(', ').replace(/\s*,\s*,/g, ',').replace(/\s{2,}/g, ' ').trim();
             if (addressSource) break;
         }
         if (!addressSource) {
             const mInd = full.match(/indirizzo\s*[:\-–]?\s*([^\n]+)/i);
             if (mInd) addressSource = mInd[1].trim();
         }
+        // pulizia: togli etichetta + campi extra (Contratto, Calendarizzato, Import API…)
+        // ma tieni via + paese + provincia completi
+        if (addressSource) {
+            addressSource = String(addressSource)
+                .replace(/^indirizzo\s*[:\-–]?\s*/i, '')
+                .replace(/\s{2,}/g, ' ')
+                .trim();
+            if (typeof cleanLedManagerAddressTail === 'function') {
+                addressSource = cleanLedManagerAddressTail(addressSource);
+            } else {
+                // fallback inline
+                addressSource = addressSource.replace(/[,\s]*(?:contratto|calendarizzat[oa]|import\s*api)\s*[:\-–][\s\S]*$/i, '').trim();
+            }
+        }
         if (addressSource) {
             const address = extractPrepAddressFromText(addressSource);
-            ledAddress = address.indirizzo || '';
+            // indirizzo salvato = via + paese + provincia (senza Contratto/Calendarizzato/…)
+            ledAddress = addressSource;
             ledProvHint = address.provinciaHint || '';
-            ledAddressQuery = address.query || ledAddress;
+            ledAddressQuery = address.query || addressSource;
             ledComune = address.comune || '';
         }
 
         if (ledAddress) {
-            // Indirizzo completo in localita; provincia/regione dal COMUNE reale
-            // (es. "via foggia 31, napoli (na)" → Napoli / NA / Campania, non Foggia).
-            out.localita = cleanVal(ledAddress);
+            // REGOLA FERREA: in Prep localita = indirizzo completo come su LED Manager
+            out.localita = ledAddress;
             if (ledProvHint) out.provinciaHint = ledProvHint;
             out.localitaQuery = ledAddressQuery;
             if (ledComune) out.comune = cleanVal(ledComune);
@@ -12062,7 +12141,7 @@
         const nomeVal = (typeof toAppUpper === 'function')
             ? toAppUpper(nomeRaw)
             : nomeRaw.toUpperCase();
-        const localitaVal = String(fields.localita || '').trim();
+        const localitaVal = (typeof cleanLedManagerAddressTail === 'function' ? cleanLedManagerAddressTail(String(fields.localita || '')) : String(fields.localita || '').trim());
         const scadenzaVal = String(fields.scadenza || '').trim();
         const modelloVal = String(fields.modello || '').trim();
         const montaggioVal = String(fields.montaggio || '').trim();
@@ -14302,14 +14381,15 @@
                 const models = (c.modelli || []).map(function(m) {
                     return (m.nome || '') + (m.qta ? (' ×' + m.qta) : '');
                 }).filter(Boolean).join(', ') || '—';
-                let paese = (c.localita || '—') + (c.provincia ? (' (' + c.provincia + ')') : '');
+                // Mostra SEMPRE l'indirizzo completo (via + paese + provincia) come da LED Manager
+                let paese = String(c.localita || '').trim() || '—';
+                // Per la mappa: cerca il comune reale (non la via)
                 let placeQuery = String(c.localita || '').trim();
                 try {
                     if (typeof parseLedManagerAddress === 'function' && c.localita) {
                         const pr = parseLedManagerAddress(c.localita);
                         if (pr && pr.comune) {
-                            placeQuery = pr.comune + (c.provincia ? (', ' + c.provincia) : '');
-                            paese = pr.comune + (c.provincia ? (' (' + c.provincia + ')') : '');
+                            placeQuery = pr.comune + (c.provincia ? (', ' + c.provincia) : (pr.provinciaHint ? (', ' + pr.provinciaHint) : ''));
                         } else if (pr && pr.query) {
                             placeQuery = pr.query.replace(/,\s*Italia\s*$/i, '').trim();
                         }
@@ -14362,7 +14442,7 @@
                     '<div class="prep-mini-meta">' +
                     '📦 <strong>Modello:</strong> ' + String(models).replace(/</g, '&lt;') + '<br>' +
                     '🔧 <strong>Montaggio:</strong> ' + (mont ? String(mont).replace(/</g, '&lt;') : '—') + '<br>' +
-                    '📍 <strong>Paese:</strong> <a href="#" class="client-location-link" title="Apri in Percorso → Trova paese sulla mappa" data-localita="' +
+                    '📍 <strong>Indirizzo:</strong> <a href="#" class="client-location-link" title="Apri in Percorso → Trova paese sulla mappa" data-localita="' +
                     String(placeQuery).replace(/"/g, '&quot;').replace(/</g, '&lt;') + '">' +
                     String(paese).replace(/</g, '&lt;') + '</a><br>' +
                     '📅 <strong>Scadenza:</strong> <span style="' + scadCls + '">' + String(scadTxt).replace(/</g, '&lt;') + '</span>' +
@@ -14381,6 +14461,7 @@
     }
 
     function renderPrepPage() {
+        try { sanitizeAllClientAddresses(); } catch (e) {}
         populatePrepDropdowns();
         const countEl = document.getElementById('navPrepCount');
         const allPrep = clients.filter(c => isInPrep(c));
