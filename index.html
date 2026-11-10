@@ -11471,7 +11471,8 @@
     }
 
     /** Pulisce localita di tutti i clienti già salvati (via/paese ok, niente Contratto/…). */
-    function sanitizeAllClientAddresses() {
+    function sanitizeAllClientAddresses(opts) {
+        opts = opts || {};
         let n = 0;
         (clients || []).forEach(function(c) {
             if (!c || !c.localita) return;
@@ -11491,7 +11492,10 @@
             try {
                 localStorage.setItem('note_clienti_data', JSON.stringify(clients));
             } catch (e) {}
-            try { if (typeof notifyPlanningDataChanged === 'function') notifyPlanningDataChanged(); } catch (e) {}
+            // silent: non ritriggera render (es. già dentro renderConsigliPage)
+            if (!opts.silent) {
+                try { if (typeof notifyPlanningDataChanged === 'function') notifyPlanningDataChanged(); } catch (e) {}
+            }
         }
         return n;
     }
@@ -14381,21 +14385,13 @@
                 const models = (c.modelli || []).map(function(m) {
                     return (m.nome || '') + (m.qta ? (' ×' + m.qta) : '');
                 }).filter(Boolean).join(', ') || '—';
-                // Mostra SEMPRE l'indirizzo completo (via + paese + provincia) come da LED Manager
+                // Indirizzo completo salvato in Prep (via + paese + provincia)
                 let paese = String(c.localita || '').trim() || '—';
-                // Per la mappa: cerca il comune reale (non la via)
+                // Mappa: cerca ESATTAMENTE l'indirizzo salvato in Pre-pianificazione
                 let placeQuery = String(c.localita || '').trim();
-                try {
-                    if (typeof parseLedManagerAddress === 'function' && c.localita) {
-                        const pr = parseLedManagerAddress(c.localita);
-                        if (pr && pr.comune) {
-                            placeQuery = pr.comune + (c.provincia ? (', ' + c.provincia) : (pr.provinciaHint ? (', ' + pr.provinciaHint) : ''));
-                        } else if (pr && pr.query) {
-                            placeQuery = pr.query.replace(/,\s*Italia\s*$/i, '').trim();
-                        }
-                    }
-                } catch (e) {}
-                if (!placeQuery) placeQuery = String(c.localita || '').trim();
+                if (placeQuery && typeof cleanLedManagerAddressTail === 'function') {
+                    placeQuery = cleanLedManagerAddressTail(placeQuery) || placeQuery;
+                }
                 const mont = String(c.montaggio || '').trim();
                 const zone = (typeof getZoneRecommendation === 'function') ? getZoneRecommendation(c) : null;
                 const montSpecial = (typeof isMontaggioCarrelloOrPiantana === 'function') && isMontaggioCarrelloOrPiantana(c);
@@ -17067,21 +17063,17 @@
     window.openPaeseInPercorso = function(localita) {
         let place = String(localita || '').trim();
         if (!place) {
-            alert('Nessun paese indicato per questo cliente.');
+            alert('Nessun indirizzo indicato per questo cliente.');
             return;
         }
-        // Se arriva un indirizzo completo, usa il comune reale per Trova paese
+        // Cerca sulla mappa l'indirizzo così come salvato in Pre-pianificazione
+        // (solo pulizia Contratto/Calendarizzato se presenti)
         try {
-            if (typeof parseLedManagerAddress === 'function') {
-                const pr = parseLedManagerAddress(place);
-                if (pr && pr.comune) {
-                    place = pr.comune + (pr.provinciaHint ? (', ' + pr.provinciaHint) : '');
-                } else if (pr && pr.query) {
-                    place = String(pr.query).replace(/,\s*Italia\s*$/i, '').trim();
-                }
+            if (typeof cleanLedManagerAddressTail === 'function') {
+                place = cleanLedManagerAddressTail(place) || place;
             }
         } catch (e) {}
-        // Salva il paese da cercare dopo il cambio vista
+        // Salva la query da cercare dopo il cambio vista
         window._pendingPlaceFind = place;
         try {
             if (typeof switchView === 'function') switchView('percorso');
@@ -18550,6 +18542,8 @@
 
     // ===== CONSIGLI PIANIFICAZIONE (regole intelligenti su Prep) =====
     function renderConsigliPage() {
+        // Indirizzi sempre allineati a Pre-pianificazione (stesso array clients)
+        try { if (typeof sanitizeAllClientAddresses === 'function') sanitizeAllClientAddresses({ silent: true }); } catch (e) {}
         const box = document.getElementById('consigliContainer');
         const badge = document.getElementById('navConsigliCount');
         const all = clients || [];
@@ -18610,21 +18604,14 @@
         }
         function esc(s) { return String(s == null ? '' : s).replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
         function luogo(c) {
-            let comune = '';
-            try {
-                if (typeof parseLedManagerAddress === 'function' && c.localita) {
-                    const p = parseLedManagerAddress(c.localita);
-                    if (p && p.comune) comune = p.comune;
-                }
-            } catch (e) {}
-            const prov = (typeof normalizeProvinciaCode === 'function') ? (normalizeProvinciaCode(c) || c.provincia || '') : (c.provincia || '');
-            if (comune) {
-                return comune + (prov ? (' (' + prov + ')') : '') +
-                    (c.localita && String(c.localita).toLowerCase().indexOf(comune.toLowerCase()) >= 0
-                        ? ''
-                        : '');
+            // Stesso indirizzo salvato in Pre-pianificazione (già senza Contratto/API)
+            let addr = String(c.localita || '').trim();
+            if (addr && typeof cleanLedManagerAddressTail === 'function') {
+                addr = cleanLedManagerAddressTail(addr) || addr;
             }
-            return [c.localita || '', prov ? ('(' + prov + ')') : ''].filter(Boolean).join(' ') || '—';
+            if (addr) return addr.replace(/</g, '&lt;');
+            const prov = (typeof normalizeProvinciaCode === 'function') ? (normalizeProvinciaCode(c) || c.provincia || '') : (c.provincia || '');
+            return prov ? ('(' + prov + ')') : '—';
         }
         function clientRegione(c) {
             let reg = String(c.regione || '').trim();
@@ -19157,7 +19144,8 @@
         }
         if (view === 'consigli') {
             try {
-                // Ricalcola sempre dalle schede Prep/Note aggiornate
+                // Allinea indirizzi a quelli salvati/puliti in Prep, poi ricalcola
+                if (typeof sanitizeAllClientAddresses === 'function') sanitizeAllClientAddresses();
                 renderConsigliPage();
             } catch (e) { console.error(e); }
         }
