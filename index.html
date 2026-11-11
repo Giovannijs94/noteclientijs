@@ -7649,7 +7649,7 @@
         { keys: ["livorno", "piombino", "cecina", "rosignano marittimo", "portoferraio", "collesalvetti", "campiglia marittima", "san vincenzo", "capraia isola"], prov: "LI", reg: "Toscana" },
         { keys: ["arezzo", "cortona", "sansepolcro", "montevarchi", "san giovanni valdarno", "castiglion fiorentino", "bibbiena", "teranuova bracciolini"], prov: "AR", reg: "Toscana" },
         { keys: ["pistoia", "montecatini terme", "pescia", "quarrata", "monsummano terme", "agliana", "borgo a mozzano", "lamporecchio"], prov: "PT", reg: "Toscana" },
-        { keys: ["pisa", "pontedera", "san giuliano terme", "volterra", "caskina", "vecchiano", "bientina", "largo", "calci", "san miniato", "fucecchio"], prov: "PI", reg: "Toscana" },
+        { keys: ["pisa", "pontedera", "san giuliano terme", "volterra", "cascina", "vecchiano", "bientina", "calci", "san miniato", "fucecchio"], prov: "PI", reg: "Toscana" },
         { keys: ["lucca", "viareggio", "capannori", "camaiore", "pietrasanta", "forte dei marmi", "massarosa", "porcari", "gallicano"], prov: "LU", reg: "Toscana" },
         { keys: ["grosseto", "follonica", "orbetello", "argentario", "follonica", "castiglione della pescaia", "scansano", "mansiano", "pitigliano", "capalbio"], prov: "GR", reg: "Toscana" },
         { keys: ["siena", "poggibonsi", "colle di val d'elsa", "montepulciano", "chianciano terme", "san gimignano", "sovicille", "castelnuovo berardenga", "sinalunga", "chianti"], prov: "SI", reg: "Toscana" },
@@ -8060,10 +8060,17 @@
         if (!localitaStr) return { prov: "", reg: "" };
         const text = localitaStr.toLowerCase().trim();
 
-        // 0) Nome provincia tra parentesi: "(Reggio Calabria)" / "(Bari)"
+        // 0) Nome provincia tra parentesi: "(Reggio Calabria)" / "(Roma Capitale)" / "(Bari)"
         const mProvName = text.match(/\(\s*([a-zàèéìòù'’\s-]{2,40}?)\s*\)\s*$/);
         if (mProvName) {
-            const pname = mProvName[1].replace(/\s+/g, ' ').trim();
+            let pname = mProvName[1].replace(/\s+/g, ' ').trim();
+            // LED Manager: "Roma Capitale" → Roma (RM / Lazio)
+            if (pname === 'roma capitale' || pname === 'roma') {
+                return { prov: 'RM', reg: 'Lazio' };
+            }
+            if (pname.indexOf('reggio calabria') >= 0) {
+                return { prov: 'RC', reg: 'Calabria' };
+            }
             for (const item of LOCATION_DATABASE) {
                 for (const kw of item.keys) {
                     if (kw === pname) return { prov: item.prov, reg: item.reg };
@@ -8071,12 +8078,25 @@
             }
             if (typeof PROVINCE_NAMES !== 'undefined') {
                 for (const code of Object.keys(PROVINCE_NAMES)) {
-                    if (String(PROVINCE_NAMES[code]).toLowerCase() === pname) {
+                    const label = String(PROVINCE_NAMES[code]).toLowerCase();
+                    if (label === pname || pname.indexOf(label) === 0 || label.indexOf(pname) === 0) {
                         const reg = (typeof PROVINCE_TO_REGION !== 'undefined' && PROVINCE_TO_REGION[code]) ? PROVINCE_TO_REGION[code] : '';
                         if (reg) return { prov: code, reg: reg };
                     }
                 }
             }
+        }
+
+        // 0b) Città evidente prima della parentesi: "ROMA (…)" / "- NAPOLI ("
+        const mCityBefore = text.match(/(?:^|[\s,\-–])([a-zàèéìòù']{3,40})\s*\(/i);
+        if (mCityBefore) {
+            const city = mCityBefore[1].toLowerCase();
+            if (city === 'roma') return { prov: 'RM', reg: 'Lazio' };
+            if (city === 'milano') return { prov: 'MI', reg: 'Lombardia' };
+            if (city === 'napoli') return { prov: 'NA', reg: 'Campania' };
+            if (city === 'torino') return { prov: 'TO', reg: 'Piemonte' };
+            if (city === 'palermo') return { prov: 'PA', reg: 'Sicilia' };
+            if (city === 'bari') return { prov: 'BA', reg: 'Puglia' };
         }
 
         // 1) Sigla provincia in coda "(rc)" / "(NA)"
@@ -8094,11 +8114,14 @@
 
         // 2) Match chiavi con confini di parola (evita "ala" dentro "Calabria" → Trento)
         // Preferisci chiavi più lunghe; a parità, match più verso la fine.
+        // Ignora tipi strada usati per errore come chiavi (largo, via, corso…)
+        const streetNoise = { via:1, viale:1, corso:1, piazza:1, largo:1, vicolo:1, piazzale:1, contrada:1, localita:1, località:1, strada:1 };
         let best = null;
         let bestScore = -1;
         for (const item of LOCATION_DATABASE) {
             for (const kw of item.keys) {
                 if (!kw || kw.length < 3) continue;
+                if (streetNoise[kw]) continue;
                 const esc = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                 const re = new RegExp('(?:^|[^a-zàèéìòù])' + esc + '(?:[^a-zàèéìòù]|$)', 'i');
                 const m = text.match(re);
