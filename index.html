@@ -11737,19 +11737,30 @@
     function cleanLedManagerAddressTail(addr) {
         let s = String(addr || '').replace(/\s+/g, ' ').trim();
         if (!s) return '';
-        // Taglia da queste etichette in poi (case-insensitive)
-        const cutRe = /(?:^|[,;]|\s)(?:Contratto|Calendarizzat[oa]|Import\s*API|Nulla\s*Osta|Cauzione|Installatore|Conf\.?\s*Ordine|Scadenza|Montaggio|Modello|Tipologia|Priorit[aà]|Necessaria\s*spedizione|In\s*coda)\s*[:\-–]/i;
+        // Taglia da etichette LED Manager in poi (non fanno parte di via/paese/provincia)
+        // Es: "... MONOPOLI (Bari), Assegnato: 23/10 13:52, In attesa di start, Carpenteria…"
+        const cutRe = /(?:^|[,;]|\s)(?:Assegnato|Contratto|Calendarizzat[oa]|Import\s*API|Nulla\s*Osta|Cauzione|Installatore|Conf\.?\s*Ordine|Scadenza|Montaggio|Modello|Tipologia|Priorit[aà]|Necessaria\s*spedizione|In\s*coda|In\s*attesa\s*di\s*start|In\s*attesa\s*di|Carpenteria|Verniciatura|Inizio|Fine)\s*[:\-–]/i;
         const m = s.match(cutRe);
         if (m && typeof m.index === 'number') {
             s = s.slice(0, m.index).trim();
         }
-        // Seconda passata: se resta ancora "Contratto" senza match precedente
-        const idx2 = s.search(/\bContratto\b/i);
-        if (idx2 > 0) s = s.slice(0, idx2).trim();
-        const idx3 = s.search(/\bCalendarizzat/i);
-        if (idx3 > 0) s = s.slice(0, idx3).trim();
-        const idx4 = s.search(/\bImport\s*API\b/i);
-        if (idx4 > 0) s = s.slice(0, idx4).trim();
+        // Passate aggiuntive (anche senza due punti dopo l'etichetta)
+        const hardCuts = [
+            /\bAssegnato\b/i,
+            /\bContratto\b/i,
+            /\bCalendarizzat/i,
+            /\bImport\s*API\b/i,
+            /\bIn\s*attesa\s*di\s*start\b/i,
+            /\bIn\s*attesa\s*di\b/i,
+            /\bCarpenteria\b/i,
+            /\bVerniciatura\b/i,
+            /\bInizio\s*:/i,
+            /\bFine\s*:/i
+        ];
+        for (let i = 0; i < hardCuts.length; i++) {
+            const idx = s.search(hardCuts[i]);
+            if (idx > 0) s = s.slice(0, idx).trim();
+        }
         s = s.replace(/[\s,;.\-–—]+$/g, '').trim();
         return s;
     }
@@ -12070,7 +12081,7 @@
         // LED Manager: copia l'INDIRIZZO COMPLETO così com'è (via + paese + provincia).
         // Può stare sulla stessa riga di "Indirizzo:" oppure su più righe successive.
         let addressSource = '';
-        const stopAddrRe = /^(conf\.?\s*ordine|scadenza|montaggio|modello|installatore|nulla\s*osta|cauzione|tipologia|priorit|q\.?\s*t[aà]|quantit|note\b|cliente\b|ragione\s*sociale|contratto|calendarizzat|import\s*api)/i;
+        const stopAddrRe = /^(conf\.?\s*ordine|scadenza|montaggio|modello|installatore|nulla\s*osta|cauzione|tipologia|priorit|q\.?\s*t[aà]|quantit|note\b|cliente\b|ragione\s*sociale|contratto|calendarizzat|import\s*api|assegnato|in\s*attesa|carpenteria|verniciatura|inizio|fine)\b/i;
         for (let ai = 0; ai < lines.length; ai++) {
             const line = String(lines[ai] || '').trim();
             if (!/^indirizzo\b/i.test(line)) continue;
