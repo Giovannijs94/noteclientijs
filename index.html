@@ -7656,7 +7656,7 @@
         { keys: ["massa", "carrara", "aulla", "montignoso", "fivizzano", "pontremoli", "licciana nardi"], prov: "MS", reg: "Toscana" },
 
         // CALABRIA
-        { keys: ["reggio calabria", "reggio di calabria", "palmi", "gioia tauro", "siderno", "locri", "rosarno", "villa san giovanni", "taurianova", "polistena", "melito di porto salvo", "bagnara calabra", "cittanova"], prov: "RC", reg: "Calabria" },
+        { keys: ["reggio calabria", "reggio di calabria", "palmi", "gioia tauro", "siderno", "locri", "rosarno", "villa san giovanni", "taurianova", "polistena", "melito di porto salvo", "bagnara calabra", "cittanova", "roccella ionica", "roccella", "bovalino", "caulonia", "gioiosa ionica", "marina di gioiosa ionica", "sbarre"], prov: "RC", reg: "Calabria" },
         { keys: ["catanzaro", "lamezia terme", "soverato", "borgia", "squillace", "sellia marina", "chiaravalle centrale"], prov: "CZ", reg: "Calabria" },
         { keys: ["cosenza", "rende", "castrovillari", "paola", "scalea", "corigliano-rossano", "montalto uffugo", "acri", "cetraro", "san giovanni in fiore", "trebisacce", "diamante", "fuscaldo"], prov: "CS", reg: "Calabria" },
         { keys: ["crotone", "isole capo rizzuto", "cutro", "cirò marina", "strongoli", "petilia policastro", "mesoraca"], prov: "KR", reg: "Calabria" },
@@ -8029,34 +8029,82 @@
         });
     }
 
+
+    // Sigla provincia → regione (fonte di verità per raggruppamenti Prep/Consigli)
+    const PROVINCE_TO_REGION = {
+        'AG': 'Sicilia', 'AL': 'Piemonte', 'AN': 'Marche', 'AO': "Valle d'Aosta", 'AP': 'Marche',
+        'AQ': 'Abruzzo', 'AR': 'Toscana', 'AT': 'Piemonte', 'AV': 'Campania', 'BA': 'Puglia',
+        'BG': 'Lombardia', 'BI': 'Piemonte', 'BL': 'Veneto', 'BN': 'Campania', 'BO': 'Emilia-Romagna',
+        'BR': 'Puglia', 'BS': 'Lombardia', 'BT': 'Puglia', 'BZ': 'Trentino-Alto Adige', 'CA': 'Sardegna',
+        'CB': 'Molise', 'CE': 'Campania', 'CH': 'Abruzzo', 'CL': 'Sicilia', 'CN': 'Piemonte',
+        'CO': 'Lombardia', 'CR': 'Lombardia', 'CS': 'Calabria', 'CT': 'Sicilia', 'CZ': 'Calabria',
+        'EN': 'Sicilia', 'FC': 'Emilia-Romagna', 'FE': 'Emilia-Romagna', 'FG': 'Puglia', 'FI': 'Toscana',
+        'FM': 'Marche', 'FR': 'Lazio', 'GE': 'Liguria', 'GO': 'Friuli-Venezia Giulia', 'GR': 'Toscana',
+        'IM': 'Liguria', 'IS': 'Molise', 'KR': 'Calabria', 'LC': 'Lombardia', 'LE': 'Puglia',
+        'LI': 'Toscana', 'LO': 'Lombardia', 'LT': 'Lazio', 'LU': 'Toscana', 'MB': 'Lombardia',
+        'MC': 'Marche', 'ME': 'Sicilia', 'MI': 'Lombardia', 'MN': 'Lombardia', 'MO': 'Emilia-Romagna',
+        'MS': 'Toscana', 'MT': 'Basilicata', 'NA': 'Campania', 'NO': 'Piemonte', 'NU': 'Sardegna',
+        'OR': 'Sardegna', 'PA': 'Sicilia', 'PC': 'Emilia-Romagna', 'PD': 'Veneto', 'PE': 'Abruzzo',
+        'PG': 'Umbria', 'PI': 'Toscana', 'PN': 'Friuli-Venezia Giulia', 'PO': 'Toscana', 'PR': 'Emilia-Romagna',
+        'PT': 'Toscana', 'PU': 'Marche', 'PV': 'Lombardia', 'PZ': 'Basilicata', 'RA': 'Emilia-Romagna',
+        'RC': 'Calabria', 'RE': 'Emilia-Romagna', 'RG': 'Sicilia', 'RI': 'Lazio', 'RM': 'Lazio',
+        'RN': 'Emilia-Romagna', 'RO': 'Veneto', 'SA': 'Campania', 'SI': 'Toscana', 'SO': 'Lombardia',
+        'SP': 'Liguria', 'SR': 'Sicilia', 'SS': 'Sardegna', 'SU': 'Sardegna', 'SV': 'Liguria',
+        'TA': 'Puglia', 'TE': 'Abruzzo', 'TN': 'Trentino-Alto Adige', 'TO': 'Piemonte', 'TP': 'Sicilia',
+        'TR': 'Umbria', 'TS': 'Friuli-Venezia Giulia', 'TV': 'Veneto', 'UD': 'Friuli-Venezia Giulia',
+        'VA': 'Lombardia', 'VB': 'Piemonte', 'VC': 'Piemonte', 'VE': 'Veneto', 'VI': 'Veneto',
+        'VR': 'Veneto', 'VT': 'Lazio', 'VV': 'Calabria'
+    };
+
     function resolveLocationData(localitaStr) {
         if (!localitaStr) return { prov: "", reg: "" };
         const text = localitaStr.toLowerCase().trim();
 
-        // Se c'è sigla provincia in coda "(na)" / "(NA)" usala subito
+        // 0) Nome provincia tra parentesi: "(Reggio Calabria)" / "(Bari)"
+        const mProvName = text.match(/\(\s*([a-zàèéìòù'’\s-]{2,40}?)\s*\)\s*$/);
+        if (mProvName) {
+            const pname = mProvName[1].replace(/\s+/g, ' ').trim();
+            for (const item of LOCATION_DATABASE) {
+                for (const kw of item.keys) {
+                    if (kw === pname) return { prov: item.prov, reg: item.reg };
+                }
+            }
+            if (typeof PROVINCE_NAMES !== 'undefined') {
+                for (const code of Object.keys(PROVINCE_NAMES)) {
+                    if (String(PROVINCE_NAMES[code]).toLowerCase() === pname) {
+                        const reg = (typeof PROVINCE_TO_REGION !== 'undefined' && PROVINCE_TO_REGION[code]) ? PROVINCE_TO_REGION[code] : '';
+                        if (reg) return { prov: code, reg: reg };
+                    }
+                }
+            }
+        }
+
+        // 1) Sigla provincia in coda "(rc)" / "(NA)"
         const mCode = text.match(/\(\s*([a-z]{2})\s*\)\s*$/);
         if (mCode) {
             const code = mCode[1].toUpperCase();
-            // mappa sigla → regione dal database province se possibile
-            let reg = '';
-            for (const item of LOCATION_DATABASE) {
-                if (item.prov === code) { reg = item.reg; break; }
+            let reg = (typeof PROVINCE_TO_REGION !== 'undefined' && PROVINCE_TO_REGION[code]) ? PROVINCE_TO_REGION[code] : '';
+            if (!reg) {
+                for (const item of LOCATION_DATABASE) {
+                    if (item.prov === code) { reg = item.reg; break; }
+                }
             }
             if (reg) return { prov: code, reg: reg };
         }
 
-        // Preferisci match verso la FINE della stringa (comune dopo la via)
-        // e, a parità di posizione, la chiave più lunga.
-        // Così "via foggia 31, napoli (na)" → Napoli, non Foggia.
+        // 2) Match chiavi con confini di parola (evita "ala" dentro "Calabria" → Trento)
+        // Preferisci chiavi più lunghe; a parità, match più verso la fine.
         let best = null;
         let bestScore = -1;
         for (const item of LOCATION_DATABASE) {
             for (const kw of item.keys) {
-                if (!kw || kw.length < 2) continue;
-                const idx = text.lastIndexOf(kw);
-                if (idx < 0) continue;
-                // score: posizione finale + lunghezza chiave
-                const score = idx * 1000 + kw.length;
+                if (!kw || kw.length < 3) continue;
+                const esc = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const re = new RegExp('(?:^|[^a-zàèéìòù])' + esc + '(?:[^a-zàèéìòù]|$)', 'i');
+                const m = text.match(re);
+                if (!m || typeof m.index !== 'number') continue;
+                const idx = m.index;
+                const score = kw.length * 100000 + idx;
                 if (score > bestScore) {
                     best = item;
                     bestScore = score;
@@ -8066,8 +8114,6 @@
         if (best) return { prov: best.prov, reg: best.reg };
         return { prov: "", reg: "" };
     }
-
-
 
     function setLocalitaStatus(msg, cls) {
         const el = document.getElementById('localitaLookupStatus');
@@ -11861,13 +11907,31 @@
         opts = opts || {};
         let n = 0;
         (clients || []).forEach(function(c) {
-            if (!c || !c.localita) return;
-            const before = String(c.localita);
-            const after = cleanLedManagerAddressTail(before);
-            if (after && after !== before) {
-                c.localita = after;
-                n++;
+            if (!c) return;
+            if (c.localita) {
+                const before = String(c.localita);
+                const after = cleanLedManagerAddressTail(before);
+                if (after && after !== before) {
+                    c.localita = after;
+                    n++;
+                }
             }
+            // Riallinea provincia/regione da indirizzo (es. Reggio Calabria → Calabria, non Trentino)
+            try {
+                if (c.localita && typeof resolveLocationData === 'function') {
+                    const res = resolveLocationData(c.localita);
+                    if (res && res.prov) {
+                        if (c.provincia !== res.prov) { c.provincia = res.prov; n++; }
+                        if (res.reg && c.regione !== res.reg) { c.regione = res.reg; n++; }
+                    }
+                }
+                // se c'è provincia ma regione sbagliata/mancante
+                if (c.provincia && typeof PROVINCE_TO_REGION !== 'undefined') {
+                    const code = String(c.provincia).toUpperCase().trim();
+                    const reg = PROVINCE_TO_REGION[code];
+                    if (reg && c.regione !== reg) { c.regione = reg; n++; }
+                }
+            } catch (e) {}
         });
         if (n > 0) {
             try {
