@@ -14034,7 +14034,9 @@
             list = list.filter(function(o) {
                 const blob = [
                     o.azienda, o.passo, o.tipo, o.sottotipo, o.note, o.lotto,
-                    o.dimensione, o.pollici, o.ambiente, o.nit, ordineFaseLabel(getOrdineFase(o))
+                    o.dimensione, o.pollici, o.ambiente, o.nit,
+                    o.dataScaricato, o.dataInserito, o.createdAt,
+                    ordineFaseLabel(getOrdineFase(o))
                 ].join(' ').toLowerCase();
                 return q.split(/\s+/).every(function(w) { return blob.indexOf(w) >= 0; });
             });
@@ -14063,6 +14065,23 @@
                 if (val == null || val === '') return '';
                 return '<div class="ordine-field"><span class="label">' + label + '</span><strong>' +
                     String(val).replace(/</g, '&lt;') + '</strong></div>';
+            }
+            function formatOrdineData(iso) {
+                const s = String(iso || '').trim();
+                if (!s) return '';
+                // YYYY-MM-DD or ISO datetime
+                const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                if (m) return m[3] + '/' + m[2] + '/' + m[1];
+                try {
+                    const d = new Date(s);
+                    if (!isNaN(d.getTime())) {
+                        const dd = String(d.getDate()).padStart(2, '0');
+                        const mm = String(d.getMonth() + 1).padStart(2, '0');
+                        const yy = d.getFullYear();
+                        return dd + '/' + mm + '/' + yy;
+                    }
+                } catch (e) {}
+                return s;
             }
             const safeId = String(o.id).replace(/'/g, "\\'");
 
@@ -14100,6 +14119,13 @@
                 field('Ambiente', o.ambiente) +
                 field('Nit', o.nit) +
                 field('Lotto', o.lotto) +
+                // Date: solo scarico (fasi scaricato/LED); in LED Manager anche data inserimento
+                (fase === 'scaricato' || fase === 'led_manager'
+                    ? field('Data scarico', formatOrdineData(o.dataScaricato || ''))
+                    : '') +
+                (fase === 'led_manager'
+                    ? field('Data LED Manager', formatOrdineData(o.dataInserito || ''))
+                    : '') +
                 noteRow +
                 '</div>' +
                 '<div class="ordine-actions">' +
