@@ -6721,7 +6721,7 @@
             </span>
         </div>
     </div>
-    <p class="meteo-intro">Due calendari separati: <strong>Note Clienti</strong> (scadenza / data / tappa) e <strong>Pre-pianificazione</strong> (<strong>solo scadenza</strong>).</p>
+    <p class="meteo-intro">Due calendari separati: <strong>Note Clienti</strong> (<strong>solo data di installazione</strong>) e <strong>Pre-pianificazione</strong> (<strong>solo scadenza</strong>).</p>
     <div class="cal-toolbar">
         <button type="button" class="btn" onclick="calShiftMonth(-1)">‹ Prec.</button>
         <strong id="calMonthLabel" style="min-width:160px;text-align:center;"></strong>
@@ -19646,6 +19646,17 @@
         return dates;
     }
 
+    /** Note Clienti calendario: SOLO data di installazione */
+    function clientEventDatesNoteInstallOnly(c) {
+        const dates = [];
+        // data installazione principale
+        let d = normalizeCalDate(c.data || '');
+        // fallback leggeri se qualche scheda usa altri campi installazione
+        if (!d) d = normalizeCalDate(c.dataInstallazione || c.data_installazione || '');
+        if (d) dates.push({ date: d, kind: 'data' });
+        return dates;
+    }
+
     function isPrepClient(c) {
         return typeof isInPrep === 'function' ? isInPrep(c) : (c && (c.inPrep === true || c.inPrep === 'true'));
     }
@@ -19761,8 +19772,9 @@
     }
 
     function renderCalendarioPage() {
-        const mapNote = clientsByDateMap(function(c) { return !isPrepClient(c); }, clientEventDates);
-        // Pre-pianificazione: clienti solo in base alla SCADENZA
+        // Note Clienti: solo DATA DI INSTALLAZIONE
+        const mapNote = clientsByDateMap(function(c) { return !isPrepClient(c); }, clientEventDatesNoteInstallOnly);
+        // Pre-pianificazione: solo SCADENZA
         const mapPrep = clientsByDateMap(function(c) { return isPrepClient(c); }, clientEventDatesPrepOnly);
 
         const badge = document.getElementById('navCalendarioCount');
