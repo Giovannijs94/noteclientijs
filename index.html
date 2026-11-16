@@ -7804,13 +7804,15 @@
                 try { if (typeof renderConsigliPage === 'function') renderConsigliPage(); } catch (e) {}
             }, 250);
         }
-        // In Prep: programma controllo paesi se i dati località sono cambiati rispetto all'ultimo check
+        // In Prep: aggiorna solo il banner (niente rete automatica)
         if (typeof currentView !== 'undefined' && currentView === 'prep') {
             if (_prepPaesiCheckTimer) clearTimeout(_prepPaesiCheckTimer);
             _prepPaesiCheckTimer = setTimeout(function() {
-                try { maybeAutoCheckPrepPaesi({ silent: true }); } catch (e) {}
-            }, 400);
+                try { updatePrepPaesiCheckBanner(); } catch (e) {}
+            }, 200);
         }
+        // Invalida cache sanitize leggero così al prossimo render Prep riallinea se dati cambiati
+        try { window._prepSanitizeDone = false; } catch (e) {}
         // Aggiorna badge nav consigli
         try {
             const badge = document.getElementById('navConsigliCount');
@@ -11928,9 +11930,15 @@
     /** Pulisce localita di tutti i clienti già salvati (via/paese ok, niente Contratto/…). */
     function sanitizeAllClientAddresses(opts) {
         opts = opts || {};
+        const onlyPrep = !!opts.onlyPrep;
+        const light = !!opts.light; // solo pulizia testo + regione da provincia (niente resolveLocationData pesante)
         let n = 0;
         (clients || []).forEach(function(c) {
             if (!c) return;
+            if (onlyPrep) {
+                const inPrep = (typeof isInPrep === 'function') ? isInPrep(c) : (c.inPrep === true || c.inPrep === 'true');
+                if (!inPrep) return;
+            }
             if (c.localita) {
                 const before = String(c.localita);
                 const after = cleanLedManagerAddressTail(before);
@@ -11939,20 +11947,20 @@
                     n++;
                 }
             }
-            // Riallinea provincia/regione da indirizzo (es. Reggio Calabria → Calabria, non Trentino)
             try {
-                if (c.localita && typeof resolveLocationData === 'function') {
+                // Veloce: se c'è già la sigla provincia, regione da tabella
+                if (c.provincia && typeof PROVINCE_TO_REGION !== 'undefined') {
+                    const code = String(c.provincia).toUpperCase().trim();
+                    const reg = PROVINCE_TO_REGION[code];
+                    if (reg && c.regione !== reg) { c.regione = reg; n++; }
+                }
+                // Pesante (solo se non light): ricalcola da indirizzo
+                if (!light && c.localita && typeof resolveLocationData === 'function') {
                     const res = resolveLocationData(c.localita);
                     if (res && res.prov) {
                         if (c.provincia !== res.prov) { c.provincia = res.prov; n++; }
                         if (res.reg && c.regione !== res.reg) { c.regione = res.reg; n++; }
                     }
-                }
-                // se c'è provincia ma regione sbagliata/mancante
-                if (c.provincia && typeof PROVINCE_TO_REGION !== 'undefined') {
-                    const code = String(c.provincia).toUpperCase().trim();
-                    const reg = PROVINCE_TO_REGION[code];
-                    if (reg && c.regione !== reg) { c.regione = reg; n++; }
                 }
             } catch (e) {}
         });
@@ -14930,7 +14938,14 @@
     }
 
     function renderPrepPage() {
-        try { sanitizeAllClientAddresses(); } catch (e) {}
+        // NON rieseguire sanitize completo a ogni render (era la causa principale di lentezza).
+        // Solo allineamento leggero regione da provincia già nota, max 1 volta a sessione se sporco.
+        try {
+            if (!window._prepSanitizeDone) {
+                sanitizeAllClientAddresses({ silent: true, onlyPrep: true, light: true });
+                window._prepSanitizeDone = true;
+            }
+        } catch (e) {}
         populatePrepDropdowns();
         const countEl = document.getElementById('navPrepCount');
         const allPrep = clients.filter(c => isInPrep(c));
@@ -19170,7 +19185,7 @@
     // ===== CONSIGLI PIANIFICAZIONE (regole intelligenti su Prep) =====
     function renderConsigliPage() {
         // Indirizzi sempre allineati a Pre-pianificazione (stesso array clients)
-        try { if (typeof sanitizeAllClientAddresses === 'function') sanitizeAllClientAddresses({ silent: true }); } catch (e) {}
+        try { if (typeof sanitizeAllClientAddresses === 'function') sanitizeAllClientAddresses({ silent: true, light: true }); } catch (e) {}
         const box = document.getElementById('consigliContainer');
         const badge = document.getElementById('navConsigliCount');
         const all = clients || [];
@@ -19767,7 +19782,8 @@
             try { populateDistCitiesDatalist(); } catch(e) {}
             renderPrepPage();
             try { updatePrepPaesiCheckBanner(); } catch (e) {}
-            try { setTimeout(function() { maybeAutoCheckPrepPaesi({ silent: true }); }, 300); } catch (e) {}
+            // Niente controllo province automatico in rete all'apertura (rallentava molto).
+            // L'utente può usare "Aggiorna province" / "Ricontrolla ora" quando serve.
         }
         if (view === 'consigli') {
             try {
