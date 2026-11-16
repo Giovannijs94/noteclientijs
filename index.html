@@ -3290,6 +3290,70 @@
             box-shadow: var(--shadow);
             margin-top: 12px;
         }
+        .ordine-quick-card {
+            margin-bottom: 12px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 12px rgba(15,23,42,0.04);
+        }
+        .ordine-quick-types {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .ordine-quick-types .ordine-qtype {
+            border-radius: 999px;
+            font-weight: 700;
+            min-height: 40px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+        }
+        .ordine-quick-types .ordine-qtype.active {
+            background: #9d174d;
+            border-color: #9d174d;
+            color: #fff;
+        }
+        @media (max-width: 600px) {
+            .ordine-quick-types .ordine-qtype { flex: 1 1 auto; }
+            .ordine-quick-grid { grid-template-columns: 1fr !important; }
+        }
+        .ordini-fase-section {
+            margin-bottom: 18px;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            overflow: hidden;
+            background: #fff;
+        }
+        .ordini-fase-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 12px 16px;
+            font-weight: 800;
+            font-size: 0.95rem;
+        }
+        .ordini-fase-head.fase-ordine_fatto { background: linear-gradient(180deg,#eff6ff,#fff); color: #1e40af; }
+        .ordini-fase-head.fase-scaricato { background: linear-gradient(180deg,#fff7ed,#fff); color: #c2410c; }
+        .ordini-fase-head.fase-led_manager { background: linear-gradient(180deg,#ecfdf5,#fff); color: #047857; }
+        .ordini-fase-count {
+            min-width: 28px;
+            height: 28px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 800;
+            background: rgba(15,23,42,0.08);
+        }
+        .ordini-fase-body { padding: 10px 12px 12px; }
+        .ordini-fase-empty {
+            text-align: center;
+            color: #94a3b8;
+            padding: 16px;
+            font-size: 0.85rem;
+        }
         #viewOrdini .installati-header {
             background: linear-gradient(135deg, #312e81, #4f46e5);
             color: #fff;
@@ -3297,11 +3361,12 @@
             padding: 12px 16px;
         }
         .ordine-card {
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 14px 16px;
-            background: linear-gradient(180deg, #fff, #fafaff);
-            margin: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 16px 18px;
+            background: #fff;
+            margin: 0 0 12px;
+            box-shadow: 0 2px 10px rgba(15,23,42,0.04);
         }
         .ordine-card-head {
             display: flex;
@@ -3309,27 +3374,64 @@
             align-items: flex-start;
             gap: 12px;
             flex-wrap: wrap;
-            margin-bottom: 10px;
+            margin-bottom: 14px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #f1f5f9;
         }
         .ordine-card-title {
             font-weight: 800;
-            color: var(--primary);
-            font-size: 1.02rem;
+            color: #0f172a;
+            font-size: 1.05rem;
+            line-height: 1.3;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
         }
-        .ordine-meta {
+        .ordine-card-type {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #64748b;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 4px 10px;
+            border-radius: 999px;
+            white-space: nowrap;
+        }
+        .ordine-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 8px 12px;
-            font-size: 0.86rem;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 12px 16px;
+            margin-bottom: 4px;
         }
-        .ordine-meta span.label {
+        .ordine-grid .ordine-field {
+            min-width: 0;
+        }
+        .ordine-grid .ordine-field .label {
             display: block;
             font-size: 0.68rem;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.04em;
             color: #6366f1;
-            opacity: 0.9;
+            margin-bottom: 4px;
+        }
+        .ordine-grid .ordine-field strong {
+            display: block;
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: #0f172a;
+            word-break: break-word;
+        }
+        .ordine-note {
+            grid-column: 1 / -1;
+            margin-top: 4px;
+            padding: 10px 12px;
+            background: #f8fafc;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            color: #475569;
+            line-height: 1.4;
         }
         .ordine-chip {
             display: inline-flex;
@@ -3339,13 +3441,31 @@
             border-radius: 999px;
             font-size: 0.75rem;
             font-weight: 800;
+            white-space: nowrap;
         }
         .ordine-chip.tipo-cabinet { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
         .ordine-chip.tipo-accessorio { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
         .ordine-chip.tipo-speciale { background: #fdf4ff; color: #86198f; border: 1px solid #f0abfc; }
         .ordine-chip.ok { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
         .ordine-chip.wait { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
-        .ordine-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+        .ordine-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px solid #f1f5f9;
+        }
+        .ordine-actions .btn {
+            min-height: 40px;
+            border-radius: 10px;
+            font-size: 0.82rem;
+        }
+        @media (max-width: 600px) {
+            .ordine-grid { grid-template-columns: 1fr 1fr; }
+            .ordine-card { padding: 14px; }
+            .ordine-actions .btn { flex: 1 1 auto; }
+        }
                 .btn-standby {
             background: #d97706;
             color: white;
@@ -6917,12 +7037,58 @@
             <h1>📦 Ordini</h1>
         </div>
         <div class="header-actions header-actions-right">
-            <button type="button" class="btn btn-primary" onclick="openOrdineForm()">＋ Nuovo ordine</button>
+            <button type="button" class="btn btn-primary" onclick="openOrdineForm()">＋ Nuovo ordine completo</button>
             <span class="header-jumbo" aria-label="Jumboscreen">
                 <span class="header-jumbo-word">
                     <span class="header-jumbo-letters">JUMBOSCRE</span><span class="header-jumbo-e" aria-hidden="true"><i></i><i></i><i></i></span><span class="header-jumbo-letters">N</span>
                 </span><span class="header-jumbo-reg">®</span>
             </span>
+        </div>
+    </div>
+
+    <div class="card ordine-quick-card" id="ordineQuickCard">
+        <div class="card-title" style="margin-bottom:10px;">⚡ Aggiunta rapida</div>
+        <div class="ordine-quick-types" role="group" aria-label="Tipo merce">
+            <button type="button" class="btn ordine-qtype active" data-tipo="cabinet" onclick="setOrdineQuickTipo('cabinet')">📦 Cabinet</button>
+            <button type="button" class="btn ordine-qtype" data-tipo="accessorio" onclick="setOrdineQuickTipo('accessorio')">🔌 Accessorio</button>
+            <button type="button" class="btn ordine-qtype" data-tipo="speciale" onclick="setOrdineQuickTipo('speciale')">✨ Speciale / altro</button>
+        </div>
+        <div class="form-grid ordine-quick-grid" style="margin-top:10px;">
+            <div class="form-group">
+                <label for="oqAzienda">Azienda *</label>
+                <input type="text" id="oqAzienda" class="input-control" list="ordineAziendaList" placeholder="Nome azienda / fornitore" autocomplete="off"
+                    onkeydown="if(event.key==='Enter'){event.preventDefault();quickAddOrdine();}">
+            </div>
+            <div class="form-group">
+                <label for="oqPezzi">Pezzi</label>
+                <input type="number" id="oqPezzi" class="input-control" min="1" step="1" value="1"
+                    onkeydown="if(event.key==='Enter'){event.preventDefault();quickAddOrdine();}">
+            </div>
+            <div class="form-group" id="oqPassoWrap">
+                <label for="oqPasso" id="oqPassoLabel">Passo cabinet</label>
+                <input type="text" id="oqPasso" class="input-control" list="ordinePassoList" placeholder="es. P2.5, P3.9…"
+                    onkeydown="if(event.key==='Enter'){event.preventDefault();quickAddOrdine();}">
+            </div>
+            <div class="form-group" id="oqSottoWrap">
+                <label for="oqSottotipo" id="oqSottoLabel">Tipologia</label>
+                <select id="oqSottotipo" class="select-control" onchange="onOqSottotipoChange()"></select>
+            </div>
+            <div class="form-group" id="oqCustomWrap" style="display:none;">
+                <label for="oqCustom">Scrivi tipologia (non in elenco)</label>
+                <input type="text" id="oqCustom" class="input-control" list="oqCustomList" placeholder="es. Cabinet speciale, nuovo totem, LCD custom…"
+                    onkeydown="if(event.key==='Enter'){event.preventDefault();quickAddOrdine();}">
+                <datalist id="oqCustomList"></datalist>
+            </div>
+            <div class="form-group">
+                <label for="oqNote">Note (opz.)</label>
+                <input type="text" id="oqNote" class="input-control" placeholder="Nota breve…"
+                    onkeydown="if(event.key==='Enter'){event.preventDefault();quickAddOrdine();}">
+            </div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center;">
+            <button type="button" class="btn btn-primary" onclick="quickAddOrdine()">＋ Aggiungi in «Ordine fatto»</button>
+            <button type="button" class="btn" onclick="openOrdineForm()" title="Apri form completo">Modulo completo…</button>
+            <span id="oqStatus" style="font-size:0.8rem;color:#64748b;"></span>
         </div>
     </div>
 
@@ -6943,6 +7109,10 @@
                 <select id="ordineSottotipo" class="select-control" onchange="onOrdineSottotipoChange()">
                     <option value="cabinet">Cabinet</option>
                 </select>
+            </div>
+            <div class="form-group" id="ordineCustomWrap" style="display:none;">
+                <label for="ordineCustomTipo">Tipologia personalizzata</label>
+                <input type="text" id="ordineCustomTipo" class="input-control" list="oqCustomList" placeholder="Scrivi se non è in elenco…">
             </div>
             <div class="form-group">
                 <label>N° pezzi</label>
@@ -7049,27 +7219,31 @@
     </div>
 
     <div class="search-card" style="margin-top:4px;">
-        <input type="search" id="ordineSearch" class="search-input" placeholder="Cerca per azienda, passo, tipo, note…" oninput="renderOrdiniPage()">
+        <input type="search" id="ordineSearch" class="search-input" placeholder="Cerca per azienda, passo, tipo, note, lotto…" oninput="renderOrdiniPage()">
         <select id="ordineFilterTipo" class="select-control" style="max-width:180px;" onchange="renderOrdiniPage()">
             <option value="">Tutti i tipi</option>
             <option value="cabinet">Cabinet</option>
             <option value="accessorio">Accessori</option>
             <option value="speciale">Speciali</option>
         </select>
-        <select id="ordineFilterInserito" class="select-control" style="max-width:150px;" onchange="renderOrdiniPage()">
-            <option value="">Inserito: tutti</option>
-            <option value="no">Da inserire</option>
-            <option value="si">Inseriti</option>
-        </select>
-        <select id="ordineFilterScaricato" class="select-control" style="max-width:160px;" onchange="renderOrdiniPage()">
-            <option value="">Scaricato: tutti</option>
-            <option value="no">Non scaricato</option>
-            <option value="si">Scaricato</option>
+        <select id="ordineFilterFase" class="select-control" style="max-width:200px;" onchange="renderOrdiniPage()">
+            <option value="">Tutte le fasi</option>
+            <option value="ordine_fatto">① Ordine fatto</option>
+            <option value="scaricato">② Scaricato</option>
+            <option value="led_manager">③ Inserito LED Manager</option>
         </select>
     </div>
 
+    <div class="ordini-fasi-legend" style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 12px;font-size:0.8rem;color:#475569;">
+        <span style="background:#eff6ff;border:1px solid #bfdbfe;padding:6px 10px;border-radius:999px;font-weight:700;">① Ordine fatto</span>
+        <span style="color:#94a3b8;">→</span>
+        <span style="background:#fff7ed;border:1px solid #fed7aa;padding:6px 10px;border-radius:999px;font-weight:700;">② Scaricato <span style="font-weight:500;opacity:.85;">(merce arrivata)</span></span>
+        <span style="color:#94a3b8;">→</span>
+        <span style="background:#ecfdf5;border:1px solid #a7f3d0;padding:6px 10px;border-radius:999px;font-weight:700;">③ Inserito LED Manager <span style="font-weight:500;opacity:.85;">(lotto noto)</span></span>
+    </div>
+
     <div class="installati-table-wrap">
-        <div class="installati-header">Elenco ordini</div>
+        <div class="installati-header">Merce per fase</div>
         <div id="ordiniListContainer"></div>
     </div>
 </div><!-- /#viewOrdini -->
@@ -13164,11 +13338,90 @@
     try {
         ordini = JSON.parse(localStorage.getItem('note_clienti_ordini') || '[]') || [];
         if (!Array.isArray(ordini)) ordini = [];
+        ordini.forEach(function(o) {
+            if (!o) return;
+            if (!o.fase) {
+                if (o.inserito) o.fase = 'led_manager';
+                else if (o.scaricato) o.fase = 'scaricato';
+                else o.fase = 'ordine_fatto';
+            }
+        });
     } catch (e) { ordini = []; }
 
     function saveOrdini() {
         try { localStorage.setItem('note_clienti_ordini', JSON.stringify(ordini || [])); } catch (e) {}
+        try { updateOrdiniNavCount(); } catch (e) {}
     }
+
+    /** Fase merce: ordine_fatto → scaricato → led_manager */
+    function getOrdineFase(o) {
+        if (!o) return 'ordine_fatto';
+        if (o.fase === 'led_manager' || o.fase === 'scaricato' || o.fase === 'ordine_fatto') return o.fase;
+        // migrazione da flag legacy
+        if (o.inserito) return 'led_manager';
+        if (o.scaricato) return 'scaricato';
+        return 'ordine_fatto';
+    }
+    function ordineFaseLabel(fase) {
+        if (fase === 'scaricato') return 'Scaricato';
+        if (fase === 'led_manager') return 'Inserito LED Manager';
+        return 'Ordine fatto';
+    }
+    function setOrdineFase(o, fase) {
+        if (!o) return;
+        const f = (fase === 'scaricato' || fase === 'led_manager') ? fase : 'ordine_fatto';
+        o.fase = f;
+        // allinea flag legacy
+        if (f === 'ordine_fatto') {
+            o.scaricato = false;
+            o.inserito = false;
+            o.dataScaricato = '';
+            // tieni dataInserito se serve storico? no, reset
+            o.dataInserito = '';
+        } else if (f === 'scaricato') {
+            o.scaricato = true;
+            o.inserito = false;
+            if (!o.dataScaricato) o.dataScaricato = new Date().toISOString().slice(0, 10);
+            o.dataInserito = '';
+        } else {
+            o.scaricato = true;
+            o.inserito = true;
+            if (!o.dataScaricato) o.dataScaricato = new Date().toISOString().slice(0, 10);
+            if (!o.dataInserito) o.dataInserito = new Date().toISOString().slice(0, 10);
+        }
+    }
+    window.avanzaOrdineFase = function(id) {
+        const o = (ordini || []).find(function(x) { return String(x.id) === String(id); });
+        if (!o) return;
+        const f = getOrdineFase(o);
+        if (f === 'ordine_fatto') {
+            setOrdineFase(o, 'scaricato');
+        } else if (f === 'scaricato') {
+            // richiede lotto se possibile
+            const lotto = String(o.lotto || '').trim();
+            if (!lotto) {
+                const v = prompt('Inserisci il lotto (necessario per LED Manager):', '');
+                if (v == null) return;
+                if (!String(v).trim()) {
+                    alert('Serve il lotto per segnare «Inserito su LED Manager».');
+                    return;
+                }
+                o.lotto = String(v).trim();
+            }
+            setOrdineFase(o, 'led_manager');
+        }
+        saveOrdini();
+        renderOrdiniPage();
+    };
+    window.indietroOrdineFase = function(id) {
+        const o = (ordini || []).find(function(x) { return String(x.id) === String(id); });
+        if (!o) return;
+        const f = getOrdineFase(o);
+        if (f === 'led_manager') setOrdineFase(o, 'scaricato');
+        else if (f === 'scaricato') setOrdineFase(o, 'ordine_fatto');
+        saveOrdini();
+        renderOrdiniPage();
+    };
     function updateOrdiniNavCount() {
         const el = document.getElementById('navOrdiniCount');
         if (el) el.textContent = (ordini || []).length;
@@ -13188,15 +13441,21 @@
         if (!sub) return;
         let opts = [];
         if (tipo === 'cabinet') {
-            if (subLabel) subLabel.textContent = 'Categoria';
-            opts = [['cabinet', 'Cabinet LED']];
+            if (subLabel) subLabel.textContent = 'Tipologia cabinet';
+            opts = [
+                ['cabinet', 'Cabinet standard'],
+                ['cabinet_outdoor', 'Cabinet outdoor'],
+                ['cabinet_indoor', 'Cabinet indoor'],
+                ['cabinet_curva', 'Cabinet curva'],
+                ['custom', '➕ Altro / non in elenco…']
+            ];
         } else if (tipo === 'accessorio') {
             if (subLabel) subLabel.textContent = 'Accessorio';
             opts = [
                 ['computer', 'Computer'],
                 ['transmitter', 'Transmitter'],
                 ['chiavetta_usb', 'Chiavetta USB'],
-                ['altro_accessorio', 'Altro accessorio']
+                ['altro_accessorio', '➕ Altro accessorio / non in elenco…']
             ];
         } else {
             if (subLabel) subLabel.textContent = 'Prodotto speciale';
@@ -13207,7 +13466,8 @@
                 ['totem_flip', 'Totem Flip'],
                 ['lcd_standard', 'LCD'],
                 ['lcd_bright', 'LCD Bright'],
-                ['lcd_touch', 'LCD TOUCH']
+                ['lcd_touch', 'LCD TOUCH'],
+                ['altro_speciale', '➕ Altro / non in elenco…']
             ];
         }
         const prev = sub.value;
@@ -13219,6 +13479,15 @@
     }
 
     function onOrdineSottotipoChange() {
+        try {
+            const sub0 = (document.getElementById('ordineSottotipo') || {}).value || '';
+            const cw = document.getElementById('ordineCustomWrap');
+            if (cw) {
+                const show = (sub0 === 'custom' || sub0 === 'altro_accessorio' || sub0 === 'altro_speciale' || sub0 === 'altro_cabinet');
+                cw.style.display = show ? '' : 'none';
+            }
+        } catch (e) {}
+
         const tipo = (document.getElementById('ordineTipo') || {}).value || 'cabinet';
         const sub = (document.getElementById('ordineSottotipo') || {}).value || '';
         const passoWrap = document.getElementById('ordinePassoWrap');
@@ -13317,6 +13586,202 @@
             return '<option value="' + a.replace(/"/g, '&quot;') + '">';
         }).join('');
     }
+
+    // --- Aggiunta rapida ordini ---
+    let _ordineQuickTipo = 'cabinet';
+
+    function loadOrdineCustomTypes() {
+        try {
+            const arr = JSON.parse(localStorage.getItem('note_clienti_ordine_custom_types') || '[]');
+            return Array.isArray(arr) ? arr : [];
+        } catch (e) { return []; }
+    }
+    function saveOrdineCustomType(label) {
+        const t = String(label || '').trim();
+        if (!t || t.length < 2) return;
+        let arr = loadOrdineCustomTypes();
+        const key = t.toLowerCase();
+        arr = arr.filter(function(x) { return String(x).toLowerCase() !== key; });
+        arr.unshift(t);
+        arr = arr.slice(0, 40);
+        try { localStorage.setItem('note_clienti_ordine_custom_types', JSON.stringify(arr)); } catch (e) {}
+        try { fillOqCustomDatalist(); } catch (e) {}
+    }
+    function fillOqCustomDatalist() {
+        const dl = document.getElementById('oqCustomList');
+        if (!dl) return;
+        const arr = loadOrdineCustomTypes();
+        dl.innerHTML = arr.map(function(t) {
+            return '<option value="' + String(t).replace(/"/g, '&quot;') + '">';
+        }).join('');
+    }
+
+    window.onOqSottotipoChange = function() {
+        const sotto = document.getElementById('oqSottotipo');
+        const wrap = document.getElementById('oqCustomWrap');
+        if (!sotto || !wrap) return;
+        const v = sotto.value || '';
+        const isCustom = (v === 'custom' || v === 'altro_accessorio' || v === 'altro_speciale' || v === 'altro_cabinet');
+        wrap.style.display = isCustom ? '' : 'none';
+        if (isCustom) {
+            try { document.getElementById('oqCustom').focus(); } catch (e) {}
+        }
+    };
+
+    window.setOrdineQuickTipo = function(tipo) {
+        _ordineQuickTipo = (tipo === 'accessorio' || tipo === 'speciale') ? tipo : 'cabinet';
+        document.querySelectorAll('.ordine-qtype').forEach(function(btn) {
+            btn.classList.toggle('active', btn.getAttribute('data-tipo') === _ordineQuickTipo);
+        });
+        const passoWrap = document.getElementById('oqPassoWrap');
+        const sottoWrap = document.getElementById('oqSottoWrap');
+        const passoLabel = document.getElementById('oqPassoLabel');
+        const sottoLabel = document.getElementById('oqSottoLabel');
+        const sotto = document.getElementById('oqSottotipo');
+        const customWrap = document.getElementById('oqCustomWrap');
+        if (customWrap) customWrap.style.display = 'none';
+        try { fillOqCustomDatalist(); } catch (e) {}
+
+        if (_ordineQuickTipo === 'cabinet') {
+            if (passoWrap) passoWrap.style.display = '';
+            if (sottoWrap) sottoWrap.style.display = '';
+            if (passoLabel) passoLabel.textContent = 'Passo cabinet';
+            if (sottoLabel) sottoLabel.textContent = 'Tipologia cabinet';
+            if (sotto) {
+                sotto.innerHTML = [
+                    ['cabinet', 'Cabinet standard'],
+                    ['cabinet_outdoor', 'Cabinet outdoor'],
+                    ['cabinet_indoor', 'Cabinet indoor'],
+                    ['cabinet_curva', 'Cabinet curva'],
+                    ['custom', '➕ Altro / non in elenco…']
+                ].map(function(o) { return '<option value="' + o[0] + '">' + o[1] + '</option>'; }).join('');
+            }
+        } else if (_ordineQuickTipo === 'accessorio') {
+            if (passoWrap) passoWrap.style.display = 'none';
+            if (sottoWrap) sottoWrap.style.display = '';
+            if (sottoLabel) sottoLabel.textContent = 'Tipologia accessorio';
+            if (sotto) {
+                sotto.innerHTML = [
+                    ['computer', 'Computer'],
+                    ['transmitter', 'Transmitter'],
+                    ['chiavetta_usb', 'Chiavetta USB'],
+                    ['custom', '➕ Altro accessorio / non in elenco…']
+                ].map(function(o) { return '<option value="' + o[0] + '">' + o[1] + '</option>'; }).join('');
+            }
+        } else {
+            if (passoWrap) passoWrap.style.display = 'none';
+            if (sottoWrap) sottoWrap.style.display = '';
+            if (sottoLabel) sottoLabel.textContent = 'Tipologia speciale';
+            if (sotto) {
+                sotto.innerHTML = [
+                    ['totem_standard', 'Totem'],
+                    ['totem_moving', 'Totem Moving'],
+                    ['totem_glass', 'Totem Glass'],
+                    ['totem_flip', 'Totem Flip'],
+                    ['lcd_standard', 'LCD'],
+                    ['lcd_bright', 'LCD Bright'],
+                    ['lcd_touch', 'LCD TOUCH'],
+                    ['custom', '➕ Altro / non in elenco…']
+                ].map(function(o) { return '<option value="' + o[0] + '">' + o[1] + '</option>'; }).join('');
+            }
+        }
+        try { onOqSottotipoChange(); } catch (e) {}
+    };
+
+    window.quickAddOrdine = function() {
+        const azienda = ((document.getElementById('oqAzienda') || {}).value || '').trim();
+        let pezzi = parseInt((document.getElementById('oqPezzi') || {}).value, 10);
+        if (isNaN(pezzi) || pezzi < 1) pezzi = 1;
+        const passo = ((document.getElementById('oqPasso') || {}).value || '').trim();
+        const note = ((document.getElementById('oqNote') || {}).value || '').trim();
+        const sottotipoEl = document.getElementById('oqSottotipo');
+        const status = document.getElementById('oqStatus');
+
+        if (!azienda) {
+            alert('Inserisci l\'azienda.');
+            try { document.getElementById('oqAzienda').focus(); } catch (e) {}
+            return;
+        }
+        const oqSubEarly = ((document.getElementById('oqSottotipo') || {}).value || '');
+        const oqCustomEarly = ((document.getElementById('oqCustom') || {}).value || '').trim();
+        const isCustomEarly = (oqSubEarly === 'custom' || oqSubEarly === 'altro_accessorio' || oqSubEarly === 'altro_speciale');
+        if (_ordineQuickTipo === 'cabinet' && !passo && !(isCustomEarly && oqCustomEarly)) {
+            alert('Inserisci il passo del cabinet (es. P2.5), oppure scegli «Altro / non in elenco» e scrivi la tipologia.');
+            try { document.getElementById('oqPasso').focus(); } catch (e) {}
+            return;
+        }
+
+        let sottotipo = (sottotipoEl && sottotipoEl.value) ? sottotipoEl.value : 'cabinet';
+        const customVal = ((document.getElementById('oqCustom') || {}).value || '').trim();
+        let etichettaCustom = '';
+        if (sottotipo === 'custom' || sottotipo === 'altro_accessorio' || sottotipo === 'altro_speciale' || sottotipo === 'altro_cabinet') {
+            if (!customVal) {
+                alert('Scrivi la tipologia (non è in elenco).');
+                try { document.getElementById('oqCustom').focus(); } catch (e) {}
+                return;
+            }
+            etichettaCustom = customVal;
+            sottotipo = 'custom';
+            saveOrdineCustomType(customVal);
+        }
+
+        // cabinet: passo obbligatorio solo se non è custom senza passo? se custom cabinet passo opzionale ma consigliato
+        if (_ordineQuickTipo === 'cabinet' && !passo && !etichettaCustom) {
+            // already checked above for standard cabinet
+        }
+
+        const o = {
+            id: ordineId(),
+            tipo: _ordineQuickTipo,
+            sottotipo: sottotipo,
+            sottotipoLabel: (typeof sottotipoLabel !== 'undefined' ? sottotipoLabel : ''),
+            sottotipoLabel: etichettaCustom || '',
+            pezzi: pezzi,
+            passo: _ordineQuickTipo === 'cabinet' ? passo : '',
+            dimensione: '',
+            pollici: '',
+            ambiente: '',
+            nit: '',
+            azienda: azienda,
+            lotto: '',
+            note: note,
+            inserito: false,
+            dataInserito: '',
+            scaricato: false,
+            dataScaricato: '',
+            fase: 'ordine_fatto',
+            createdAt: new Date().toISOString()
+        };
+        ordini = ordini || [];
+        ordini.unshift(o);
+        saveOrdini();
+        try { renderOrdiniPage(); } catch (e) {}
+
+        // reset campi veloci (tieni tipo e pezzi)
+        try {
+            document.getElementById('oqAzienda').value = '';
+            document.getElementById('oqPasso').value = '';
+            document.getElementById('oqNote').value = '';
+            document.getElementById('oqPezzi').value = '1';
+            const oc = document.getElementById('oqCustom');
+            if (oc) oc.value = '';
+            document.getElementById('oqAzienda').focus();
+        } catch (e) {}
+        if (status) {
+            status.textContent = '✓ Aggiunto in Ordine fatto: ' + azienda;
+            status.style.color = '#047857';
+            setTimeout(function() {
+                if (status.textContent.indexOf(azienda) >= 0) {
+                    status.textContent = '';
+                    status.style.color = '#64748b';
+                }
+            }, 2500);
+        }
+    };
+
+    // init quick tipo on load
+    try { setOrdineQuickTipo('cabinet'); } catch (e) {}
+
     window.openOrdineForm = function(id) {
         const card = document.getElementById('ordineFormCard');
         const title = document.getElementById('ordineFormTitle');
@@ -13386,7 +13851,20 @@
     };
     window.saveOrdine = function() {
         const tipo = (document.getElementById('ordineTipo').value || 'cabinet').trim();
-        const sottotipo = (document.getElementById('ordineSottotipo').value || '').trim();
+        let sottotipo = (document.getElementById('ordineSottotipo').value || '').trim();
+        let sottotipoLabel = '';
+        const customTipo = ((document.getElementById('ordineCustomTipo') || {}).value || '').trim();
+        if (sottotipo === 'custom' || sottotipo === 'altro_accessorio' || sottotipo === 'altro_speciale' || sottotipo === 'altro_cabinet') {
+            if (!customTipo) {
+                alert('Scrivi la tipologia personalizzata (non in elenco).');
+                try { document.getElementById('ordineCustomTipo').focus(); } catch (e) {}
+                return;
+            }
+            sottotipoLabel = customTipo;
+            sottotipo = 'custom';
+            try { saveOrdineCustomType(customTipo); } catch (e) {}
+        }
+
         let pezzi = parseInt(document.getElementById('ordinePezzi').value, 10);
         if (isNaN(pezzi) || pezzi < 1) pezzi = 1;
         let passo = (document.getElementById('ordinePasso').value || '').trim();
@@ -13405,6 +13883,10 @@
         let dataScaricato = (document.getElementById('ordineDataScaricato').value || '').trim();
         if (scaricato && !dataScaricato) dataScaricato = new Date().toISOString().slice(0, 10);
         if (!scaricato) dataScaricato = '';
+        // Fase merce derivata dai flag (o default ordine fatto)
+        let faseSave = 'ordine_fatto';
+        if (inserito) faseSave = 'led_manager';
+        else if (scaricato) faseSave = 'scaricato';
         if (!azienda) {
             alert('Inserisci l\'azienda.');
             document.getElementById('ordineAzienda').focus();
@@ -13454,6 +13936,7 @@
             dataInserito: dataInserito,
             scaricato: scaricato,
             dataScaricato: dataScaricato,
+            fase: (typeof faseSave !== 'undefined' ? faseSave : (inserito ? 'led_manager' : (scaricato ? 'scaricato' : 'ordine_fatto'))),
             updatedAt: new Date().toISOString()
         };
         if (editId) {
@@ -13530,87 +14013,124 @@
     }
 
     window.renderOrdiniPage = function() {
-        updateOrdiniNavCount();
         const box = document.getElementById('ordiniListContainer');
+        updateOrdiniNavCount();
         if (!box) return;
-        const q = ((document.getElementById('ordineSearch') || {}).value || '').trim().toLowerCase();
+
+        // Migrazione leggera: assegna fase se manca
+        (ordini || []).forEach(function(o) {
+            if (!o) return;
+            if (!o.fase) o.fase = getOrdineFase(o);
+        });
+
+        const q = ((document.getElementById('ordineSearch') || {}).value || '').toLowerCase().trim();
         const fTipo = ((document.getElementById('ordineFilterTipo') || {}).value || '').trim();
-        const fIns = ((document.getElementById('ordineFilterInserito') || {}).value || '').trim();
-        const fSca = ((document.getElementById('ordineFilterScaricato') || {}).value || '').trim();
+        const fFase = ((document.getElementById('ordineFilterFase') || {}).value || '').trim();
+
         let list = (ordini || []).slice();
         if (fTipo) list = list.filter(function(o) { return o.tipo === fTipo; });
-        if (fIns === 'si') list = list.filter(function(o) { return !!o.inserito; });
-        if (fIns === 'no') list = list.filter(function(o) { return !o.inserito; });
-        if (fSca === 'si') list = list.filter(function(o) { return !!o.scaricato; });
-        if (fSca === 'no') list = list.filter(function(o) { return !o.scaricato; });
+        if (fFase) list = list.filter(function(o) { return getOrdineFase(o) === fFase; });
         if (q) {
             list = list.filter(function(o) {
-                const blob = [o.azienda, o.passo, o.dimensione, o.pollici, o.ambiente, o.nit, o.lotto, o.note, o.tipo, o.sottotipo, sottotipoLabel(o)].join(' ').toLowerCase();
-                return blob.indexOf(q) !== -1;
+                const blob = [
+                    o.azienda, o.passo, o.tipo, o.sottotipo, o.note, o.lotto,
+                    o.dimensione, o.pollici, o.ambiente, o.nit, ordineFaseLabel(getOrdineFase(o))
+                ].join(' ').toLowerCase();
+                return q.split(/\s+/).every(function(w) { return blob.indexOf(w) >= 0; });
             });
         }
+
+        // ordina: più recenti prima dentro ogni fase
         list.sort(function(a, b) {
-            const da = a.updatedAt || a.createdAt || '';
-            const db = b.updatedAt || b.createdAt || '';
-            return db.localeCompare(da);
+            return String(b.createdAt || b.id || '').localeCompare(String(a.createdAt || a.id || ''));
         });
+
         if (!list.length) {
-            box.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:36px;">Nessun ordine' + (q || fTipo || fIns || fSca ? ' con questi filtri' : '') + '.</p>';
+            box.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:40px;">Nessun ordine' +
+                (q || fTipo || fFase ? ' con questi filtri' : '') + '.</p>';
             return;
         }
-        let html = '';
-        list.forEach(function(o) {
-            const tipoCls = 'tipo-' + (o.tipo || 'cabinet');
-            const insChip = o.inserito
-                ? '<span class="ordine-chip ok">✅ Inserito' + (o.dataInserito ? (' · ' + String(o.dataInserito).split('-').reverse().join('/')) : '') + '</span>'
-                : '<span class="ordine-chip wait">⏳ Da inserire</span>';
-            const scaChip = o.scaricato
-                ? '<span class="ordine-chip ok">📥 Scaricato' + (o.dataScaricato ? (' · ' + String(o.dataScaricato).split('-').reverse().join('/')) : '') + '</span>'
-                : '<span class="ordine-chip wait">📤 Non scaricato</span>';
-            const passoRow = (o.passo)
-                ? ('<div><span class="label">Passo</span><strong>' + String(o.passo || '—').replace(/</g, '&lt;') + '</strong></div>')
-                : '';
-            const dimRow = (o.dimensione)
-                ? ('<div><span class="label">Dimensione</span><strong>' + String(o.dimensione || '—').replace(/</g, '&lt;') + '</strong></div>')
-                : '';
-            const polRow = (o.pollici)
-                ? ('<div><span class="label">Pollici</span><strong>' + String(o.pollici).replace(/</g, '&lt;') + '"</strong></div>')
-                : '';
-            const ambRow = (o.ambiente)
-                ? ('<div><span class="label">Ambiente</span><strong>' + (o.ambiente === 'outdoor' ? 'Outdoor' : 'Indoor') + '</strong></div>')
-                : '';
-            const nitRow = (o.nit)
-                ? ('<div><span class="label">Nit</span><strong>' + String(o.nit).replace(/</g, '&lt;') + (o.nit === 'altro' ? '' : ' nit') + '</strong></div>')
-                : '';
-            const lottoRow = o.lotto
-                ? ('<div><span class="label">Lotto</span><strong>' + String(o.lotto).replace(/</g, '&lt;') + '</strong></div>')
-                : ('<div><span class="label">Lotto</span><span style="color:#94a3b8;">non assegnato</span></div>');
-            const noteRow = o.note
-                ? ('<div style="grid-column:1/-1;"><span class="label">Note</span>' + String(o.note).replace(/</g, '&lt;') + '</div>')
-                : '';
-            html += '<article class="ordine-card">' +
+
+        function cardHtml(o) {
+            const fase = getOrdineFase(o);
+            const tipoLab = ordineTipoLabel(o.tipo);
+            const subLab = (function() {
+                if (o.sottotipoLabel) return String(o.sottotipoLabel);
+                if (o.sottotipo === 'custom' && o.note) return '';
+                try { return ordineSottotipoLabel(o.tipo, o.sottotipo) || ''; } catch (e) { return o.sottotipo || ''; }
+            })();
+            function field(label, val) {
+                if (val == null || val === '') return '';
+                return '<div class="ordine-field"><span class="label">' + label + '</span><strong>' +
+                    String(val).replace(/</g, '&lt;') + '</strong></div>';
+            }
+            const safeId = String(o.id).replace(/'/g, "\\'");
+
+            let faseChip = '';
+            if (fase === 'ordine_fatto') faseChip = '<span class="ordine-chip" style="background:#dbeafe;color:#1e40af;">① Ordine fatto</span>';
+            else if (fase === 'scaricato') faseChip = '<span class="ordine-chip" style="background:#ffedd5;color:#c2410c;">② Scaricato</span>';
+            else faseChip = '<span class="ordine-chip" style="background:#d1fae5;color:#047857;">③ LED Manager</span>';
+
+            let nextBtn = '';
+            let backBtn = '';
+            if (fase === 'ordine_fatto') {
+                nextBtn = '<button type="button" class="btn btn-primary" onclick="avanzaOrdineFase(\'' + safeId + '\')">📥 Segna scaricato</button>';
+            } else if (fase === 'scaricato') {
+                nextBtn = '<button type="button" class="btn btn-primary" onclick="avanzaOrdineFase(\'' + safeId + '\')">✅ Inserito su LED Manager</button>';
+                backBtn = '<button type="button" class="btn" onclick="indietroOrdineFase(\'' + safeId + '\')">↩ Torna a ordine fatto</button>';
+            } else {
+                backBtn = '<button type="button" class="btn" onclick="indietroOrdineFase(\'' + safeId + '\')">↩ Torna a scaricato</button>';
+            }
+
+            const typeLine = tipoLab + (subLab ? (' · ' + String(subLab).replace(/</g, '&lt;').replace(/_/g, ' ')) : '');
+            const noteRow = o.note ? ('<div class="ordine-note">📝 ' + String(o.note).replace(/</g, '&lt;') + '</div>') : '';
+
+            return '<article class="ordine-card">' +
                 '<div class="ordine-card-head">' +
-                '<div class="ordine-card-title">' + String(o.azienda || 'Senza azienda').replace(/</g, '&lt;') +
-                ' <span style="font-weight:700;color:#64748b;font-size:0.9rem;">· ' + sottotipoLabel(o).replace(/</g, '&lt;') + '</span></div>' +
-                '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
-                '<span class="ordine-chip ' + tipoCls + '">' + ordineTipoLabel(o.tipo) + '</span>' +
-                insChip + scaChip +
-                '</div></div>' +
-                '<div class="ordine-meta">' +
-                '<div><span class="label">Pezzi</span><strong>' + (o.pezzi != null ? o.pezzi : '—') + '</strong></div>' +
-                passoRow + dimRow + polRow + ambRow + nitRow + lottoRow +
-                '<div><span class="label">Azienda</span><strong>' + String(o.azienda || '—').replace(/</g, '&lt;') + '</strong></div>' +
+                '<div class="ordine-card-title">' +
+                String(o.azienda || '—').replace(/</g, '&lt;') + ' ' + faseChip +
+                '</div>' +
+                '<span class="ordine-card-type">' + typeLine + '</span>' +
+                '</div>' +
+                '<div class="ordine-grid">' +
+                field('Pezzi', o.pezzi != null ? o.pezzi : '') +
+                field('Passo', o.passo) +
+                field('Dimensione', o.dimensione) +
+                field('Pollici', o.pollici) +
+                field('Ambiente', o.ambiente) +
+                field('Nit', o.nit) +
+                field('Lotto', o.lotto) +
                 noteRow +
                 '</div>' +
                 '<div class="ordine-actions">' +
-                '<button type="button" class="btn" onclick="toggleOrdineInserito(\'' + String(o.id).replace(/'/g, "\\'") + '\')">' +
-                (o.inserito ? '↩ Segna da inserire' : '✅ Segna inserito') + '</button>' +
-                '<button type="button" class="btn" onclick="toggleOrdineScaricato(\'' + String(o.id).replace(/'/g, "\\'") + '\')">' +
-                (o.scaricato ? '↩ Non scaricato' : '📥 Segna scaricato') + '</button>' +
-                '<button type="button" class="btn" onclick="openOrdineForm(\'' + String(o.id).replace(/'/g, "\\'") + '\')">✏️ Modifica</button>' +
-                '<button type="button" class="btn" onclick="setOrdineLotto(\'' + String(o.id).replace(/'/g, "\\'") + '\')">🏷️ Lotto</button>' +
-                '<button type="button" class="btn-icon danger" onclick="deleteOrdine(\'' + String(o.id).replace(/'/g, "\\'") + '\')" title="Elimina">🗑️</button>' +
+                nextBtn + backBtn +
+                '<button type="button" class="btn" onclick="openOrdineForm(\'' + safeId + '\')">✏️ Modifica</button>' +
+                '<button type="button" class="btn" onclick="setOrdineLotto(\'' + safeId + '\')">🏷️ Lotto</button>' +
+                '<button type="button" class="btn-icon danger" onclick="deleteOrdine(\'' + safeId + '\')" title="Elimina">🗑️</button>' +
                 '</div></article>';
+        }
+
+        const fasi = [
+            { key: 'ordine_fatto', title: '① Ordine fatto', desc: 'Ordine inviato, in attesa della merce' },
+            { key: 'scaricato', title: '② Scaricato', desc: 'Merce arrivata, in attesa del lotto / inserimento LED Manager' },
+            { key: 'led_manager', title: '③ Inserito su LED Manager', desc: 'Lotto noto e ordine registrato su LED Manager' }
+        ];
+
+        let html = '';
+        fasi.forEach(function(f) {
+            if (fFase && fFase !== f.key) return;
+            const items = list.filter(function(o) { return getOrdineFase(o) === f.key; });
+            html += '<section class="ordini-fase-section">' +
+                '<div class="ordini-fase-head fase-' + f.key + '">' +
+                '<span>' + f.title + ' <span style="font-weight:500;font-size:0.8rem;opacity:.85;">— ' + f.desc + '</span></span>' +
+                '<span class="ordini-fase-count">' + items.length + '</span>' +
+                '</div><div class="ordini-fase-body">';
+            if (!items.length) {
+                html += '<div class="ordini-fase-empty">Nessun ordine in questa fase</div>';
+            } else {
+                items.forEach(function(o) { html += cardHtml(o); });
+            }
+            html += '</div></section>';
         });
         box.innerHTML = html;
     };
