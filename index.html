@@ -3378,6 +3378,14 @@
             padding-bottom: 12px;
             border-bottom: 1px solid #f1f5f9;
         }
+        .ordine-card-product {
+            font-size: 1.15rem;
+            font-weight: 900;
+            color: #9d174d;
+            line-height: 1.25;
+            margin-bottom: 6px;
+            letter-spacing: -0.01em;
+        }
         .ordine-card-title {
             font-weight: 800;
             color: #0f172a;
@@ -13993,12 +14001,19 @@
         renderOrdiniPage();
     };
     function sottotipoLabel(o) {
+        if (!o) return '';
+        if (o.sottotipoLabel) return String(o.sottotipoLabel);
         const map = {
             cabinet: 'Cabinet LED',
+            cabinet_outdoor: 'Cabinet outdoor',
+            cabinet_indoor: 'Cabinet indoor',
+            cabinet_curva: 'Cabinet curva',
             computer: 'Computer',
             transmitter: 'Transmitter',
             chiavetta_usb: 'Chiavetta USB',
             altro_accessorio: 'Altro accessorio',
+            altro_speciale: 'Altro speciale',
+            custom: 'Personalizzato',
             totem: 'Totem',
             totem_standard: 'Totem',
             totem_moving: 'Totem Moving',
@@ -14010,6 +14025,28 @@
             lcd_touch: 'LCD TOUCH'
         };
         return map[o.sottotipo] || ordineTipoLabel(o.tipo);
+    }
+    /** Nome prodotto leggibile: priorità massima in scheda ordine */
+    function ordineProdottoNome(o) {
+        if (!o) return '—';
+        // etichetta custom scritta dall'utente
+        if (o.sottotipoLabel && String(o.sottotipoLabel).trim()) {
+            return String(o.sottotipoLabel).trim();
+        }
+        const sub = sottotipoLabel(o);
+        const tipo = ordineTipoLabel(o.tipo);
+        // se sottotipo già esplicativo usalo
+        if (sub && sub !== tipo && sub !== 'Personalizzato' && sub !== 'Altro accessorio' && sub !== 'Altro speciale') {
+            // per cabinet aggiungi passo se c'è
+            if (o.tipo === 'cabinet' && o.passo) return sub + ' ' + String(o.passo).trim();
+            return sub;
+        }
+        if (o.tipo === 'cabinet') {
+            return o.passo ? ('Cabinet ' + String(o.passo).trim()) : 'Cabinet';
+        }
+        if (o.tipo === 'accessorio') return sub || 'Accessorio';
+        if (o.tipo === 'speciale') return sub || 'Speciale';
+        return sub || tipo || '—';
     }
 
     window.renderOrdiniPage = function() {
@@ -14033,9 +14070,10 @@
         if (q) {
             list = list.filter(function(o) {
                 const blob = [
-                    o.azienda, o.passo, o.tipo, o.sottotipo, o.note, o.lotto,
+                    o.azienda, o.passo, o.tipo, o.sottotipo, o.sottotipoLabel, o.note, o.lotto,
                     o.dimensione, o.pollici, o.ambiente, o.nit,
                     o.dataScaricato, o.dataInserito, o.createdAt,
+                    ordineProdottoNome(o),
                     ordineFaseLabel(getOrdineFase(o))
                 ].join(' ').toLowerCase();
                 return q.split(/\s+/).every(function(w) { return blob.indexOf(w) >= 0; });
@@ -14101,17 +14139,22 @@
                 backBtn = '<button type="button" class="btn" onclick="indietroOrdineFase(\'' + safeId + '\')">↩ Torna a scaricato</button>';
             }
 
+            const prodottoNome = ordineProdottoNome(o);
             const typeLine = tipoLab + (subLab ? (' · ' + String(subLab).replace(/</g, '&lt;').replace(/_/g, ' ')) : '');
             const noteRow = o.note ? ('<div class="ordine-note">📝 ' + String(o.note).replace(/</g, '&lt;') + '</div>') : '';
 
             return '<article class="ordine-card">' +
                 '<div class="ordine-card-head">' +
+                '<div>' +
+                '<div class="ordine-card-product">' + String(prodottoNome).replace(/</g, '&lt;') + '</div>' +
                 '<div class="ordine-card-title">' +
                 String(o.azienda || '—').replace(/</g, '&lt;') + ' ' + faseChip +
+                '</div>' +
                 '</div>' +
                 '<span class="ordine-card-type">' + typeLine + '</span>' +
                 '</div>' +
                 '<div class="ordine-grid">' +
+                field('Prodotto', prodottoNome) +
                 field('Pezzi', o.pezzi != null ? o.pezzi : '') +
                 field('Passo', o.passo) +
                 field('Dimensione', o.dimensione) +
