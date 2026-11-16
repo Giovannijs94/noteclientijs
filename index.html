@@ -7063,6 +7063,11 @@
         </div>
         <div class="form-grid ordine-quick-grid" style="margin-top:10px;">
             <div class="form-group">
+                <label for="oqProdotto">Nome prodotto *</label>
+                <input type="text" id="oqProdotto" class="input-control" list="oqCustomList" placeholder="es. Computer, Totem Glass, Cabinet P2.5, LEDCARD…" autocomplete="off"
+                    onkeydown="if(event.key==='Enter'){event.preventDefault();quickAddOrdine();}">
+            </div>
+            <div class="form-group">
                 <label for="oqAzienda">Azienda *</label>
                 <input type="text" id="oqAzienda" class="input-control" list="ordineAziendaList" placeholder="Nome azienda / fornitore" autocomplete="off"
                     onkeydown="if(event.key==='Enter'){event.preventDefault();quickAddOrdine();}">
@@ -13697,6 +13702,7 @@
     };
 
     window.quickAddOrdine = function() {
+        const prodotto = ((document.getElementById('oqProdotto') || {}).value || '').trim();
         const azienda = ((document.getElementById('oqAzienda') || {}).value || '').trim();
         let pezzi = parseInt((document.getElementById('oqPezzi') || {}).value, 10);
         if (isNaN(pezzi) || pezzi < 1) pezzi = 1;
@@ -13705,45 +13711,40 @@
         const sottotipoEl = document.getElementById('oqSottotipo');
         const status = document.getElementById('oqStatus');
 
+        if (!prodotto) {
+            alert('Inserisci il NOME del prodotto (es. Computer, Totem Glass, Cabinet P2.5…).');
+            try { document.getElementById('oqProdotto').focus(); } catch (e) {}
+            return;
+        }
         if (!azienda) {
             alert('Inserisci l\'azienda.');
             try { document.getElementById('oqAzienda').focus(); } catch (e) {}
             return;
         }
         const oqSubEarly = ((document.getElementById('oqSottotipo') || {}).value || '');
-        const oqCustomEarly = ((document.getElementById('oqCustom') || {}).value || '').trim();
         const isCustomEarly = (oqSubEarly === 'custom' || oqSubEarly === 'altro_accessorio' || oqSubEarly === 'altro_speciale');
-        if (_ordineQuickTipo === 'cabinet' && !passo && !(isCustomEarly && oqCustomEarly)) {
-            alert('Inserisci il passo del cabinet (es. P2.5), oppure scegli «Altro / non in elenco» e scrivi la tipologia.');
+        if (_ordineQuickTipo === 'cabinet' && !passo && !isCustomEarly) {
+            alert('Inserisci il passo del cabinet (es. P2.5).');
             try { document.getElementById('oqPasso').focus(); } catch (e) {}
             return;
         }
 
         let sottotipo = (sottotipoEl && sottotipoEl.value) ? sottotipoEl.value : 'cabinet';
-        const customVal = ((document.getElementById('oqCustom') || {}).value || '').trim();
-        let etichettaCustom = '';
+        // Nome prodotto: sempre salvato (priorità sul display)
+        const etichetta = prodotto;
+        // se scelta "altro/custom", marca custom; altrimenti tieni il sottotipo selezionato
         if (sottotipo === 'custom' || sottotipo === 'altro_accessorio' || sottotipo === 'altro_speciale' || sottotipo === 'altro_cabinet') {
-            if (!customVal) {
-                alert('Scrivi la tipologia (non è in elenco).');
-                try { document.getElementById('oqCustom').focus(); } catch (e) {}
-                return;
-            }
-            etichettaCustom = customVal;
             sottotipo = 'custom';
-            saveOrdineCustomType(customVal);
         }
-
-        // cabinet: passo obbligatorio solo se non è custom senza passo? se custom cabinet passo opzionale ma consigliato
-        if (_ordineQuickTipo === 'cabinet' && !passo && !etichettaCustom) {
-            // already checked above for standard cabinet
-        }
+        // salva tipologia tra i suggerimenti futuri
+        try { saveOrdineCustomType(etichetta); } catch (e) {}
 
         const o = {
             id: ordineId(),
             tipo: _ordineQuickTipo,
             sottotipo: sottotipo,
-            sottotipoLabel: (typeof sottotipoLabel !== 'undefined' ? sottotipoLabel : ''),
-            sottotipoLabel: etichettaCustom || '',
+            sottotipoLabel: etichetta,
+            prodotto: etichetta,
             pezzi: pezzi,
             passo: _ordineQuickTipo === 'cabinet' ? passo : '',
             dimensione: '',
@@ -13765,21 +13766,22 @@
         saveOrdini();
         try { renderOrdiniPage(); } catch (e) {}
 
-        // reset campi veloci (tieni tipo e pezzi)
+        // reset campi veloci (tieni tipo)
         try {
+            document.getElementById('oqProdotto').value = '';
             document.getElementById('oqAzienda').value = '';
             document.getElementById('oqPasso').value = '';
             document.getElementById('oqNote').value = '';
             document.getElementById('oqPezzi').value = '1';
             const oc = document.getElementById('oqCustom');
             if (oc) oc.value = '';
-            document.getElementById('oqAzienda').focus();
+            document.getElementById('oqProdotto').focus();
         } catch (e) {}
         if (status) {
-            status.textContent = '✓ Aggiunto in Ordine fatto: ' + azienda;
+            status.textContent = '✓ Salvato: ' + etichetta + ' — ' + azienda;
             status.style.color = '#047857';
             setTimeout(function() {
-                if (status.textContent.indexOf(azienda) >= 0) {
+                if (status.textContent.indexOf(etichetta) >= 0) {
                     status.textContent = '';
                     status.style.color = '#64748b';
                 }
@@ -13828,6 +13830,13 @@
             // re-apply glass lock after load
             onOrdineSottotipoChange();
             if (o.passo) document.getElementById('ordinePasso').value = o.passo;
+            const customEl = document.getElementById('ordineCustomTipo');
+            if (customEl) customEl.value = o.sottotipoLabel || o.prodotto || '';
+            // se ha nome prodotto custom, assicurati che il campo custom sia visibile
+            if ((o.sottotipo === 'custom' || o.sottotipoLabel || o.prodotto) && customEl) {
+                const cw = document.getElementById('ordineCustomWrap');
+                if (cw) cw.style.display = '';
+            }
         } else {
             if (title) title.textContent = 'Nuovo ordine';
             if (editId) editId.value = '';
@@ -13871,6 +13880,17 @@
             sottotipoLabel = customTipo;
             sottotipo = 'custom';
             try { saveOrdineCustomType(customTipo); } catch (e) {}
+        }
+        // Nome prodotto da mostrare in lista (sempre valorizzato)
+        let prodottoNome = sottotipoLabel || customTipo || '';
+        if (!prodottoNome) {
+            try {
+                const tmp = { tipo: tipo, sottotipo: sottotipo, sottotipoLabel: sottotipoLabel, passo: passo };
+                prodottoNome = ordineProdottoNome(tmp);
+            } catch (e) { prodottoNome = ''; }
+        }
+        if (prodottoNome) {
+            try { saveOrdineCustomType(prodottoNome); } catch (e) {}
         }
 
         let pezzi = parseInt(document.getElementById('ordinePezzi').value, 10);
@@ -13931,6 +13951,8 @@
             id: editId || ordineId(),
             tipo: tipo,
             sottotipo: sottotipo,
+            sottotipoLabel: (typeof sottotipoLabel !== 'undefined' ? sottotipoLabel : '') || '',
+            prodotto: (typeof prodottoNome !== 'undefined' && prodottoNome) ? prodottoNome : ((typeof sottotipoLabel !== 'undefined' ? sottotipoLabel : '') || ''),
             pezzi: pezzi,
             passo: passo,
             dimensione: dimensione,
@@ -14029,24 +14051,20 @@
     /** Nome prodotto leggibile: priorità massima in scheda ordine */
     function ordineProdottoNome(o) {
         if (!o) return '—';
-        // etichetta custom scritta dall'utente
-        if (o.sottotipoLabel && String(o.sottotipoLabel).trim()) {
-            return String(o.sottotipoLabel).trim();
-        }
+        if (o.prodotto && String(o.prodotto).trim()) return String(o.prodotto).trim();
+        if (o.sottotipoLabel && String(o.sottotipoLabel).trim()) return String(o.sottotipoLabel).trim();
         const sub = sottotipoLabel(o);
         const tipo = ordineTipoLabel(o.tipo);
-        // se sottotipo già esplicativo usalo
-        if (sub && sub !== tipo && sub !== 'Personalizzato' && sub !== 'Altro accessorio' && sub !== 'Altro speciale') {
-            // per cabinet aggiungi passo se c'è
+        if (sub && sub !== tipo && sub !== 'Personalizzato' && sub !== 'Altro accessorio' && sub !== 'Altro speciale' && sub !== 'custom') {
             if (o.tipo === 'cabinet' && o.passo) return sub + ' ' + String(o.passo).trim();
             return sub;
         }
         if (o.tipo === 'cabinet') {
             return o.passo ? ('Cabinet ' + String(o.passo).trim()) : 'Cabinet';
         }
-        if (o.tipo === 'accessorio') return sub || 'Accessorio';
-        if (o.tipo === 'speciale') return sub || 'Speciale';
-        return sub || tipo || '—';
+        if (o.tipo === 'accessorio') return (sub && sub !== 'Personalizzato') ? sub : 'Accessorio';
+        if (o.tipo === 'speciale') return (sub && sub !== 'Personalizzato') ? sub : 'Speciale';
+        return (sub && sub !== 'Personalizzato') ? sub : (tipo || '—');
     }
 
     window.renderOrdiniPage = function() {
