@@ -6721,7 +6721,7 @@
             </span>
         </div>
     </div>
-    <p class="meteo-intro">Due calendari separati: <strong>Note Clienti</strong> e <strong>Pre-pianificazione</strong>. Stesso mese, clienti per giorno (scadenza / data / tappa).</p>
+    <p class="meteo-intro">Due calendari separati: <strong>Note Clienti</strong> (scadenza / data / tappa) e <strong>Pre-pianificazione</strong> (<strong>solo scadenza</strong>).</p>
     <div class="cal-toolbar">
         <button type="button" class="btn" onclick="calShiftMonth(-1)">‹ Prec.</button>
         <strong id="calMonthLabel" style="min-width:160px;text-align:center;"></strong>
@@ -19612,30 +19612,37 @@
     let _calMonth = new Date().getMonth(); // 0-11
     let _calSelected = null;
 
+    function normalizeCalDate(s) {
+        s = String(s || '').trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+        if (/^\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}$/.test(s)) {
+            const p = s.split(/[\/.\-]/);
+            let y = p[2];
+            if (y.length === 2) y = '20' + y;
+            return y + '-' + String(p[1]).padStart(2, '0') + '-' + String(p[0]).padStart(2, '0');
+        }
+        return '';
+    }
+
+    /** Date eventi Note Clienti (scadenza, data installazione, tappa) */
     function clientEventDates(c) {
         const dates = [];
-        const scad = (c.scadenza || '').trim();
-        if (/^\d{4}-\d{2}-\d{2}$/.test(scad)) dates.push({ date: scad, kind: 'scadenza' });
-        const d = (c.data || '').trim();
-        if (/^\d{4}-\d{2}-\d{2}$/.test(d) && d !== scad) dates.push({ date: d, kind: 'data' });
-        // tappa dal-al se presenti
-        const dal = (c.tappaDal || c.dal || '').trim();
-        const al = (c.tappaAl || c.al || '').trim();
-        if (/^\d{4}-\d{2}-\d{2}$/.test(dal)) dates.push({ date: dal, kind: 'tappa' });
-        if (/^\d{4}-\d{2}-\d{2}$/.test(al) && al !== dal) dates.push({ date: al, kind: 'tappa' });
+        const scad = normalizeCalDate(c.scadenza || '');
+        if (scad) dates.push({ date: scad, kind: 'scadenza' });
+        const d = normalizeCalDate(c.data || '');
+        if (d && d !== scad) dates.push({ date: d, kind: 'data' });
+        const dal = normalizeCalDate(c.tappaDal || c.dal || '');
+        const al = normalizeCalDate(c.tappaAl || c.al || '');
+        if (dal) dates.push({ date: dal, kind: 'tappa' });
+        if (al && al !== dal) dates.push({ date: al, kind: 'tappa' });
         return dates;
     }
 
-    function clientEventDates(c) {
+    /** Pre-pianificazione: SOLO scadenza */
+    function clientEventDatesPrepOnly(c) {
         const dates = [];
-        const scad = (c.scadenza || '').trim();
-        if (/^\d{4}-\d{2}-\d{2}$/.test(scad)) dates.push({ date: scad, kind: 'scadenza' });
-        const d = (c.data || '').trim();
-        if (/^\d{4}-\d{2}-\d{2}$/.test(d) && d !== scad) dates.push({ date: d, kind: 'data' });
-        const dal = (c.tappaDal || c.dal || '').trim();
-        const al = (c.tappaAl || c.al || '').trim();
-        if (/^\d{4}-\d{2}-\d{2}$/.test(dal)) dates.push({ date: dal, kind: 'tappa' });
-        if (/^\d{4}-\d{2}-\d{2}$/.test(al) && al !== dal) dates.push({ date: al, kind: 'tappa' });
+        const scad = normalizeCalDate(c.scadenza || '');
+        if (scad) dates.push({ date: scad, kind: 'scadenza' });
         return dates;
     }
 
@@ -19643,12 +19650,13 @@
         return typeof isInPrep === 'function' ? isInPrep(c) : (c && (c.inPrep === true || c.inPrep === 'true'));
     }
 
-    function clientsByDateMap(filterFn) {
+    function clientsByDateMap(filterFn, dateFn) {
         const map = {};
+        const getDates = (typeof dateFn === 'function') ? dateFn : clientEventDates;
         (clients || []).forEach(function(c) {
             if (c.installato) return;
             if (filterFn && !filterFn(c)) return;
-            clientEventDates(c).forEach(function(ev) {
+            getDates(c).forEach(function(ev) {
                 if (!map[ev.date]) map[ev.date] = [];
                 map[ev.date].push({ client: c, kind: ev.kind });
             });
@@ -19753,8 +19761,9 @@
     }
 
     function renderCalendarioPage() {
-        const mapNote = clientsByDateMap(function(c) { return !isPrepClient(c); });
-        const mapPrep = clientsByDateMap(function(c) { return isPrepClient(c); });
+        const mapNote = clientsByDateMap(function(c) { return !isPrepClient(c); }, clientEventDates);
+        // Pre-pianificazione: clienti solo in base alla SCADENZA
+        const mapPrep = clientsByDateMap(function(c) { return isPrepClient(c); }, clientEventDatesPrepOnly);
 
         const badge = document.getElementById('navCalendarioCount');
         if (badge) badge.textContent = countMapItems(mapNote) + countMapItems(mapPrep);
