@@ -3290,6 +3290,72 @@
             box-shadow: var(--shadow);
             margin-top: 12px;
         }
+        .prep-filters-bar {
+            margin: 6px 0 8px;
+            padding: 8px 10px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 10px;
+        }
+        .prep-filter-modes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin: 0;
+        }
+        .prep-filter-mode {
+            border-radius: 999px;
+            font-weight: 700;
+            min-height: 30px;
+            padding: 4px 10px;
+            font-size: 0.75rem;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+        }
+        .prep-filter-mode.active {
+            background: #9d174d;
+            border-color: #9d174d;
+            color: #fff;
+        }
+        .prep-filter-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 8px;
+            align-items: center;
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+        .prep-filter-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 8px;
+            align-items: center;
+        }
+        .prep-filter-panel label {
+            display: none;
+        }
+        .prep-filter-panel .select-control {
+            min-width: 120px;
+            max-width: 180px;
+            min-height: 32px;
+            font-size: 0.8rem;
+            padding: 4px 8px;
+        }
+        .prep-filter-hint {
+            font-size: 0.72rem;
+            color: #64748b;
+            line-height: 1.3;
+        }
+        .prep-flat-list .prep-mini-row {
+            border-bottom: 1px solid #f1f5f9;
+            padding: 10px 4px;
+        }
+        .prep-flat-list .prep-mini-row:last-child { border-bottom: none; }
         .ordine-quick-card {
             margin-bottom: 12px;
             border: 1px solid #e2e8f0;
@@ -6958,15 +7024,49 @@
         <span style="font-weight: 700; color: var(--primary);">🔍 Cerca:</span>
         <input type="text" id="prepSearchInput" class="search-input" placeholder="Filtra per cliente, località, provincia, regione, modello, nota o tappa..." oninput="renderPrepPage()">
     </div>
+    <div class="prep-filters-bar" id="prepFiltersBar">
+        <div class="prep-filter-modes" role="tablist">
+            <button type="button" class="btn prep-filter-mode active" data-mode="regione" onclick="setPrepListMode('regione')">🗺️ Regione</button>
+            <button type="button" class="btn prep-filter-mode" data-mode="scadenza" onclick="setPrepListMode('scadenza')">📅 Scadenza</button>
+            <button type="button" class="btn prep-filter-mode" data-mode="modello" onclick="setPrepListMode('modello')">📦 Modello</button>
+        </div>
+        <div class="prep-filter-controls" id="prepFilterControls">
+            <div class="prep-filter-panel" id="prepFilterRegione" data-panel="regione">
+                <label for="prepFilterRegioneSelect">Regione</label>
+                <select id="prepFilterRegioneSelect" class="select-control" onchange="renderPrepPage()">
+                    <option value="">Tutte le regioni</option>
+                </select>
+            </div>
+            <div class="prep-filter-panel" id="prepFilterScadenza" data-panel="scadenza" hidden>
+                <span class="prep-filter-hint">Ordine per priorità scadenza.</span>
+            </div>
+            <div class="prep-filter-panel" id="prepFilterModello" data-panel="modello" hidden>
+                <label for="prepFilterPasso">Passo</label>
+                <select id="prepFilterPasso" class="select-control" onchange="renderPrepPage()">
+                    <option value="">Tutti i passi</option>
+                </select>
+                <label for="prepFilterDim">Dimensione (CM)</label>
+                <select id="prepFilterDim" class="select-control" onchange="renderPrepPage()">
+                    <option value="">Tutte le dimensioni</option>
+                </select>
+                <label for="prepFilterAmb">Indoor / Outdoor</label>
+                <select id="prepFilterAmb" class="select-control" onchange="renderPrepPage()">
+                    <option value="">Tutti</option>
+                    <option value="indoor">Indoor</option>
+                    <option value="outdoor">Outdoor</option>
+                </select>
+            </div>
+        </div>
+    </div>
     <div id="prepPaesiCheckBanner" class="prep-paesi-banner" style="margin:8px 0 12px;padding:10px 12px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0;font-size:0.82rem;color:#334155;line-height:1.4;" hidden></div>
 
 
     <div class="card prep-mini-list-card" id="prepMiniListCard" style="margin-bottom:16px; display:none;">
         <div class="card-title" style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-            <span>Clienti per regione</span>
+            <span id="prepMiniListTitle">Clienti per regione</span>
             <button type="button" class="btn prep-multi-toggle" id="prepMultiToggleBtn" onclick="togglePrepMultiSelect()" title="Attiva selezione multipla per eliminare più clienti">☑️ Selezione multipla</button>
         </div>
-        <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:10px;">Raggruppati per regione. Su ogni cliente: <strong>📦 Spedisci</strong> (al cliente stesso o a un tecnico di zona) oppure <strong>→ Note</strong> con tappa.</p>
+        <p id="prepMiniListDesc" style="font-size:0.8rem;color:var(--text-muted);margin-bottom:10px;">Raggruppati per regione. Su ogni cliente: <strong>📦 Spedisci</strong> oppure <strong>→ Note</strong> con tappa.</p>
         <div class="prep-multi-bar" id="prepMultiBar">
             <span class="prep-multi-count" id="prepMultiCount">0 selezionati</span>
             <button type="button" class="btn" onclick="prepSelectAllVisible()" style="min-height:36px;padding:6px 12px;font-size:0.82rem;">Seleziona tutti</button>
@@ -15388,6 +15488,172 @@
         try { if (typeof renderPrepPage === 'function') renderPrepPage(); } catch (e) {}
     };
 
+
+    let _prepListMode = 'regione'; // regione | scadenza | modello
+
+    window.setPrepListMode = function(mode) {
+        _prepListMode = (mode === 'scadenza' || mode === 'modello') ? mode : 'regione';
+        document.querySelectorAll('.prep-filter-mode').forEach(function(btn) {
+            btn.classList.toggle('active', btn.getAttribute('data-mode') === _prepListMode);
+        });
+        document.querySelectorAll('.prep-filter-panel').forEach(function(p) {
+            const show = p.getAttribute('data-panel') === _prepListMode;
+            p.hidden = !show;
+        });
+        const title = document.getElementById('prepMiniListTitle');
+        const desc = document.getElementById('prepMiniListDesc');
+        if (title) {
+            if (_prepListMode === 'scadenza') title.textContent = 'Clienti per scadenza';
+            else if (_prepListMode === 'modello') title.textContent = 'Clienti per modello';
+            else title.textContent = 'Clienti per regione';
+        }
+        if (desc) {
+            if (_prepListMode === 'scadenza') {
+                desc.innerHTML = 'Tutti i clienti Prep in un unico elenco, ordinati per priorità scadenza (scaduti e più urgenti prima).';
+            } else if (_prepListMode === 'modello') {
+                desc.innerHTML = 'Filtra per <strong>passo</strong>, <strong>dimensione CM</strong> o <strong>indoor/outdoor</strong> dal modello.';
+            } else {
+                desc.innerHTML = 'Raggruppati per regione. Su ogni cliente: <strong>📦 Spedisci</strong> oppure <strong>→ Note</strong> con tappa.';
+            }
+        }
+        try { renderPrepPage(); } catch (e) {}
+    };
+
+    function prepDaysLeft(c) {
+        const s = String((c && c.scadenza) || '').trim();
+        const today = new Date();
+        today.setHours(12, 0, 0, 0);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+            return Math.round((new Date(s + 'T12:00:00') - today) / 86400000);
+        }
+        if (/^\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}$/.test(s)) {
+            const p = s.split(/[\/.\-]/);
+            const y = p[2].length === 2 ? ('20' + p[2]) : p[2];
+            const iso = y + '-' + String(p[1]).padStart(2, '0') + '-' + String(p[0]).padStart(2, '0');
+            return Math.round((new Date(iso + 'T12:00:00') - today) / 86400000);
+        }
+        return 9999;
+    }
+
+    function parsePrepModelTokens(modelNome) {
+        const t = String(modelNome || '');
+        const up = t.toUpperCase();
+        const out = { passi: [], dims: [], amb: '' };
+        // Indoor / Outdoor
+        if (/\bOUTDOOR\b/.test(up)) out.amb = 'outdoor';
+        else if (/\bINDOOR\b/.test(up)) out.amb = 'indoor';
+        // Passo: P2.5 oppure /4.8 dopo codice
+        const pMatches = up.match(/\bP\s*(\d+(?:[.,]\d+)?)\b/g) || [];
+        pMatches.forEach(function(m) {
+            const n = m.replace(/[^\d.,]/g, '').replace(',', '.');
+            if (n) out.passi.push(n);
+        });
+        const slash = up.match(/\/(\d+(?:[.,]\d+)?)/g) || [];
+        slash.forEach(function(m) {
+            const n = m.replace(/[^\d.,]/g, '').replace(',', '.');
+            if (n) out.passi.push(n);
+        });
+        // CM 75 X 50
+        const cm = up.match(/CM\s*(\d+)\s*[X×]\s*(\d+)/);
+        if (cm) out.dims.push(cm[1] + 'x' + cm[2]);
+        // dedupe
+        out.passi = Array.from(new Set(out.passi));
+        out.dims = Array.from(new Set(out.dims));
+        return out;
+    }
+
+    function collectPrepModelFilters(list) {
+        const passi = {};
+        const dims = {};
+        (list || []).forEach(function(c) {
+            (c.modelli || []).forEach(function(m) {
+                const tok = parsePrepModelTokens(m.nome || m);
+                tok.passi.forEach(function(p) { passi[p] = true; });
+                tok.dims.forEach(function(d) { dims[d] = true; });
+            });
+            // anche stringa modello piatta
+            if (c.modello) {
+                const tok = parsePrepModelTokens(c.modello);
+                tok.passi.forEach(function(p) { passi[p] = true; });
+                tok.dims.forEach(function(d) { dims[d] = true; });
+            }
+        });
+        return {
+            passi: Object.keys(passi).sort(function(a, b) { return parseFloat(a) - parseFloat(b); }),
+            dims: Object.keys(dims).sort()
+        };
+    }
+
+    function clientMatchesPrepModelFilters(c, passo, dim, amb) {
+        if (!passo && !dim && !amb) return true;
+        const models = [];
+        (c.modelli || []).forEach(function(m) { models.push(String(m.nome || m || '')); });
+        if (c.modello) models.push(String(c.modello));
+        if (!models.length) return false;
+        return models.some(function(nome) {
+            const tok = parsePrepModelTokens(nome);
+            if (passo && tok.passi.indexOf(passo) < 0) {
+                // match anche se passo nel testo grezzo
+                if (nome.toUpperCase().indexOf(passo) < 0) return false;
+            }
+            if (dim && tok.dims.indexOf(dim) < 0) {
+                const parts = dim.toLowerCase().split('x');
+                if (!(parts.length === 2 && nome.toUpperCase().indexOf(parts[0]) >= 0 && nome.toUpperCase().indexOf(parts[1]) >= 0)) {
+                    return false;
+                }
+            }
+            if (amb && tok.amb !== amb) {
+                if (nome.toUpperCase().indexOf(amb.toUpperCase()) < 0) return false;
+            }
+            return true;
+        });
+    }
+
+    function populatePrepFilterOptions(allPrep) {
+        // regioni
+        const regSel = document.getElementById('prepFilterRegioneSelect');
+        if (regSel) {
+            const prev = regSel.value;
+            const regs = {};
+            (allPrep || []).forEach(function(c) {
+                let reg = (c.regione || '').trim() || 'Senza regione';
+                regs[reg] = true;
+            });
+            const names = Object.keys(regs).sort(function(a, b) {
+                if (a === 'Senza regione') return 1;
+                if (b === 'Senza regione') return -1;
+                return a.localeCompare(b, 'it');
+            });
+            regSel.innerHTML = '<option value="">Tutte le regioni</option>' +
+                names.map(function(r) {
+                    return '<option value="' + String(r).replace(/"/g, '&quot;') + '">' + String(r).replace(/</g, '&lt;') + '</option>';
+                }).join('');
+            if (prev) {
+                try { regSel.value = prev; } catch (e) {}
+            }
+        }
+        // modello
+        const mf = collectPrepModelFilters(allPrep);
+        const passoSel = document.getElementById('prepFilterPasso');
+        const dimSel = document.getElementById('prepFilterDim');
+        if (passoSel) {
+            const prev = passoSel.value;
+            passoSel.innerHTML = '<option value="">Tutti i passi</option>' +
+                mf.passi.map(function(p) {
+                    return '<option value="' + p + '">P' + p + ' / ' + p + '</option>';
+                }).join('');
+            if (prev) try { passoSel.value = prev; } catch (e) {}
+        }
+        if (dimSel) {
+            const prev = dimSel.value;
+            dimSel.innerHTML = '<option value="">Tutte le dimensioni</option>' +
+                mf.dims.map(function(d) {
+                    return '<option value="' + d + '">CM ' + d.replace('x', ' × ') + '</option>';
+                }).join('');
+            if (prev) try { dimSel.value = prev; } catch (e) {}
+        }
+    }
+
     function renderPrepMiniList(allPrep) {
         const card = document.getElementById('prepMiniListCard');
         const box = document.getElementById('prepMiniList');
@@ -15412,10 +15678,56 @@
             return;
         }
         card.style.display = 'block';
+        try { populatePrepFilterOptions(allPrep); } catch (e) {}
 
-        // Raggruppa per regione
-        const byReg = {};
-        list.forEach(function(c) {
+        // Filtri modalità
+        let viewList = list.slice();
+        const mode = _prepListMode || 'regione';
+
+        if (mode === 'regione') {
+            const regFilter = ((document.getElementById('prepFilterRegioneSelect') || {}).value || '').trim();
+            if (regFilter) {
+                viewList = viewList.filter(function(c) {
+                    let reg = (c.regione || '').trim() || 'Senza regione';
+                    return reg === regFilter;
+                });
+            }
+        } else if (mode === 'modello') {
+            const passo = ((document.getElementById('prepFilterPasso') || {}).value || '').trim();
+            const dim = ((document.getElementById('prepFilterDim') || {}).value || '').trim();
+            const amb = ((document.getElementById('prepFilterAmb') || {}).value || '').trim();
+            viewList = viewList.filter(function(c) {
+                return clientMatchesPrepModelFilters(c, passo, dim, amb);
+            });
+        } else if (mode === 'scadenza') {
+            viewList.sort(function(a, b) {
+                const da = prepDaysLeft(a);
+                const db = prepDaysLeft(b);
+                if (da !== db) return da - db;
+                return String(a.nome || '').localeCompare(String(b.nome || ''), 'it');
+            });
+        }
+
+        if (!viewList.length) {
+            box.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:20px;">Nessun cliente con questi filtri.</p>';
+            return;
+        }
+
+        // Modalità SCADENZA / MODELLO: elenco unico (no gruppi regione)
+        if (mode === 'scadenza' || mode === 'modello') {
+            // riusa renderer righe tramite byReg finto con un solo gruppo
+            const byRegFlat = { '__flat__': viewList };
+            // patch: costruisci HTML flat più sotto sostituendo regNames
+            window._prepFlatByReg = byRegFlat;
+            window._prepUseFlat = true;
+        } else {
+            window._prepUseFlat = false;
+        }
+
+        // Raggruppa per regione (default)
+        const byReg = (window._prepUseFlat && window._prepFlatByReg) ? window._prepFlatByReg : {};
+        if (!window._prepUseFlat) {
+        viewList.forEach(function(c) {
             let reg = (c.regione || '').trim();
             if (!reg) {
                 // prova da provincia/paese
@@ -15434,6 +15746,7 @@
             if (!byReg[reg]) byReg[reg] = [];
             byReg[reg].push(c);
         });
+        }
 
         // Ordina regioni: Sicilia/Lazio prima se hanno tecnici, poi alfabetico
         const regNames = Object.keys(byReg).sort(function(a, b) {
@@ -15542,6 +15855,13 @@
                     '</div>';
             }).join('');
 
+            if (reg === '__flat__') {
+                return '<div class="prep-reg-group prep-flat-list">' +
+                    '<div class="prep-reg-head"><span>' +
+                    (_prepListMode === 'scadenza' ? '📅 Ordine per scadenza' : '📦 Filtro modello') +
+                    '</span><span class="prep-reg-count">' + clients.length + '</span></div>' +
+                    '<div class="prep-reg-clients">' + rows + '</div></div>';
+            }
             return '<div class="prep-reg-group">' +
                 '<div class="prep-reg-head"><span>🗺️ ' + String(reg).replace(/</g, '&lt;') + '</span>' +
                 '<span class="prep-reg-count">' + clients.length + '</span></div>' +
