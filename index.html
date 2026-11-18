@@ -9319,12 +9319,33 @@
         if (client) {
             client.standby = true;
             client.installato = false;
+            client.inPrep = false; // esce da Pre-pianificazione
             saveToLocalStorage();
+            try { if (typeof notifyPlanningDataChanged === 'function') notifyPlanningDataChanged(); } catch (e) {}
             render();
+            try { if (typeof renderPrepPage === 'function') renderPrepPage(); } catch (e) {}
+            try { if (typeof renderStandbyPage === 'function') renderStandbyPage(); } catch (e) {}
         }
         pendingStandbyId = null;
         document.getElementById('confirmStandbyModal').style.display = 'none';
     }
+
+    /** Da Pre-pianificazione → Stand-by (con conferma) */
+    window.movePrepClientToStandby = function(id) {
+        try { markStandby(id); } catch (e) {
+            const client = clients.find(function(c) { return String(c.id) === String(id); });
+            if (!client) return;
+            if (!confirm('Spostare «' + (client.nome || '') + '» in Stand-by?')) return;
+            client.standby = true;
+            client.installato = false;
+            client.inPrep = false;
+            saveToLocalStorage();
+            try { if (typeof notifyPlanningDataChanged === 'function') notifyPlanningDataChanged(); } catch (e2) {}
+            try { renderPrepPage(); } catch (e2) {}
+            try { renderStandbyPage(); } catch (e2) {}
+            try { render(); } catch (e2) {}
+        }
+    };
 
     window.unmarkStandby = function(id) {
         const client = clients.find(c => String(c.id) === String(id));
@@ -15821,6 +15842,7 @@
                 actions +=
                     '<button type="button" class="btn btn-primary prep-mini-btn" onclick="openPrepShipModal(\'' + safeId + '\')" title="Scegli spedizione: cliente stesso o tecnico">📦 Spedisci</button>' +
                     '<button type="button" class="btn prep-mini-btn" onclick="editClient(\'' + safeId + '\')" title="Modifica scheda">✏️ Modifica</button>' +
+                    '<button type="button" class="btn prep-mini-btn" style="background:#fff7ed;color:#c2410c;border-color:#fed7aa;" onclick="movePrepClientToStandby(\'' + safeId + '\')" title="Sposta in Stand-by">⏸️ Stand-by</button>' +
                     '<button type="button" class="btn-icon danger prep-mini-btn" onclick="deleteClient(\'' + safeId + '\')" title="Elimina">🗑️</button>' +
                     '<button type="button" class="btn prep-mini-btn" onclick="movePrepClientToNote(\'' + safeId + '\')">→ Note</button>';
 
