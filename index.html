@@ -9932,6 +9932,14 @@
         html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;background:#2563eb;color:#fff;border:none;" data-act="prep">📋 Porta in Pre-pianificazione</button>';
         if (isSped) {
             html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;background:#9d174d;color:#fff;border:none;" data-act="gruppo">📁 Cambia gruppo spedizione</button>';
+            const track = String(client.tracking || '').trim();
+            if (track) {
+                html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;background:#be185d;color:#fff;border:none;" data-act="brt">🔗 Apri BRT Tracking</button>';
+                html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;" data-act="edit-track">✏️ Modifica codice tracking</button>';
+            } else {
+                html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;background:#be185d;color:#fff;border:none;" data-act="edit-track">📦 Inserisci tracking BRT</button>';
+            }
+            html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;" data-act="brt-portal">🌐 Portale BRT</button>';
         }
         html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;" data-act="edit">✏️ Modifica scheda completa</button>';
         html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;color:#b91c1c;border-color:#fca5a5;" data-act="delete">🗑️ Elimina cliente</button>';
@@ -9948,6 +9956,20 @@
                 else if (act === 'gruppo') openMoveClientSpedGruppo(cid);
                 else if (act === 'edit') editClient(cid);
                 else if (act === 'delete') deleteClient(cid);
+                else if (act === 'edit-track') {
+                    try { editTracking(cid); } catch (e) {}
+                } else if (act === 'brt') {
+                    const cl = (clients || []).find(function(x) { return String(x.id) === String(cid); });
+                    const code = cl && String(cl.tracking || '').trim();
+                    if (code) {
+                        const url = (typeof brtTrackingUrl === 'function') ? brtTrackingUrl(code) : ('https://services.brt.it/it/tracking?brtcode=' + encodeURIComponent(code));
+                        window.open(url, '_blank');
+                    } else {
+                        window.open('https://services.brt.it/it/tracking', '_blank');
+                    }
+                } else if (act === 'brt-portal') {
+                    window.open('https://services.brt.it/it/tracking', '_blank');
+                }
             });
         });
         const modal = document.getElementById('compactActionModal');
@@ -11389,7 +11411,7 @@
                 trackingHTML = '<div class="note-card-tracking"><span class="info-label">📦 Tracking</span>' +
                     '<div class="note-card-tracking-row">' +
                     '<span class="model-badge track-badge" onclick="copyTrackingCode(\'' + code + '\', this)" ondblclick="event.preventDefault(); editTracking(\'' + client.id + '\');">' + (client.tracking.trim().replace(/</g, '&lt;')) + '</span>' +
-                    '<button type="button" class="btn btn-track" onclick="window.open(\'https://services.brt.it/it/tracking\',\'_blank\')">BRT</button></div></div>';
+                    '<button type="button" class="btn btn-track" onclick="window.open(\'' + brtTrackingUrl(client.tracking.trim()).replace(/'/g, "%27") + '\',\'_blank\')">BRT</button></div></div>';
             } else {
                 trackingHTML = '<div class="note-card-tracking"><span class="info-label">📦 Tracking</span>' +
                     '<div class="note-card-tracking-row">' +
@@ -11656,6 +11678,37 @@
                 '<button type="button" class="btn" style="background:#0f172a;color:#fff;border:none;" onclick="openCompactActionMenu(\'' + safeId + '\')" title="Azioni">⚙️ Azioni</button>' +
                 '</div>';
 
+            // Tracking BRT (solo clienti in spedizione)
+            let trackTd = '';
+            if (isSped) {
+                const track = String(c.tracking || '').trim();
+                const editing = !!c._editingTracking;
+                let trackInner = '';
+                if (editing || !track) {
+                    trackInner =
+                        '<div class="nc-track">' +
+                        '<input type="text" class="nc-input" id="tracking-input-' + safeId + '" placeholder="Tracking BRT" value="' +
+                        String(c.tracking || '').replace(/"/g, '&quot;') + '" ' +
+                        'onkeydown="onTrackingKeydown(event, \'' + safeId + '\')">' +
+                        '<button type="button" class="btn" style="background:#9d174d;color:#fff;border:none;" onclick="saveTracking(\'' + safeId + '\')">OK</button>' +
+                        '</div>';
+                } else {
+                    const url = (typeof brtTrackingUrl === 'function')
+                        ? brtTrackingUrl(track)
+                        : ('https://services.brt.it/it/tracking?brtcode=' + encodeURIComponent(track));
+                    const urlAttr = String(url).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+                    trackInner =
+                        '<div class="nc-track">' +
+                        '<span class="nc-track-code" title="Clicca per copiare · doppio click modifica" onclick="copyTrackingCode(\'' +
+                        track.replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\', this)" ondblclick="event.preventDefault();editTracking(\'' + safeId + '\);">' +
+                        track.replace(/</g, '&lt;') + '</span>' +
+                        '<a class="btn" style="background:#9d174d;color:#fff;border:none;text-decoration:none;" href="' + urlAttr + '" target="_blank" rel="noopener" title="Apri portale BRT">BRT</a>' +
+                        '<button type="button" class="btn" onclick="editTracking(\'' + safeId + '\')" title="Modifica tracking">✏️</button>' +
+                        '</div>';
+                }
+                trackTd = '<td>' + trackInner + '</td>';
+            }
+
             return '<tr>' +
                 '<td><span class="nc-name" ondblclick="renameClientName(\'' + safeId + '\')" title="Doppio click per rinominare">' +
                 String(c.nome || '').replace(/</g, '&lt;') + '</span>' +
@@ -11666,6 +11719,7 @@
                 '<td>' + dataHtml + '</td>' +
                 '<td>' + scadHtml + '</td>' +
                 '<td>' + ordHtml + '</td>' +
+                trackTd +
                 '<td><div class="nc-dots">' + dots.join('') + '</div></td>' +
                 '<td>' + actions + '</td>' +
                 '</tr>';
@@ -11673,8 +11727,12 @@
 
         function tableFor(clientsArr, isSpedizione) {
             const sorted = sortClients(clientsArr);
+            const cols = isSpedizione
+                ? '<th>Cliente</th><th>Modelli / Luogo</th><th>Data</th><th>Scadenza</th><th>Ordine</th><th>BRT Tracking</th><th>Stato</th><th></th>'
+                : '<th>Cliente</th><th>Modelli / Luogo</th><th>Data</th><th>Scadenza</th><th>Ordine</th><th>Stato</th><th></th>';
+            const colSpan = isSpedizione ? 8 : 7;
             let h = '<div class="note-compact-wrap"><table class="note-compact-table"><thead><tr>' +
-                '<th>Cliente</th><th>Modelli / Luogo</th><th>Data</th><th>Scadenza</th><th>Ordine</th><th>Stato</th><th></th>' +
+                cols +
                 '</tr></thead><tbody>';
             let lastG = null;
             const hasAnyGruppo = isSpedizione && sorted.some(function(c) { return String(c.spedizioneGruppo || '').trim(); });
@@ -11686,11 +11744,11 @@
                         lastG = key;
                         if (g) {
                             const cnt = sorted.filter(function(x) { return String(x.spedizioneGruppo || '').trim() === g; }).length;
-                            h += '<tr class="note-compact-subhead"><td colspan="7">📁 ' + String(g).replace(/</g, '&lt;') +
+                            h += '<tr class="note-compact-subhead"><td colspan="' + colSpan + '">📁 ' + String(g).replace(/</g, '&lt;') +
                                 ' <span class="nc-badge conf" style="margin-left:6px;">' + cnt + '</span></td></tr>';
                         } else {
                             const cnt = sorted.filter(function(x) { return !String(x.spedizioneGruppo || '').trim(); }).length;
-                            h += '<tr class="note-compact-subhead tappa-none"><td colspan="7">📁 Senza gruppo <span class="nc-badge conf" style="margin-left:6px;">' + cnt + '</span></td></tr>';
+                            h += '<tr class="note-compact-subhead tappa-none"><td colspan="' + colSpan + '">📁 Senza gruppo <span class="nc-badge conf" style="margin-left:6px;">' + cnt + '</span></td></tr>';
                         }
                     }
                 }
