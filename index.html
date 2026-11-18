@@ -20451,7 +20451,9 @@
         // Regione
         let regioneHit = '';
         CQ_REGIONI.forEach(function(r) {
-            if (q.indexOf(r) >= 0) regioneHit = r;
+            // match regione come parola (evita match parziali strani)
+            const re = new RegExp('(?:^|\\s)' + r.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\s+/g, '\\s+') + '(?:\\s|$)');
+            if (re.test(q) || q.indexOf(r) >= 0) regioneHit = r;
         });
         if (regioneHit) {
             const rkey = regioneHit.replace(/\s+/g, ' ');
@@ -20534,13 +20536,17 @@
             }
         });
 
-        // Scadenza entro N giorni
-        const entroM = q.match(/entro\s+(\d+)\s*g/);
+        // Scadenza entro N giorni / prossimi N giorni / tra N giorni
+        let entroM = q.match(/\bentro\s+(\d+)\s*giorn?/);
+        if (!entroM) entroM = q.match(/\bprossimi\s+(\d+)\s*giorn?/);
+        if (!entroM) entroM = q.match(/\btra\s+(\d+)\s*giorn?/);
+        if (!entroM) entroM = q.match(/\bentro\s+(\d+)\s*g\b/);
+        let entroDays = null;
         if (entroM) {
-            const n = parseInt(entroM[1], 10);
+            entroDays = parseInt(entroM[1], 10);
             list = list.filter(function(c) {
                 const d = (typeof prepDaysLeft === 'function') ? prepDaysLeft(c) : 9999;
-                return d <= n;
+                return d <= entroDays;
             });
         } else if (/\bscadut/.test(q)) {
             list = list.filter(function(c) {
@@ -20549,28 +20555,46 @@
             });
         }
 
-        // Free-text nome/localita residual keywords (longer tokens)
-        const stop = {
-            clienti:1, cliente:1, elencami:1, elenca:1, mostra:1, quali:1, che:1, con:1,
-            modello:1, modelli:1, dimensione:1, dimensioni:1, ordine:1, per:1, della:1,
-            delle:1, nella:1, nelle:1, nella:1, in:1, di:1, da:1, a:1, e:1, o:1,
-            il:1, lo:1, la:1, i:1, gli:1, le:1, un:1, una:1, del:1, al:1, tutti:1,
-            tutte:1, scadenza:1, scadenze:1, outdoor:1, indoor:1, passo:1, cm:1,
-            prep:1, note:1, pianificazione:1, pre:1, utilizzano:1, usa:1, usano:1,
-            dove:1, sono:1, c:1, mi:1, i:1, x:1
-        };
-        q.split(' ').forEach(function(w) {
-            if (w.length < 3 || stop[w]) return;
-            if (/^\d+$/.test(w)) return;
-            if (CQ_REGIONI.indexOf(w) >= 0) return;
-            // skip if already matched as region part
-            list = list.filter(function(c) {
-                return _cqClientBlob(c).indexOf(w) >= 0;
-            });
-        });
+        // Free-text residual: solo se NON abbiamo già filtri strutturati
+        const hasStructured =
+            !!regioneHit || !!dimM || (entroDays != null) ||
+            /\boutdoor\b/.test(q) || /\bindoor\b/.test(q) ||
+            /\bbandiera\b/.test(q) || /\bparete\b/.test(q) || /\bpalo\b/.test(q) ||
+            /\bcarrello\b/.test(q) || /\bpiantana\b/.test(q) ||
+            /\bpasso\b/.test(q) || /\bp\d/.test(q.replace(/\s/g, ''));
 
-        // Sort
-        if (/scadenz/.test(q) || /priorit/.test(q) || /urgent/.test(q) || /ordine/.test(q)) {
+        if (!hasStructured) {
+            const stop = {
+                clienti:1, cliente:1, elencami:1, elenca:1, elenco:1, mostra:1, mostrami:1,
+                dimmi:1, dime:1, dammi:1, cerca:1, trova:1, trovami:1, fammi:1, vedi:1,
+                quali:1, quale:1, che:1, chi:1, con:1, hanno:1, ha:1, avendo:1,
+                modello:1, modelli:1, dimensione:1, dimensioni:1, ordine:1, per:1,
+                della:1, delle:1, dello:1, degli:1, nella:1, nelle:1, nello:1, negli:1,
+                in:1, di:1, da:1, a:1, e:1, o:1, ed:1, od:1,
+                il:1, lo:1, la:1, i:1, gli:1, le:1, un:1, una:1, uno:1, del:1, al:1, ai:1, alle:1,
+                tutti:1, tutte:1, tutto:1, tutta:1, quelli:1, quelle:1,
+                scadenza:1, scadenze:1, scadere:1, outdoor:1, indoor:1, passo:1, cm:1,
+                prep:1, note:1, pianificazione:1, pre:1, utilizzano:1, utilizza:1, usa:1, usano:1,
+                dove:1, sono:1, sia:1, c:1, mi:1, ti:1, ci:1, vi:1, x:1,
+                giorni:1, giorno:1, gg:1, entro:1, prossimi:1, prossimo:1, tra:1,
+                regione:1, regioni:1, provincia:1, province:1, citta:1, paese:1, paesi:1,
+                sezione:1, lista:1, risultato:1, risultati:1, puoi:1, puo:1,
+                vorrei:1, voglio:1, serve:1, servono:1, anche:1, solo:1, ancora:1,
+                installato:1, installati:1, installare:1, standby:1, stand:1, by:1
+            };
+            q.split(' ').forEach(function(w) {
+                if (w.length < 3 || stop[w]) return;
+                if (/^\d+$/.test(w)) return;
+                if (CQ_REGIONI.indexOf(w) >= 0) return;
+                if (['emilia','romagna','friuli','venezia','giulia','trentino','alto','adige','valle','aosta'].indexOf(w) >= 0) return;
+                list = list.filter(function(c) {
+                    return _cqClientBlob(c).indexOf(w) >= 0;
+                });
+            });
+        }
+
+        // Sort: priorità scadenza se richiesto o se filtro entro
+        if (entroDays != null || /scadenz/.test(q) || /priorit/.test(q) || /urgent/.test(q) || /ordine/.test(q)) {
             list = list.slice().sort(function(a, b) {
                 const da = (typeof prepDaysLeft === 'function') ? prepDaysLeft(a) : 9999;
                 const db = (typeof prepDaysLeft === 'function') ? prepDaysLeft(b) : 9999;
@@ -20590,7 +20614,7 @@
         if (dimM) filters.push('dimensione ' + dimM[1] + '×' + dimM[2]);
         if (/\boutdoor\b/.test(q)) filters.push('outdoor');
         if (/\bindoor\b/.test(q)) filters.push('indoor');
-        if (entroM) filters.push('scadenza entro ' + entroM[1] + ' giorni');
+        if (entroDays != null) filters.push('scadenza entro ' + entroDays + ' giorni');
         const filtTxt = filters.length ? (' (' + filters.join(', ') + ')') : '';
         const answer = list.length
             ? ('Trovati <strong>' + list.length + '</strong> clienti in ' + scopeLab + filtTxt + '.')
