@@ -7276,10 +7276,10 @@
             <button type="button" class="btn" onclick="clearConsigliQuery('consigli')" title="Pulisci">✕</button>
         </div>
         <div class="consigli-query-examples">
-            <button type="button" class="consigli-ex" onclick="fillConsigliQuery(this.textContent,'consigli')">Clienti in Campania per scadenza</button>
-            <button type="button" class="consigli-ex" onclick="fillConsigliQuery(this.textContent,'consigli')">Modello dimensione 75x100</button>
-            <button type="button" class="consigli-ex" onclick="fillConsigliQuery(this.textContent,'consigli')">Outdoor in Sicilia</button>
-            <button type="button" class="consigli-ex" onclick="fillConsigliQuery(this.textContent,'consigli')">Scadenze entro 14 giorni</button>
+            <button type="button" class="consigli-ex" onclick="fillConsigliQuery(this.textContent,'consigli')">Clienti in Abruzzo e Marche</button>
+            <button type="button" class="consigli-ex" onclick="fillConsigliQuery(this.textContent,'consigli')">Lombardia e Piemonte passo 3.9</button>
+            <button type="button" class="consigli-ex" onclick="fillConsigliQuery(this.textContent,'consigli')">Campania scadenze entro 14 giorni</button>
+            <button type="button" class="consigli-ex" onclick="fillConsigliQuery(this.textContent,'consigli')">Dimensione 100x100 outdoor</button>
         </div>
         <div id="consigliQueryResult" class="consigli-query-result" hidden></div>
     </div>
@@ -20448,40 +20448,43 @@
 
         let list = _cqPool(scope);
 
-        // Regione
-        let regioneHit = '';
+        // Regioni MULTIPLE (OR): "Abruzzo e Marche", "Lombardia e Piemonte"
+        const regioniHit = [];
         CQ_REGIONI.forEach(function(r) {
-            // match regione come parola (evita match parziali strani)
-            const re = new RegExp('(?:^|\\s)' + r.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\s+/g, '\\s+') + '(?:\\s|$)');
-            if (re.test(q) || q.indexOf(r) >= 0) regioneHit = r;
+            if (q.indexOf(r) >= 0) {
+                if (regioniHit.indexOf(r) < 0) regioniHit.push(r);
+            }
         });
-        if (regioneHit) {
-            const rkey = regioneHit.replace(/\s+/g, ' ');
+        // alias "marche" già in lista; normalizza chiavi display
+        const regioneHit = regioniHit[0] || ''; // compat label singola
+        if (regioniHit.length) {
             list = list.filter(function(c) {
                 const reg = _cqNorm(c.regione || '');
-                if (reg.indexOf(rkey) >= 0) return true;
-                // da provincia
+                let codeReg = '';
                 try {
                     const code = String(c.provincia || '').toUpperCase();
                     if (code && typeof PROVINCE_TO_REGION !== 'undefined' && PROVINCE_TO_REGION[code]) {
-                        if (_cqNorm(PROVINCE_TO_REGION[code]).indexOf(rkey) >= 0) return true;
+                        codeReg = _cqNorm(PROVINCE_TO_REGION[code]);
                     }
                 } catch (e) {}
-                return false;
+                return regioniHit.some(function(r) {
+                    const rkey = r.replace(/\s+/g, ' ');
+                    return reg.indexOf(rkey) >= 0 || (codeReg && codeReg.indexOf(rkey) >= 0);
+                });
             });
         }
 
-        // Provincia sigla (BA, NA, RM…)
-        const provM = q.match(/\b(provincia\s+)?([a-z]{2})\b/);
-        // only if looks like Italian province code in uppercase original
-        const provCodes = q.toUpperCase().match(/\b([A-Z]{2})\b/g) || [];
-        if (typeof PROVINCE_TO_REGION !== 'undefined') {
-            provCodes.forEach(function(code) {
-                if (PROVINCE_TO_REGION[code]) {
-                    list = list.filter(function(c) {
-                        return String(c.provincia || '').toUpperCase() === code;
-                    });
-                }
+        // Province MULTIPLE (OR) da sigle tipo BA, NA, RM
+        const provCodes = [];
+        (q.toUpperCase().match(/\b([A-Z]{2})\b/g) || []).forEach(function(code) {
+            if (typeof PROVINCE_TO_REGION !== 'undefined' && PROVINCE_TO_REGION[code]) {
+                if (provCodes.indexOf(code) < 0) provCodes.push(code);
+            }
+        });
+        if (provCodes.length) {
+            list = list.filter(function(c) {
+                const code = String(c.provincia || '').toUpperCase();
+                return provCodes.indexOf(code) >= 0;
             });
         }
 
@@ -20496,35 +20499,52 @@
             });
         }
 
-        // Dimensione CM 75x100 / 75 x 100 / 75×100
-        const dimM = q.match(/(\d{2,4})\s*[x×]\s*(\d{2,4})/);
-        if (dimM) {
-            const a = dimM[1], b = dimM[2];
+        // Dimensioni MULTIPLE: 100x100, 75 x 50…
+        const dimMatches = [];
+        q.replace(/(\d{2,4})\s*[x×]\s*(\d{2,4})/g, function(_, a, b) {
+            dimMatches.push([a, b]);
+            return _;
+        });
+        const dimM = dimMatches[0] || null; // compat
+        if (dimMatches.length) {
             list = list.filter(function(c) {
                 const models = _cqModels(c);
                 return models.some(function(m) {
                     const up = m.toUpperCase().replace(/×/g, 'X');
-                    // CM 75 X 100 o 75X100
-                    if (new RegExp(a + '\\s*X\\s*' + b).test(up)) return true;
-                    if (up.indexOf(a) >= 0 && up.indexOf(b) >= 0 && /CM/.test(up)) return true;
-                    return false;
+                    return dimMatches.some(function(pair) {
+                        const a = pair[0], b = pair[1];
+                        if (new RegExp(a + '\\s*X\\s*' + b).test(up)) return true;
+                        if (up.indexOf(a) >= 0 && up.indexOf(b) >= 0 && /CM/.test(up)) return true;
+                        return false;
+                    });
                 });
             });
         }
 
-        // Passo P2.5 / passo 2.5
-        const passoM = q.match(/\b(?:passo\s*)?p?\s*(\d+(?:[.,]\d+)?)\b/);
-        if (/\bpasso\b/.test(q) || /\bp\d/.test(q.replace(/\s/g, ''))) {
-            const pm = q.match(/\bp\s*(\d+(?:[.,]\d+)?)/) || q.match(/passo\s*(\d+(?:[.,]\d+)?)/);
-            if (pm) {
-                const p = pm[1].replace(',', '.');
-                list = list.filter(function(c) {
-                    return _cqModels(c).some(function(m) {
-                        const up = m.toUpperCase().replace(',', '.');
-                        return up.indexOf('P' + p) >= 0 || up.indexOf('/' + p) >= 0 || up.indexOf(p) >= 0;
+        // Passi MULTIPLI: passo 3.9, P2.5, /3.91
+        const passiHit = [];
+        // "passo 3.9" / "passo3.9"
+        q.replace(/\bpasso\s*(\d+(?:[.,]\d+)?)/g, function(_, p) {
+            const v = String(p).replace(',', '.');
+            if (v && passiHit.indexOf(v) < 0) passiHit.push(v);
+            return _;
+        });
+        // "P3.9" o "p 3.9"
+        q.replace(/\bp\s*(\d+(?:[.,]\d+)?)/g, function(_, p) {
+            const v = String(p).replace(',', '.');
+            if (v && passiHit.indexOf(v) < 0) passiHit.push(v);
+            return _;
+        });
+        if (passiHit.length) {
+            list = list.filter(function(c) {
+                return _cqModels(c).some(function(m) {
+                    const up = m.toUpperCase().replace(',', '.');
+                    return passiHit.some(function(p) {
+                        return up.indexOf('P' + p) >= 0 || up.indexOf('/' + p) >= 0 ||
+                            new RegExp('(?:^|[^0-9])' + p.replace('.', '\\.') + '(?:[^0-9]|$)').test(up);
                     });
                 });
-            }
+            });
         }
 
         // Montaggio
@@ -20557,11 +20577,11 @@
 
         // Free-text residual: solo se NON abbiamo già filtri strutturati
         const hasStructured =
-            !!regioneHit || !!dimM || (entroDays != null) ||
+            (regioniHit && regioniHit.length) || (dimMatches && dimMatches.length) ||
+            (passiHit && passiHit.length) || (entroDays != null) ||
             /\boutdoor\b/.test(q) || /\bindoor\b/.test(q) ||
             /\bbandiera\b/.test(q) || /\bparete\b/.test(q) || /\bpalo\b/.test(q) ||
-            /\bcarrello\b/.test(q) || /\bpiantana\b/.test(q) ||
-            /\bpasso\b/.test(q) || /\bp\d/.test(q.replace(/\s/g, ''));
+            /\bcarrello\b/.test(q) || /\bpiantana\b/.test(q);
 
         if (!hasStructured) {
             const stop = {
@@ -20574,7 +20594,7 @@
                 il:1, lo:1, la:1, i:1, gli:1, le:1, un:1, una:1, uno:1, del:1, al:1, ai:1, alle:1,
                 tutti:1, tutte:1, tutto:1, tutta:1, quelli:1, quelle:1,
                 scadenza:1, scadenze:1, scadere:1, outdoor:1, indoor:1, passo:1, cm:1,
-                prep:1, note:1, pianificazione:1, pre:1, utilizzano:1, utilizza:1, usa:1, usano:1,
+                prep:1, note:1, pianificazione:1, pre:1, utilizzano:1, utilizzando:1, utilizza:1, usa:1, usano:1, trovano:1,
                 dove:1, sono:1, sia:1, c:1, mi:1, ti:1, ci:1, vi:1, x:1,
                 giorni:1, giorno:1, gg:1, entro:1, prossimi:1, prossimo:1, tra:1,
                 regione:1, regioni:1, provincia:1, province:1, citta:1, paese:1, paesi:1,
@@ -20610,8 +20630,12 @@
         // Answer text
         let scopeLab = scope === 'prep' ? 'Pre-pianificazione' : (scope === 'note' ? 'Note clienti' : (scope === 'standby' ? 'Stand-by' : (scope === 'installati' ? 'Installati' : 'clienti attivi')));
         let filters = [];
-        if (regioneHit) filters.push('regione ' + regioneHit);
-        if (dimM) filters.push('dimensione ' + dimM[1] + '×' + dimM[2]);
+        if (regioniHit && regioniHit.length) filters.push('regione ' + regioniHit.join(' + '));
+        if (provCodes && provCodes.length) filters.push('prov. ' + provCodes.join(', '));
+        if (dimMatches && dimMatches.length) {
+            filters.push('dimensione ' + dimMatches.map(function(p) { return p[0] + '×' + p[1]; }).join(', '));
+        }
+        if (passiHit && passiHit.length) filters.push('passo ' + passiHit.join(', '));
         if (/\boutdoor\b/.test(q)) filters.push('outdoor');
         if (/\bindoor\b/.test(q)) filters.push('indoor');
         if (entroDays != null) filters.push('scadenza entro ' + entroDays + ' giorni');
