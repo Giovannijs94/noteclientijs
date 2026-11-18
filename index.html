@@ -3358,6 +3358,9 @@
         }
         .dash-card li:last-child { border-bottom: none; }
         .dash-card li strong { color: #9d174d; }
+        .dash-card li {
+            line-height: 1.35;
+        }
         .consigli-query-bar {
             margin: 0 0 14px;
             padding: 12px;
@@ -6788,25 +6791,18 @@
             </span>
         </div>
     </div>
-    <p class="meteo-intro">Panoramica clienti e <strong>ricerca intelligente</strong> (stessa di Consigli pianificazione).</p>
+    <p class="meteo-intro">Panoramica clienti. Usa la ricerca per <strong>trovare un cliente</strong> in qualsiasi sezione e aprirne la scheda.</p>
 
     <div class="dash-kpi-grid" id="dashKpiGrid"></div>
 
     <div class="consigli-query-bar" id="dashQueryBar">
         <div class="consigli-query-row">
-            <input type="search" id="dashQueryInput" class="input-control" placeholder='Es. «clienti in Campania per scadenza» · «modello 75x100» · «stand-by Sicilia»' autocomplete="off"
-                onkeydown="if(event.key==='Enter'){event.preventDefault();runConsigliQuery('dash');}">
-            <button type="button" class="btn btn-primary" onclick="runConsigliQuery('dash')">Chiedi</button>
-            <button type="button" class="btn" onclick="clearConsigliQuery('dash')" title="Pulisci">✕</button>
+            <input type="search" id="dashClientSearch" class="input-control" placeholder="Cerca cliente per nome, indirizzo, modello, conf. ordine…" autocomplete="off"
+                oninput="runDashClientSearch()" onkeydown="if(event.key==='Enter'){event.preventDefault();runDashClientSearch(true);}">
+            <button type="button" class="btn btn-primary" onclick="runDashClientSearch(true)">Cerca</button>
+            <button type="button" class="btn" onclick="clearDashClientSearch()" title="Pulisci">✕</button>
         </div>
-        <div class="consigli-query-examples">
-            <button type="button" class="consigli-ex" onclick="fillConsigliQuery(this.textContent,'dash')">Clienti in Campania per scadenza</button>
-            <button type="button" class="consigli-ex" onclick="fillConsigliQuery(this.textContent,'dash')">Modello dimensione 75x100</button>
-            <button type="button" class="consigli-ex" onclick="fillConsigliQuery(this.textContent,'dash')">Outdoor in Sicilia</button>
-            <button type="button" class="consigli-ex" onclick="fillConsigliQuery(this.textContent,'dash')">Scadenze entro 14 giorni</button>
-            <button type="button" class="consigli-ex" onclick="fillConsigliQuery(this.textContent,'dash')">Clienti in stand-by</button>
-        </div>
-        <div id="dashQueryResult" class="consigli-query-result" hidden></div>
+        <div id="dashClientSearchResult" class="consigli-query-result" hidden></div>
     </div>
 
     <div class="dash-sections" id="dashSections"></div>
@@ -20355,7 +20351,7 @@
 
     // ===== Query intelligente Consigli =====
     window.fillConsigliQuery = function(txt, target) {
-        target = target || (document.getElementById('viewDashboard') && document.getElementById('viewDashboard').classList.contains('active') ? 'dash' : 'consigli');
+        target = target || 'consigli';
         const inputId = target === 'dash' ? 'dashQueryInput' : 'consigliQueryInput';
         const el = document.getElementById(inputId);
         if (el) {
@@ -20432,7 +20428,7 @@
     ];
 
     window.runConsigliQuery = function(target) {
-        target = target || (document.getElementById('viewDashboard') && document.getElementById('viewDashboard').classList.contains('active') ? 'dash' : 'consigli');
+        target = target || 'consigli';
         const input = document.getElementById(target === 'dash' ? 'dashQueryInput' : 'consigliQueryInput');
         const box = document.getElementById(target === 'dash' ? 'dashQueryResult' : 'consigliQueryResult');
         if (!input || !box) return;
@@ -20633,6 +20629,86 @@
     };
 
 
+
+    function dashClientSection(c) {
+        if (!c) return '—';
+        if (c.installato) return 'Installati';
+        if (c.standby) return 'Stand-by';
+        if (typeof isInPrep === 'function' ? isInPrep(c) : (c.inPrep === true || c.inPrep === 'true')) return 'Pre-pianificazione';
+        return 'Note clienti';
+    }
+
+    window.clearDashClientSearch = function() {
+        const el = document.getElementById('dashClientSearch');
+        const box = document.getElementById('dashClientSearchResult');
+        if (el) el.value = '';
+        if (box) { box.hidden = true; box.innerHTML = ''; }
+    };
+
+    window.runDashClientSearch = function(openIfOne) {
+        const el = document.getElementById('dashClientSearch');
+        const box = document.getElementById('dashClientSearchResult');
+        if (!el || !box) return;
+        const q = String(el.value || '').toLowerCase().trim();
+        if (!q) {
+            box.hidden = true;
+            box.innerHTML = '';
+            return;
+        }
+        const words = q.split(/\s+/).filter(Boolean);
+        const list = (clients || []).filter(function(c) {
+            if (!c) return false;
+            const models = (c.modelli || []).map(function(m) { return String(m.nome || ''); }).join(' ');
+            const blob = [
+                c.nome, c.localita, c.provincia, c.regione, c.montaggio,
+                c.confOrdine, c.tappa, c.spedizione, c.scadenza, models, c.modello
+            ].join(' ').toLowerCase();
+            return words.every(function(w) { return blob.indexOf(w) >= 0; });
+        }).sort(function(a, b) {
+            return String(a.nome || '').localeCompare(String(b.nome || ''), 'it');
+        });
+
+        if (openIfOne && list.length === 1) {
+            try { editClient(list[0].id); } catch (e) {}
+            box.hidden = false;
+            box.innerHTML = '<div class="consigli-q-answer">Aperta scheda di <strong>' +
+                String(list[0].nome || '').replace(/</g, '&lt;') + '</strong> (' + dashClientSection(list[0]) + ').</div>';
+            return;
+        }
+
+        if (!list.length) {
+            box.hidden = false;
+            box.innerHTML = '<div class="consigli-q-empty">Nessun cliente trovato.</div>';
+            return;
+        }
+
+        let html = '<div class="consigli-q-answer">Trovati <strong>' + list.length + '</strong> clienti — clicca per aprire la scheda.</div>';
+        html += '<div class="consigli-q-list">';
+        list.slice(0, 50).forEach(function(c) {
+            const sec = dashClientSection(c);
+            const models = (c.modelli || []).map(function(m) {
+                return (m.nome || '') + (m.qta ? (' ×' + m.qta) : '');
+            }).filter(Boolean).join(', ') || (c.modello || '—');
+            const safeId = String(c.id).replace(/'/g, "\\'");
+            html += '<button type="button" class="consigli-q-item dash-client-hit" style="width:100%;text-align:left;cursor:pointer;" onclick="editClient(\'' + safeId + '\')">' +
+                '<strong>' + String(c.nome || '—').replace(/</g, '&lt;') + '</strong>' +
+                '<span class="consigli-q-meta">' + sec + '</span>' +
+                '<span class="consigli-q-meta">📍 ' + String(c.localita || '—').replace(/</g, '&lt;') + '</span>' +
+                '<span class="consigli-q-meta">📦 ' + String(models).replace(/</g, '&lt;') + '</span>' +
+                '</button>';
+        });
+        if (list.length > 50) {
+            html += '<div class="consigli-q-empty">… e altri ' + (list.length - 50) + ' risultati (affina la ricerca)</div>';
+        }
+        html += '</div>';
+        box.hidden = false;
+        box.innerHTML = html;
+    };
+
+    window.openDashClient = function(id) {
+        try { editClient(id); } catch (e) {}
+    };
+
     function renderDashboardPage() {
         const all = clients || [];
         const prep = all.filter(function(c) {
@@ -20655,7 +20731,7 @@
             kpi.innerHTML =
                 '<div class="dash-kpi kpi-prep" onclick="switchView(\'prep\')"><div class="k">Pre-pianificazione</div><div class="v">' + prep.length + '</div></div>' +
                 '<div class="dash-kpi" onclick="switchView(\'note\')"><div class="k">Note clienti</div><div class="v">' + note.length + '</div></div>' +
-                '<div class="dash-kpi kpi-urg" onclick="fillConsigliQuery(\'Scadenze entro 14 giorni\',\'dash\')"><div class="k">Scadenze ≤ 14 gg (Prep)</div><div class="v">' + urg.length + '</div></div>' +
+                '<div class="dash-kpi kpi-urg" onclick="switchView(\'prep\')"><div class="k">Scadenze ≤ 14 gg (Prep)</div><div class="v">' + urg.length + '</div></div>' +
                 '<div class="dash-kpi" onclick="switchView(\'standby\')"><div class="k">Stand-by</div><div class="v">' + standby.length + '</div></div>' +
                 '<div class="dash-kpi kpi-ok" onclick="switchView(\'installati\')"><div class="k">Installati</div><div class="v">' + installati.length + '</div></div>';
         }
@@ -20675,20 +20751,114 @@
                         String(c.localita || '—').replace(/</g, '&lt;') + scad + '</li>';
                 }).join('');
             }
-            const byReg = {};
+
+            function resolveReg(c) {
+                let r = String((c && c.regione) || '').trim();
+                if (r) return r;
+                try {
+                    const code = String((c && c.provincia) || '').toUpperCase();
+                    if (code && typeof PROVINCE_TO_REGION !== 'undefined' && PROVINCE_TO_REGION[code]) {
+                        return PROVINCE_TO_REGION[code];
+                    }
+                } catch (e) {}
+                return 'Senza regione';
+            }
+
+            function modelKey(nome) {
+                let s = String(nome || '').trim();
+                if (!s) return '';
+                // normalizza spazi multipli
+                s = s.replace(/\s+/g, ' ');
+                return s;
+            }
+
+            function collectModels(list, outMap) {
+                (list || []).forEach(function(c) {
+                    const items = [];
+                    (c.modelli || []).forEach(function(m) {
+                        const k = modelKey(m.nome || m);
+                        if (!k) return;
+                        const q = parseInt(m.qta, 10);
+                        items.push({ k: k, q: (isNaN(q) || q < 1) ? 1 : q });
+                    });
+                    if (!items.length && c.modello) {
+                        const k = modelKey(c.modello);
+                        if (k) items.push({ k: k, q: 1 });
+                    }
+                    items.forEach(function(it) {
+                        if (!outMap[it.k]) outMap[it.k] = { clienti: 0, pezzi: 0 };
+                        outMap[it.k].clienti += 1;
+                        outMap[it.k].pezzi += it.q;
+                    });
+                });
+            }
+
+            function topModelRows(map, limit) {
+                const keys = Object.keys(map);
+                if (!keys.length) return '<li style="color:#94a3b8;">Nessun modello</li>';
+                keys.sort(function(a, b) {
+                    if (map[b].pezzi !== map[a].pezzi) return map[b].pezzi - map[a].pezzi;
+                    return map[b].clienti - map[a].clienti;
+                });
+                return keys.slice(0, limit || 12).map(function(k, i) {
+                    const m = map[k];
+                    return '<li><span style="color:#94a3b8;font-weight:700;">' + (i + 1) + '.</span> <strong>' +
+                        String(k).replace(/</g, '&lt;') + '</strong><br><span style="color:#64748b;">' +
+                        m.pezzi + ' pezzi · ' + m.clienti + ' clienti</span></li>';
+                }).join('');
+            }
+
+            // Prep per regione (clienti)
+            const byRegPrep = {};
             prep.forEach(function(c) {
-                const r = (c.regione || 'Senza regione').trim() || 'Senza regione';
-                byReg[r] = (byReg[r] || 0) + 1;
+                const r = resolveReg(c);
+                byRegPrep[r] = (byRegPrep[r] || 0) + 1;
             });
-            const regRows = Object.keys(byReg).sort(function(a, b) { return byReg[b] - byReg[a]; }).slice(0, 10)
+            const regPrepRows = Object.keys(byRegPrep).sort(function(a, b) { return byRegPrep[b] - byRegPrep[a]; }).slice(0, 12)
                 .map(function(r) {
-                    return '<li><strong>' + String(r).replace(/</g, '&lt;') + '</strong> · ' + byReg[r] + ' clienti</li>';
+                    return '<li><strong>' + String(r).replace(/</g, '&lt;') + '</strong> · ' + byRegPrep[r] + ' clienti</li>';
                 }).join('') || '<li style="color:#94a3b8;">Nessun cliente in Prep</li>';
 
+            // Installazioni per regione (clienti installati)
+            const byRegInst = {};
+            installati.forEach(function(c) {
+                const r = resolveReg(c);
+                byRegInst[r] = (byRegInst[r] || 0) + 1;
+            });
+            // anche pezzi modello per regione installata
+            const byRegInstPezzi = {};
+            installati.forEach(function(c) {
+                const r = resolveReg(c);
+                let pz = 0;
+                (c.modelli || []).forEach(function(m) {
+                    const q = parseInt(m.qta, 10);
+                    pz += (isNaN(q) || q < 1) ? 1 : q;
+                });
+                if (!pz && c.modello) pz = 1;
+                if (!pz) pz = 1;
+                byRegInstPezzi[r] = (byRegInstPezzi[r] || 0) + pz;
+            });
+            const regInstRows = Object.keys(byRegInst).sort(function(a, b) { return byRegInst[b] - byRegInst[a]; }).slice(0, 12)
+                .map(function(r) {
+                    const pz = byRegInstPezzi[r] || byRegInst[r];
+                    return '<li><strong>' + String(r).replace(/</g, '&lt;') + '</strong> · ' +
+                        byRegInst[r] + ' installazioni · ' + pz + ' pezzi</li>';
+                }).join('') || '<li style="color:#94a3b8;">Nessuna installazione registrata</li>';
+
+            // Da installare = Prep + Note (non standby)
+            const daInstallare = prep.concat(note);
+            const modelsDaInst = {};
+            const modelsInstallati = {};
+            collectModels(daInstallare, modelsDaInst);
+            collectModels(installati, modelsInstallati);
+
             sec.innerHTML =
+                '<div class="dash-card"><h3>✅ Installazioni per regione</h3><ul>' + regInstRows + '</ul></div>' +
+                '<div class="dash-card"><h3>📦 Modelli più installati</h3><ul>' + topModelRows(modelsInstallati, 12) + '</ul></div>' +
+                '<div class="dash-card"><h3>🛠️ Modelli da installare (più usati)</h3><ul>' + topModelRows(modelsDaInst, 12) + '</ul></div>' +
                 '<div class="dash-card"><h3>⏰ Scadenze urgenti (Prep)</h3><ul>' + rowList(urg, 'Nessuna scadenza entro 14 giorni') + '</ul></div>' +
-                '<div class="dash-card"><h3>🗺️ Prep per regione</h3><ul>' + regRows + '</ul></div>' +
-                '<div class="dash-card"><h3>⏸️ Stand-by recenti</h3><ul>' + rowList(standby, 'Nessun cliente in stand-by') + '</ul></div>';
+                '<div class="dash-card"><h3>🗺️ Prep per regione</h3><ul>' + regPrepRows + '</ul></div>' +
+                '<div class="dash-card"><h3>⏸️ Stand-by</h3><ul>' + rowList(standby, 'Nessun cliente in stand-by') + '</ul></div>';
         }
     }
     window.renderDashboardPage = renderDashboardPage;
