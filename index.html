@@ -3290,6 +3290,143 @@
             box-shadow: var(--shadow);
             margin-top: 12px;
         }
+        .dash-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .dash-kpi {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 12px 14px;
+            cursor: pointer;
+            transition: transform .15s, box-shadow .15s;
+        }
+        .dash-kpi:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(15,23,42,0.08);
+        }
+        .dash-kpi .k {
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #64748b;
+        }
+        .dash-kpi .v {
+            font-size: 1.55rem;
+            font-weight: 900;
+            color: #0f172a;
+            line-height: 1.2;
+            margin-top: 4px;
+        }
+        .dash-kpi.kpi-prep .v { color: #9d174d; }
+        .dash-kpi.kpi-urg .v { color: #c2410c; }
+        .dash-kpi.kpi-ok .v { color: #047857; }
+        .dash-sections {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 12px;
+            margin-top: 14px;
+        }
+        .dash-card {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 12px 14px;
+        }
+        .dash-card h3 {
+            margin: 0 0 8px;
+            font-size: 0.92rem;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .dash-card ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            max-height: 220px;
+            overflow-y: auto;
+        }
+        .dash-card li {
+            padding: 6px 0;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 0.8rem;
+            color: #334155;
+        }
+        .dash-card li:last-child { border-bottom: none; }
+        .dash-card li strong { color: #9d174d; }
+        .consigli-query-bar {
+            margin: 0 0 14px;
+            padding: 12px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+        }
+        .consigli-query-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+        .consigli-query-row .input-control {
+            flex: 1 1 220px;
+            min-height: 42px;
+        }
+        .consigli-query-examples {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .consigli-ex {
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            color: #475569;
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .consigli-ex:hover { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+        .consigli-query-result {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #f1f5f9;
+        }
+        .consigli-q-answer {
+            font-size: 0.9rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 8px;
+        }
+        .consigli-q-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 360px;
+            overflow-y: auto;
+        }
+        .consigli-q-item {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 12px;
+            align-items: baseline;
+            padding: 8px 10px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 0.82rem;
+        }
+        .consigli-q-item strong { color: #9d174d; }
+        .consigli-q-meta { color: #64748b; font-size: 0.78rem; }
+        .consigli-q-empty { color: #94a3b8; font-size: 0.85rem; padding: 8px 0; }
+        @media (max-width: 600px) {
+            .consigli-query-row .btn { flex: 1 1 auto; }
+        }
         .prep-filters-bar {
             margin: 6px 0 8px;
             padding: 8px 10px;
@@ -6574,7 +6711,11 @@
             <div class="portal-brand-title">Portale Clienti</div>
         </div>
         <div class="portal-nav-menu">
-            <button type="button" class="portal-nav-btn active" id="navNote" onclick="switchView('note')">
+            <button type="button" class="portal-nav-btn active" id="navDashboard" onclick="switchView('dashboard')">
+                <span class="nav-ico-wrap"><span class="nav-ico">📊</span></span>
+                <span class="nav-txt-wrap"><span class="nav-txt">Dashboard</span><span class="nav-desc">Clienti e ricerca</span></span>
+            </button>
+            <button type="button" class="portal-nav-btn" id="navNote" onclick="switchView('note')">
                 <span class="nav-ico-wrap"><span class="nav-ico">📝</span></span>
                 <span class="nav-txt-wrap"><span class="nav-txt">Note</span><span class="nav-desc">Clienti e tappe</span></span>
             </button>
@@ -6632,7 +6773,46 @@
         </div>
     </div>
 
-<div id="viewNote" class="view-panel active">
+
+<div id="viewDashboard" class="view-panel active">
+    <div class="header-bar">
+        <div class="header-title-group">
+            <h1>📊 Dashboard clienti</h1>
+        </div>
+        <div class="header-actions header-actions-right">
+            <button type="button" class="btn btn-primary" onclick="renderDashboardPage()">🔄 Aggiorna</button>
+            <span class="header-jumbo" aria-label="Jumboscreen">
+                <span class="header-jumbo-word">
+                    <span class="header-jumbo-letters">JUMBOSCRE</span><span class="header-jumbo-e" aria-hidden="true"><i></i><i></i><i></i></span><span class="header-jumbo-letters">N</span>
+                </span><span class="header-jumbo-reg">®</span>
+            </span>
+        </div>
+    </div>
+    <p class="meteo-intro">Panoramica clienti e <strong>ricerca intelligente</strong> (stessa di Consigli pianificazione).</p>
+
+    <div class="dash-kpi-grid" id="dashKpiGrid"></div>
+
+    <div class="consigli-query-bar" id="dashQueryBar">
+        <div class="consigli-query-row">
+            <input type="search" id="dashQueryInput" class="input-control" placeholder='Es. «clienti in Campania per scadenza» · «modello 75x100» · «stand-by Sicilia»' autocomplete="off"
+                onkeydown="if(event.key==='Enter'){event.preventDefault();runConsigliQuery('dash');}">
+            <button type="button" class="btn btn-primary" onclick="runConsigliQuery('dash')">Chiedi</button>
+            <button type="button" class="btn" onclick="clearConsigliQuery('dash')" title="Pulisci">✕</button>
+        </div>
+        <div class="consigli-query-examples">
+            <button type="button" class="consigli-ex" onclick="fillConsigliQuery(this.textContent,'dash')">Clienti in Campania per scadenza</button>
+            <button type="button" class="consigli-ex" onclick="fillConsigliQuery(this.textContent,'dash')">Modello dimensione 75x100</button>
+            <button type="button" class="consigli-ex" onclick="fillConsigliQuery(this.textContent,'dash')">Outdoor in Sicilia</button>
+            <button type="button" class="consigli-ex" onclick="fillConsigliQuery(this.textContent,'dash')">Scadenze entro 14 giorni</button>
+            <button type="button" class="consigli-ex" onclick="fillConsigliQuery(this.textContent,'dash')">Clienti in stand-by</button>
+        </div>
+        <div id="dashQueryResult" class="consigli-query-result" hidden></div>
+    </div>
+
+    <div class="dash-sections" id="dashSections"></div>
+</div><!-- /#viewDashboard -->
+
+<div id="viewNote" class="view-panel">
     <div class="header-bar">
         <div class="header-title-group">
             <h1>📋 Gestione Note Clienti</h1>
@@ -7092,6 +7272,21 @@
         </div>
     </div>
     <p class="meteo-intro"><strong>Percorsi di consegna diretta</strong> da Casamassima (scadenza + distanza) e <strong>elenco spedizioni</strong> agli installatori esterni, sempre per scadenza.</p>
+    <div class="consigli-query-bar" id="consigliQueryBar">
+        <div class="consigli-query-row">
+            <input type="search" id="consigliQueryInput" class="input-control" placeholder='Es. «clienti in Campania per scadenza» · «modello 75x100» · «outdoor in Sicilia»' autocomplete="off"
+                onkeydown="if(event.key==='Enter'){event.preventDefault();runConsigliQuery('consigli');}">
+            <button type="button" class="btn btn-primary" onclick="runConsigliQuery('consigli')">Chiedi</button>
+            <button type="button" class="btn" onclick="clearConsigliQuery('consigli')" title="Pulisci">✕</button>
+        </div>
+        <div class="consigli-query-examples">
+            <button type="button" class="consigli-ex" onclick="fillConsigliQuery(this.textContent,'consigli')">Clienti in Campania per scadenza</button>
+            <button type="button" class="consigli-ex" onclick="fillConsigliQuery(this.textContent,'consigli')">Modello dimensione 75x100</button>
+            <button type="button" class="consigli-ex" onclick="fillConsigliQuery(this.textContent,'consigli')">Outdoor in Sicilia</button>
+            <button type="button" class="consigli-ex" onclick="fillConsigliQuery(this.textContent,'consigli')">Scadenze entro 14 giorni</button>
+        </div>
+        <div id="consigliQueryResult" class="consigli-query-result" hidden></div>
+    </div>
     <div id="consigliContainer"></div>
 </div><!-- /#viewConsigli -->
 
@@ -20157,6 +20352,347 @@
         }
     }
 
+
+    // ===== Query intelligente Consigli =====
+    window.fillConsigliQuery = function(txt, target) {
+        target = target || (document.getElementById('viewDashboard') && document.getElementById('viewDashboard').classList.contains('active') ? 'dash' : 'consigli');
+        const inputId = target === 'dash' ? 'dashQueryInput' : 'consigliQueryInput';
+        const el = document.getElementById(inputId);
+        if (el) {
+            el.value = String(txt || '').replace(/^«|»$/g, '').trim();
+            el.focus();
+        }
+        runConsigliQuery(target);
+    };
+    window.clearConsigliQuery = function(target) {
+        target = target || 'consigli';
+        const inputId = target === 'dash' ? 'dashQueryInput' : 'consigliQueryInput';
+        const boxId = target === 'dash' ? 'dashQueryResult' : 'consigliQueryResult';
+        const el = document.getElementById(inputId);
+        const box = document.getElementById(boxId);
+        if (el) el.value = '';
+        if (box) { box.hidden = true; box.innerHTML = ''; }
+    };
+
+    function _cqNorm(s) {
+        return String(s || '').toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/[«»"']/g, ' ')
+            .replace(/\s+/g, ' ').trim();
+    }
+
+    function _cqFmtScad(c) {
+        const s = String((c && c.scadenza) || '').trim();
+        if (!s) return '—';
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+            const p = s.split('-');
+            return p[2] + '/' + p[1] + '/' + p[0];
+        }
+        return s;
+    }
+
+    function _cqModels(c) {
+        const arr = [];
+        (c.modelli || []).forEach(function(m) {
+            arr.push(String(m.nome || m || ''));
+        });
+        if (c.modello) arr.push(String(c.modello));
+        return arr.filter(Boolean);
+    }
+
+    function _cqClientBlob(c) {
+        return _cqNorm([
+            c.nome, c.localita, c.provincia, c.regione, c.montaggio,
+            c.scadenza, c.tappa, c.spedizione, _cqModels(c).join(' ')
+        ].join(' '));
+    }
+
+    function _cqPool(scope) {
+        const all = clients || [];
+        return all.filter(function(c) {
+            if (!c) return false;
+            if (scope === 'prep') {
+                return typeof isInPrep === 'function' ? isInPrep(c) : (c.inPrep === true || c.inPrep === 'true');
+            }
+            if (scope === 'note') {
+                return !c.installato && !c.standby && !(typeof isInPrep === 'function' ? isInPrep(c) : (c.inPrep === true || c.inPrep === 'true'));
+            }
+            if (scope === 'standby') return !!c.standby && !c.installato;
+            if (scope === 'installati') return !!c.installato;
+            // all attivi (prep + note)
+            return !c.installato;
+        });
+    }
+
+    const CQ_REGIONI = [
+        'abruzzo','basilicata','calabria','campania','emilia-romagna','emilia romagna',
+        'friuli-venezia giulia','friuli venezia giulia','lazio','liguria','lombardia',
+        'marche','molise','piemonte','puglia','sardegna','sicilia','toscana',
+        'trentino-alto adige','trentino alto adige','umbria',"valle d'aosta",'valle daosta','veneto'
+    ];
+
+    window.runConsigliQuery = function(target) {
+        target = target || (document.getElementById('viewDashboard') && document.getElementById('viewDashboard').classList.contains('active') ? 'dash' : 'consigli');
+        const input = document.getElementById(target === 'dash' ? 'dashQueryInput' : 'consigliQueryInput');
+        const box = document.getElementById(target === 'dash' ? 'dashQueryResult' : 'consigliQueryResult');
+        if (!input || !box) return;
+        const raw = String(input.value || '').trim();
+        if (!raw) {
+            box.hidden = false;
+            box.innerHTML = '<div class="consigli-q-empty">Scrivi una domanda, es. «clienti in Campania per scadenza».</div>';
+            return;
+        }
+        const q = _cqNorm(raw);
+        let scope = 'all';
+        if (/\bpre[- ]?pianific/.test(q) || /\bprep\b/.test(q)) scope = 'prep';
+        else if (/\bnote\b/.test(q)) scope = 'note';
+        else if (/\bstand[- ]?by\b/.test(q)) scope = 'standby';
+        else if (/\binstallat/.test(q)) scope = 'installati';
+        else scope = (target === 'dash') ? 'all' : 'prep'; // dashboard: tutti gli attivi; consigli: prep
+
+        let list = _cqPool(scope);
+
+        // Regione
+        let regioneHit = '';
+        CQ_REGIONI.forEach(function(r) {
+            if (q.indexOf(r) >= 0) regioneHit = r;
+        });
+        if (regioneHit) {
+            const rkey = regioneHit.replace(/\s+/g, ' ');
+            list = list.filter(function(c) {
+                const reg = _cqNorm(c.regione || '');
+                if (reg.indexOf(rkey) >= 0) return true;
+                // da provincia
+                try {
+                    const code = String(c.provincia || '').toUpperCase();
+                    if (code && typeof PROVINCE_TO_REGION !== 'undefined' && PROVINCE_TO_REGION[code]) {
+                        if (_cqNorm(PROVINCE_TO_REGION[code]).indexOf(rkey) >= 0) return true;
+                    }
+                } catch (e) {}
+                return false;
+            });
+        }
+
+        // Provincia sigla (BA, NA, RM…)
+        const provM = q.match(/\b(provincia\s+)?([a-z]{2})\b/);
+        // only if looks like Italian province code in uppercase original
+        const provCodes = q.toUpperCase().match(/\b([A-Z]{2})\b/g) || [];
+        if (typeof PROVINCE_TO_REGION !== 'undefined') {
+            provCodes.forEach(function(code) {
+                if (PROVINCE_TO_REGION[code]) {
+                    list = list.filter(function(c) {
+                        return String(c.provincia || '').toUpperCase() === code;
+                    });
+                }
+            });
+        }
+
+        // Indoor / Outdoor
+        if (/\boutdoor\b/.test(q)) {
+            list = list.filter(function(c) {
+                return _cqModels(c).some(function(m) { return /outdoor/i.test(m); }) || /outdoor/i.test(c.modello || '');
+            });
+        } else if (/\bindoor\b/.test(q)) {
+            list = list.filter(function(c) {
+                return _cqModels(c).some(function(m) { return /indoor/i.test(m); }) || /indoor/i.test(c.modello || '');
+            });
+        }
+
+        // Dimensione CM 75x100 / 75 x 100 / 75×100
+        const dimM = q.match(/(\d{2,4})\s*[x×]\s*(\d{2,4})/);
+        if (dimM) {
+            const a = dimM[1], b = dimM[2];
+            list = list.filter(function(c) {
+                const models = _cqModels(c);
+                return models.some(function(m) {
+                    const up = m.toUpperCase().replace(/×/g, 'X');
+                    // CM 75 X 100 o 75X100
+                    if (new RegExp(a + '\\s*X\\s*' + b).test(up)) return true;
+                    if (up.indexOf(a) >= 0 && up.indexOf(b) >= 0 && /CM/.test(up)) return true;
+                    return false;
+                });
+            });
+        }
+
+        // Passo P2.5 / passo 2.5
+        const passoM = q.match(/\b(?:passo\s*)?p?\s*(\d+(?:[.,]\d+)?)\b/);
+        if (/\bpasso\b/.test(q) || /\bp\d/.test(q.replace(/\s/g, ''))) {
+            const pm = q.match(/\bp\s*(\d+(?:[.,]\d+)?)/) || q.match(/passo\s*(\d+(?:[.,]\d+)?)/);
+            if (pm) {
+                const p = pm[1].replace(',', '.');
+                list = list.filter(function(c) {
+                    return _cqModels(c).some(function(m) {
+                        const up = m.toUpperCase().replace(',', '.');
+                        return up.indexOf('P' + p) >= 0 || up.indexOf('/' + p) >= 0 || up.indexOf(p) >= 0;
+                    });
+                });
+            }
+        }
+
+        // Montaggio
+        ['bandiera', 'parete', 'su palo', 'carrello', 'piantana'].forEach(function(mon) {
+            if (q.indexOf(mon) >= 0) {
+                list = list.filter(function(c) {
+                    return _cqNorm(c.montaggio || '').indexOf(mon) >= 0;
+                });
+            }
+        });
+
+        // Scadenza entro N giorni
+        const entroM = q.match(/entro\s+(\d+)\s*g/);
+        if (entroM) {
+            const n = parseInt(entroM[1], 10);
+            list = list.filter(function(c) {
+                const d = (typeof prepDaysLeft === 'function') ? prepDaysLeft(c) : 9999;
+                return d <= n;
+            });
+        } else if (/\bscadut/.test(q)) {
+            list = list.filter(function(c) {
+                const d = (typeof prepDaysLeft === 'function') ? prepDaysLeft(c) : 9999;
+                return d < 0;
+            });
+        }
+
+        // Free-text nome/localita residual keywords (longer tokens)
+        const stop = {
+            clienti:1, cliente:1, elencami:1, elenca:1, mostra:1, quali:1, che:1, con:1,
+            modello:1, modelli:1, dimensione:1, dimensioni:1, ordine:1, per:1, della:1,
+            delle:1, nella:1, nelle:1, nella:1, in:1, di:1, da:1, a:1, e:1, o:1,
+            il:1, lo:1, la:1, i:1, gli:1, le:1, un:1, una:1, del:1, al:1, tutti:1,
+            tutte:1, scadenza:1, scadenze:1, outdoor:1, indoor:1, passo:1, cm:1,
+            prep:1, note:1, pianificazione:1, pre:1, utilizzano:1, usa:1, usano:1,
+            dove:1, sono:1, c:1, mi:1, i:1, x:1
+        };
+        q.split(' ').forEach(function(w) {
+            if (w.length < 3 || stop[w]) return;
+            if (/^\d+$/.test(w)) return;
+            if (CQ_REGIONI.indexOf(w) >= 0) return;
+            // skip if already matched as region part
+            list = list.filter(function(c) {
+                return _cqClientBlob(c).indexOf(w) >= 0;
+            });
+        });
+
+        // Sort
+        if (/scadenz/.test(q) || /priorit/.test(q) || /urgent/.test(q) || /ordine/.test(q)) {
+            list = list.slice().sort(function(a, b) {
+                const da = (typeof prepDaysLeft === 'function') ? prepDaysLeft(a) : 9999;
+                const db = (typeof prepDaysLeft === 'function') ? prepDaysLeft(b) : 9999;
+                if (da !== db) return da - db;
+                return String(a.nome || '').localeCompare(String(b.nome || ''), 'it');
+            });
+        } else {
+            list = list.slice().sort(function(a, b) {
+                return String(a.nome || '').localeCompare(String(b.nome || ''), 'it');
+            });
+        }
+
+        // Answer text
+        let scopeLab = scope === 'prep' ? 'Pre-pianificazione' : (scope === 'note' ? 'Note clienti' : (scope === 'standby' ? 'Stand-by' : (scope === 'installati' ? 'Installati' : 'clienti attivi')));
+        let filters = [];
+        if (regioneHit) filters.push('regione ' + regioneHit);
+        if (dimM) filters.push('dimensione ' + dimM[1] + '×' + dimM[2]);
+        if (/\boutdoor\b/.test(q)) filters.push('outdoor');
+        if (/\bindoor\b/.test(q)) filters.push('indoor');
+        if (entroM) filters.push('scadenza entro ' + entroM[1] + ' giorni');
+        const filtTxt = filters.length ? (' (' + filters.join(', ') + ')') : '';
+        const answer = list.length
+            ? ('Trovati <strong>' + list.length + '</strong> clienti in ' + scopeLab + filtTxt + '.')
+            : ('Nessun cliente trovato in ' + scopeLab + filtTxt + '.');
+
+        let html = '<div class="consigli-q-answer">' + answer + '</div>';
+        if (!list.length) {
+            html += '<div class="consigli-q-empty">Prova a cambiare regione, modello o sezione (es. «in note», «in prep»).</div>';
+        } else {
+            html += '<div class="consigli-q-list">';
+            list.slice(0, 80).forEach(function(c) {
+                const models = _cqModels(c).join(', ') || '—';
+                const d = (typeof prepDaysLeft === 'function') ? prepDaysLeft(c) : 9999;
+                let scadInfo = _cqFmtScad(c);
+                if (d < 9000) {
+                    if (d < 0) scadInfo += ' · scaduto';
+                    else if (d === 0) scadInfo += ' · oggi';
+                    else scadInfo += ' · tra ' + d + 'g';
+                }
+                html += '<div class="consigli-q-item">' +
+                    '<strong>' + String(c.nome || '—').replace(/</g, '&lt;') + '</strong>' +
+                    '<span class="consigli-q-meta">📍 ' + String(c.localita || '—').replace(/</g, '&lt;') +
+                    (c.regione ? (' · ' + String(c.regione).replace(/</g, '&lt;')) : '') + '</span>' +
+                    '<span class="consigli-q-meta">📦 ' + String(models).replace(/</g, '&lt;') + '</span>' +
+                    '<span class="consigli-q-meta">📅 ' + String(scadInfo).replace(/</g, '&lt;') + '</span>' +
+                    '</div>';
+            });
+            if (list.length > 80) {
+                html += '<div class="consigli-q-empty">… e altri ' + (list.length - 80) + ' risultati</div>';
+            }
+            html += '</div>';
+        }
+        box.hidden = false;
+        box.innerHTML = html;
+        try { box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
+    };
+
+
+    function renderDashboardPage() {
+        const all = clients || [];
+        const prep = all.filter(function(c) {
+            return typeof isInPrep === 'function' ? isInPrep(c) : (c.inPrep === true || c.inPrep === 'true');
+        });
+        const note = all.filter(function(c) {
+            return !c.installato && !c.standby && !(typeof isInPrep === 'function' ? isInPrep(c) : (c.inPrep === true || c.inPrep === 'true'));
+        });
+        const standby = all.filter(function(c) { return !!c.standby && !c.installato; });
+        const installati = all.filter(function(c) { return !!c.installato; });
+        const urg = prep.filter(function(c) {
+            const d = (typeof prepDaysLeft === 'function') ? prepDaysLeft(c) : 9999;
+            return d <= 14;
+        }).sort(function(a, b) {
+            return ((typeof prepDaysLeft === 'function') ? prepDaysLeft(a) : 9999) - ((typeof prepDaysLeft === 'function') ? prepDaysLeft(b) : 9999);
+        });
+
+        const kpi = document.getElementById('dashKpiGrid');
+        if (kpi) {
+            kpi.innerHTML =
+                '<div class="dash-kpi kpi-prep" onclick="switchView(\'prep\')"><div class="k">Pre-pianificazione</div><div class="v">' + prep.length + '</div></div>' +
+                '<div class="dash-kpi" onclick="switchView(\'note\')"><div class="k">Note clienti</div><div class="v">' + note.length + '</div></div>' +
+                '<div class="dash-kpi kpi-urg" onclick="fillConsigliQuery(\'Scadenze entro 14 giorni\',\'dash\')"><div class="k">Scadenze ≤ 14 gg (Prep)</div><div class="v">' + urg.length + '</div></div>' +
+                '<div class="dash-kpi" onclick="switchView(\'standby\')"><div class="k">Stand-by</div><div class="v">' + standby.length + '</div></div>' +
+                '<div class="dash-kpi kpi-ok" onclick="switchView(\'installati\')"><div class="k">Installati</div><div class="v">' + installati.length + '</div></div>';
+        }
+
+        const sec = document.getElementById('dashSections');
+        if (sec) {
+            function rowList(arr, emptyMsg) {
+                if (!arr.length) return '<li style="color:#94a3b8;">' + emptyMsg + '</li>';
+                return arr.slice(0, 12).map(function(c) {
+                    const d = (typeof prepDaysLeft === 'function') ? prepDaysLeft(c) : 9999;
+                    let scad = '';
+                    if (c.scadenza) {
+                        scad = ' · 📅 ' + String(c.scadenza);
+                        if (d < 9000) scad += (d < 0 ? ' (scaduto)' : ' (' + d + 'g)');
+                    }
+                    return '<li><strong>' + String(c.nome || '—').replace(/</g, '&lt;') + '</strong> · ' +
+                        String(c.localita || '—').replace(/</g, '&lt;') + scad + '</li>';
+                }).join('');
+            }
+            const byReg = {};
+            prep.forEach(function(c) {
+                const r = (c.regione || 'Senza regione').trim() || 'Senza regione';
+                byReg[r] = (byReg[r] || 0) + 1;
+            });
+            const regRows = Object.keys(byReg).sort(function(a, b) { return byReg[b] - byReg[a]; }).slice(0, 10)
+                .map(function(r) {
+                    return '<li><strong>' + String(r).replace(/</g, '&lt;') + '</strong> · ' + byReg[r] + ' clienti</li>';
+                }).join('') || '<li style="color:#94a3b8;">Nessun cliente in Prep</li>';
+
+            sec.innerHTML =
+                '<div class="dash-card"><h3>⏰ Scadenze urgenti (Prep)</h3><ul>' + rowList(urg, 'Nessuna scadenza entro 14 giorni') + '</ul></div>' +
+                '<div class="dash-card"><h3>🗺️ Prep per regione</h3><ul>' + regRows + '</ul></div>' +
+                '<div class="dash-card"><h3>⏸️ Stand-by recenti</h3><ul>' + rowList(standby, 'Nessun cliente in stand-by') + '</ul></div>';
+        }
+    }
+    window.renderDashboardPage = renderDashboardPage;
+
     // ===== CONSIGLI PIANIFICAZIONE (regole intelligenti su Prep) =====
     function renderConsigliPage() {
         // Indirizzi sempre allineati a Pre-pianificazione (stesso array clients)
@@ -20720,12 +21256,16 @@
         const viewMeteo = document.getElementById('viewMeteo');
         if (viewMeteo) viewMeteo.classList.toggle('active', view === 'meteo');
         document.getElementById('viewPrep').classList.toggle('active', view === 'prep');
+        const viewDashboard = document.getElementById('viewDashboard');
+        if (viewDashboard) viewDashboard.classList.toggle('active', view === 'dashboard');
         const viewConsigli = document.getElementById('viewConsigli');
         if (viewConsigli) viewConsigli.classList.toggle('active', view === 'consigli');
         document.getElementById('viewInstallati').classList.toggle('active', view === 'installati');
         document.getElementById('viewStandby').classList.toggle('active', view === 'standby');
         const viewOrdini = document.getElementById('viewOrdini');
         if (viewOrdini) viewOrdini.classList.toggle('active', view === 'ordini');
+        const navDashboard = document.getElementById('navDashboard');
+        if (navDashboard) navDashboard.classList.toggle('active', view === 'dashboard');
         document.getElementById('navNote').classList.toggle('active', view === 'note');
         const navCalendario = document.getElementById('navCalendario');
         if (navCalendario) navCalendario.classList.toggle('active', view === 'calendario');
@@ -20759,6 +21299,9 @@
             try { updatePrepPaesiCheckBanner(); } catch (e) {}
             // Niente controllo province automatico in rete all'apertura (rallentava molto).
             // L'utente può usare "Aggiorna province" / "Ricontrolla ora" quando serve.
+        }
+        if (view === 'dashboard') {
+            try { renderDashboardPage(); } catch (e) { console.error(e); }
         }
         if (view === 'consigli') {
             try {
