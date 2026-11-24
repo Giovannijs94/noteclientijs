@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Note Clienti">
+  <meta name="theme-color" content="#9d174d">
+  <title>Note Clienti · Mobile</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="icon" href="favicon.png">
+  <style>
+    :root {
+      --primary: #9d174d;
+      --primary-dark: #831843;
+      --primary-soft: #fdf2f8;
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --ok: #16a34a;
+      --warn: #ea580c;
+      --danger: #b91c1c;
+      --tab-h: 60px;
+      --safe-b: env(safe-area-inset-bottom, 0px);
+      --safe-t: env(safe-area-inset-top, 0px);
+      --radius: 14px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100%;
+      min-height: 100dvh;
+    }
+    body {
+      padding-bottom: calc(var(--tab-h) + var(--safe-b));
+      overflow-x: hidden;
+    }
+
+    /* Top bar */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(255,255,255,0.92);
+      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: calc(10px + var(--safe-t)) 14px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .topbar h1 {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: -0.02em;
+    }
+    .brand-dot {
+      display: inline-flex;
+      gap: 3px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .brand-dot i {
+      width: 7px; height: 7px; border-radius: 50%;
+      display: inline-block;
+    }
+    .brand-dot i.r { background: #ef4444; }
+    .brand-dot i.g { background: #22c55e; }
+    .brand-dot i.b { background: #3b82f6; }
+    .topbar-actions { display: flex; gap: 6px; }
+    .icon-btn {
+      width: 40px; height: 40px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      font-size: 1.05rem;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+    }
+
+    /* Search */
+    .search-wrap {
+      padding: 10px 14px 0;
+    }
+    .search-box {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 4px 4px 4px 12px;
+      box-shadow: 0 1px 4px rgba(15,23,42,0.04);
+    }
+    .search-box input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 16px;
+      min-height: 40px;
+      background: transparent;
+    }
+    .search-box button {
+      border: none;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 700;
+      border-radius: 11px;
+      min-height: 40px;
+      padding: 0 14px;
+      font-size: 0.85rem;
+    }
+
+    /* Views */
+    .view { display: none; padding: 12px 14px 20px; }
+    .view.active { display: block; }
+
+    /* KPI */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .kpi {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+    }
+    .kpi .v { font-size: 1.4rem; font-weight: 800; color: var(--primary); }
+    .kpi .k { font-size: 0.72rem; color: var(--muted); font-weight: 700; margin-top: 2px; }
+    .kpi.warn .v { color: var(--warn); }
+    .kpi.ok .v { color: var(--ok); }
+
+    /* Cards list */
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      margin: 14px 0 8px;
+    }
+    .client-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 12px 10px;
+      margin-bottom: 8px;
+      box-shadow: 0 1px 3px rgba(15,23,42,0.03);
+      cursor: pointer;
+    }
+    .client-card:active { background: var(--primary-soft); }
+    .client-card.standby {
+      background: #ffedd5;
+      border-color: #fdba74;
+    }
+    .client-card .name {
+      font-weight: 800;
+      font-size: 0.95rem;
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+    .client-card.standby .name { color: #c2410c; }
+    .client-card .meta {
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    .client-card .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 8px;
+    }
+    .chip {
+      font-size: 0.68rem;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #f1f5f9;
+      color: #475569;
+    }
+    .chip.scaduto { background: #fee2e2; color: #b91c1c; }
+    .chip.urgente { background: #ffedd5; color: #c2410c; }
+    .chip.ok { background: #dcfce7; color: #15803d; }
+    .chip.sb { background: #ea580c; color: #fff; }
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 28px 12px;
+      font-size: 0.9rem;
+    }
+
+    /* Filters */
+    .filters {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      margin-bottom: 10px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .filters button {
+      flex: 0 0 auto;
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--muted);
+      min-height: 36px;
+    }
+    .filters button.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+
+    /* Bottom tab */
+    .tabbar {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      z-index: 100;
+      display: flex;
+      background: rgba(255,255,255,0.94);
+      -webkit-backdrop-filter: blur(18px);
+      backdrop-filter: blur(18px);
+      border-top: 1px solid rgba(15,23,42,0.08);
+      padding: 4px 2px max(6px, var(--safe-b));
+      box-shadow: 0 -6px 24px rgba(15,23,42,0.07);
+    }
+    .tab {
+      flex: 1;
+      border: none;
+      background: transparent;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      min-height: 52px;
+      color: #64748b;
+      font-size: 0.62rem;
+      font-weight: 700;
+      border-radius: 12px;
+      cursor: pointer;
+      position: relative;
+    }
+    .tab .ico { font-size: 1.2rem; line-height: 1; }
+    .tab.active {
+      color: var(--primary);
+      background: rgba(157,23,77,0.08);
+    }
+    .tab .badge {
+      position: absolute;
+      top: 4px;
+      right: calc(50% - 20px);
+      min-width: 16px;
+      height: 16px;
+      padding: 0 4px;
+      border-radius: 999px;
+      background: var(--primary);
+      color: #fff;
+      font-size: 0.6rem;
+      font-weight: 800;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .tab .badge.show { display: flex; }
+
+    /* Action sheet */
+    .sheet {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+    }
+    .sheet.open { display: block; }
+    .sheet-bg {
+      position: absolute;
+      inset: 0;
+      background: rgba(15,23,42,0.45);
+    }
+    .sheet-panel {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      background: #fff;
+      border-radius: 20px 20px 0 0;
+      padding: 10px 16px calc(16px + var(--safe-b));
+      max-height: 82vh;
+      overflow: auto;
+      animation: up .28s cubic-bezier(.22,1,.36,1);
+    }
+    @keyframes up {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .sheet-handle {
+      width: 40px; height: 4px; border-radius: 999px;
+      background: #cbd5e1; margin: 4px auto 12px;
+    }
+    .sheet-title {
+      font-weight: 800;
+      font-size: 1.05rem;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+    .sheet-sub {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.8rem;
+      margin-bottom: 12px;
+    }
+    .sheet-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .sheet-actions button {
+      width: 100%;
+      min-height: 48px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #fff;
+      font-weight: 700;
+      font-size: 0.92rem;
+      cursor: pointer;
+      padding: 12px;
+    }
+    .sheet-actions button.primary {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .sheet-actions button.warn {
+      background: #ea580c;
+      color: #fff;
+      border-color: #ea580c;
+    }
+    .sheet-actions button.ok {
+      background: var(--ok);
+      color: #fff;
+      border-color: var(--ok);
+    }
+    .sheet-actions button.danger {
+      color: var(--danger);
+      border-color: #fca5a5;
+    }
+    .sheet-actions button.ghost { color: var(--muted); }
+
+    .field {
+      margin-bottom: 10px;
+      text-align: left;
+    }
+    .field label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .field input, .field select {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0 12px;
+      font-size: 16px;
+      background: #fff;
+    }
+    .mode-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .mode-row button {
+      flex: 1;
+      min-height: 42px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #fff;
+      font-weight: 700;
+    }
+    .mode-row button.on {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    .more-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .more-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 76px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: linear-gradient(180deg, #fff, #faf5f8);
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #334155;
+      cursor: pointer;
+    }
+    .more-item span:first-child { font-size: 1.35rem; }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(var(--tab-h) + var(--safe-b) + 16px);
+      transform: translateX(-50%) translateY(120%);
+      background: #0f172a;
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      z-index: 300;
+      opacity: 0;
+      transition: .25s ease;
+      max-width: 90vw;
+      text-align: center;
+    }
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    .desktop-link {
+      display: block;
+      text-align: center;
+      margin: 16px 0 8px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .desktop-link a { color: var(--primary); font-weight: 700; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <h1 id="topTitle">Home <span class="brand-dot" aria-hidden="true"><i class="r"></i><i class="g"></i><i class="b"></i></span></h1>
+    <div class="topbar-actions">
+      <button type="button" class="icon-btn" onclick="AppEngine.load(); renderAll(); toast('Dati aggiornati')" title="Ricarica">🔄</button>
+      <button type="button" class="icon-btn" onclick="openMore()" title="Altro">☰</button>
+    </div>
+  </header>
+
+  <div class="search-wrap">
+    <div class="search-box">
+      <input type="search" id="globalSearch" placeholder="Cerca cliente…" autocomplete="off"
+        oninput="onSearch()" onkeydown="if(event.key==='Enter'){event.preventDefault();onSearch(true);}">
+      <button type="button" onclick="onSearch(true)">Cerca</button>
+    </div>
+  </div>
+
+  <!-- HOME -->
+  <section id="view-home" class="view active">
+    <div class="kpi-row" id="kpiRow"></div>
+    <div class="section-label">Scadenze urgenti (Prep)</div>
+    <div id="homeUrgent"></div>
+    <div class="section-label">Ultimi in Stand-by</div>
+    <div id="homeStandby"></div>
+    <p class="desktop-link">Preferisci il computer? <a href="index.html">Apri versione desktop</a></p>
+  </section>
+
+  <!-- NOTE -->
+  <section id="view-note" class="view">
+    <div class="filters" id="noteFilters">
+      <button type="button" class="active" data-f="all" onclick="setNoteFilter('all')">Tutti</button>
+      <button type="button" data-f="tappa" onclick="setNoteFilter('tappa')">Tappe</button>
+      <button type="button" data-f="sped" onclick="setNoteFilter('sped')">Spedizioni</button>
+    </div>
+    <div id="noteList"></div>
+  </section>
+
+  <!-- PREP -->
+  <section id="view-prep" class="view">
+    <div class="filters">
+      <button type="button" class="active" data-pf="scadenza" onclick="setPrepSort('scadenza')">Scadenza</button>
+      <button type="button" data-pf="nome" onclick="setPrepSort('nome')">Nome</button>
+    </div>
+    <div id="prepList"></div>
+  </section>
+
+  <!-- CONSIGLI -->
+  <section id="view-consigli" class="view">
+    <div class="section-label">Consegna diretta (senza tecnico zona)</div>
+    <div id="consigliDiretti"></div>
+    <div class="section-label">Da spedire a tecnici / Stand-by</div>
+    <div id="consigliSped"></div>
+  </section>
+
+  <!-- ALTRI (inline list views) -->
+  <section id="view-standby" class="view">
+    <div id="standbyList"></div>
+  </section>
+  <section id="view-installati" class="view">
+    <div id="installatiList"></div>
+  </section>
+  <section id="view-ordini" class="view">
+    <div id="ordiniList"></div>
+  </section>
+
+  <nav class="tabbar" aria-label="Navigazione">
+    <button type="button" class="tab active" data-view="home" onclick="go('home')"><span class="ico">📊</span>Home</button>
+    <button type="button" class="tab" data-view="note" onclick="go('note')"><span class="ico">📝</span>Note</button>
+    <button type="button" class="tab" data-view="prep" onclick="go('prep')"><span class="ico">📋</span>Prep<span class="badge" id="badgePrep">0</span></button>
+    <button type="button" class="tab" data-view="consigli" onclick="go('consigli')"><span class="ico">💡</span>Consigli</button>
+    <button type="button" class="tab" data-view="more" onclick="openMore()"><span class="ico">☰</span>Altro</button>
+  </nav>
+
+  <!-- Client action sheet -->
+  <div class="sheet" id="clientSheet">
+    <div class="sheet-bg" onclick="closeSheet()"></div>
+    <div class="sheet-panel">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title" id="sheetName">Cliente</div>
+      <div class="sheet-sub" id="sheetMeta"></div>
+      <div class="sheet-actions" id="sheetActions"></div>
+    </div>
+  </div>
+
+  <!-- Move to Note sheet -->
+  <div class="sheet" id="noteSheet">
+    <div class="sheet-bg" onclick="closeNoteSheet()"></div>
+    <div class="sheet-panel">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">Porta in Note</div>
+      <div class="sheet-sub" id="noteSheetName"></div>
+      <div class="mode-row">
+        <button type="button" id="modeTappa" class="on" onclick="setNoteMode('tappa')">🚩 Tappa</button>
+        <button type="button" id="modeSped" onclick="setNoteMode('spedizione')">📦 Spedizione</button>
+      </div>
+      <div class="field" id="fieldTappa">
+        <label>Tappa</label>
+        <input type="text" id="noteTappa" placeholder="Es. Palermo / Trapani" list="tappeList">
+        <datalist id="tappeList"></datalist>
+      </div>
+      <div class="field" id="fieldSped" hidden>
+        <label>Spedizione</label>
+        <input type="text" id="noteSped" placeholder="Cliente stesso o tecnico" list="spedList">
+        <datalist id="spedList"></datalist>
+      </div>
+      <div class="field">
+        <label>Data installazione</label>
+        <input type="date" id="noteData">
+      </div>
+      <div class="sheet-actions">
+        <button type="button" class="primary" onclick="confirmToNote()">Conferma → Note</button>
+        <button type="button" class="ghost" onclick="closeNoteSheet()">Annulla</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- More sheet -->
+  <div class="sheet" id="moreSheet">
+    <div class="sheet-bg" onclick="closeMore()"></div>
+    <div class="sheet-panel">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">Altre sezioni</div>
+      <div class="more-grid">
+        <button type="button" class="more-item" onclick="goFromMore('standby')"><span>⏸️</span><span>Stand-by</span></button>
+        <button type="button" class="more-item" onclick="goFromMore('installati')"><span>✅</span><span>Installati</span></button>
+        <button type="button" class="more-item" onclick="goFromMore('ordini')"><span>📦</span><span>Ordini</span></button>
+        <button type="button" class="more-item" onclick="location.href='index.html'"><span>🖥️</span><span>Desktop</span></button>
+        <button type="button" class="more-item" onclick="location.href='index.html#percorso'"><span>🗺️</span><span>Percorso*</span></button>
+        <button type="button" class="more-item" onclick="location.href='index.html#calendario'"><span>📅</span><span>Calendario*</span></button>
+      </div>
+      <p style="font-size:0.72rem;color:#94a3b8;text-align:center;margin:0 0 10px;">* Percorso e Calendario si aprono nella versione desktop completa</p>
+      <div class="sheet-actions">
+        <button type="button" class="ghost" onclick="closeMore()">Chiudi</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="js/engine.js"></script>
+  <script>
+    const E = window.AppEngine;
+    let currentView = 'home';
+    let noteFilter = 'all';
+    let prepSort = 'scadenza';
+    let activeClientId = null;
+    let noteMode = 'tappa';
+    let searchQ = '';
+
+    function toast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(window._toastT);
+      window._toastT = setTimeout(function () { el.classList.remove('show'); }, 2200);
+    }
+
+    function go(view) {
+      currentView = view;
+      document.querySelectorAll('.view').forEach(function (v) { v.classList.remove('active'); });
+      const map = {
+        home: 'view-home',
+        note: 'view-note',
+        prep: 'view-prep',
+        consigli: 'view-consigli',
+        standby: 'view-standby',
+        installati: 'view-installati',
+        ordini: 'view-ordini'
+      };
+      const id = map[view] || 'view-home';
+      const panel = document.getElementById(id);
+      if (panel) panel.classList.add('active');
+
+      document.querySelectorAll('.tab').forEach(function (t) {
+        const dv = t.getAttribute('data-view');
+        t.classList.toggle('active', dv === view || (view === 'more' && dv === 'more'));
+      });
+      // primary tabs only highlight primary
+      const primary = { home:1, note:1, prep:1, consigli:1 };
+      document.querySelectorAll('.tab').forEach(function (t) {
+        const dv = t.getAttribute('data-view');
+        if (dv === 'more') t.classList.toggle('active', !primary[view]);
+        else t.classList.toggle('active', dv === view);
+      });
+
+      const titles = {
+        home: 'Home', note: 'Note clienti', prep: 'Pre-pianificazione',
+        consigli: 'Consigli', standby: 'Stand-by', installati: 'Installati', ordini: 'Ordini'
+      };
+      document.getElementById('topTitle').innerHTML = (titles[view] || 'App') +
+        ' <span class="brand-dot" aria-hidden="true"><i class="r"></i><i class="g"></i><i class="b"></i></span>';
+      renderAll();
+      window.scrollTo(0, 0);
+    }
+
+    function goFromMore(view) {
+      closeMore();
+      go(view);
+    }
+
+    function openMore() { document.getElementById('moreSheet').classList.add('open'); }
+    function closeMore() { document.getElementById('moreSheet').classList.remove('open'); }
+
+    function onSearch(openFirst) {
+      searchQ = document.getElementById('globalSearch').value || '';
+      const results = E.searchClients(searchQ);
+      if (openFirst && results.length === 1) {
+        openClient(results[0].id);
+        return;
+      }
+      // se stiamo cercando, mostra in home lista risultati
+      if (searchQ.trim()) {
+        go('home');
+        document.getElementById('homeUrgent').innerHTML = renderCardList(results.slice(0, 40), true);
+        document.getElementById('homeStandby').innerHTML = '';
+        document.querySelector('#view-home .section-label').textContent = 'Risultati ricerca';
+      } else {
+        renderAll();
+      }
+    }
+
+    function scadChip(c) {
+      const d = E.daysUntil(c.scadenza);
+      if (d === null) return '<span class="chip">Scad. —</span>';
+      if (d < 0) return '<span class="chip scaduto">Scaduto ' + Math.abs(d) + 'g</span>';
+      if (d === 0) return '<span class="chip urgente">Oggi</span>';
+      if (d <= 14) return '<span class="chip urgente">' + d + 'g</span>';
+      return '<span class="chip ok">' + d + 'g</span>';
+    }
+
+    function renderCard(c) {
+      const sb = E.isStandby(c);
+      const addr = E.cleanAddress(c.localita || '');
+      const sec = E.sectionOf(c);
+      return '<article class="client-card' + (sb ? ' standby' : '') + '" onclick="openClient(\'' + String(c.id).replace(/'/g, "\\'") + '\')">' +
+        '<div class="name">' + esc(c.nome || 'Senza nome') + (sb ? ' <span class="chip sb">Stand-by</span>' : '') + '</div>' +
+        '<div class="meta">' +
+          '📦 ' + esc(E.modelsLabel(c)) + '<br>' +
+          (addr ? ('📍 ' + esc(addr) + '<br>') : '') +
+          (c.tappa ? ('🚩 ' + esc(c.tappa) + '<br>') : '') +
+          (c.spedizione ? ('📦 Sped. ' + esc(c.spedizione) + '<br>') : '') +
+          '📅 ' + esc(E.formatScadenza(c.scadenza)) +
+        '</div>' +
+        '<div class="chips">' + scadChip(c) +
+          '<span class="chip">' + sec + '</span>' +
+          (c.confOrdine ? '<span class="chip">CONF ' + esc(c.confOrdine) + '</span>' : '') +
+        '</div></article>';
+    }
+
+    function renderCardList(list, emptyMsg) {
+      if (!list || !list.length) {
+        return '<div class="empty">' + (emptyMsg === true ? 'Nessun risultato' : (emptyMsg || 'Nessun cliente')) + '</div>';
+      }
+      return list.map(renderCard).join('');
+    }
+
+    function esc(s) {
+      return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function setNoteFilter(f) {
+      noteFilter = f;
+      document.querySelectorAll('#noteFilters button').forEach(function (b) {
+        b.classList.toggle('active', b.getAttribute('data-f') === f);
+      });
+      renderNote();
+    }
+
+    function setPrepSort(s) {
+      prepSort = s;
+      document.querySelectorAll('#view-prep .filters button').forEach(function (b) {
+        b.classList.toggle('active', b.getAttribute('data-pf') === s);
+      });
+      renderPrep();
+    }
+
+    function renderHome() {
+      const st = E.stats();
+      document.getElementById('kpiRow').innerHTML =
+        '<div class="kpi"><div class="v">' + st.prep + '</div><div class="k">Pre-pianificazione</div></div>' +
+        '<div class="kpi"><div class="v">' + st.note + '</div><div class="k">Note clienti</div></div>' +
+        '<div class="kpi warn"><div class="v">' + st.standby + '</div><div class="k">Stand-by</div></div>' +
+        '<div class="kpi ok"><div class="v">' + st.installati + '</div><div class="k">Installati</div></div>';
+
+      if (!searchQ.trim()) {
+        const labels = document.querySelectorAll('#view-home .section-label');
+        if (labels[0]) labels[0].textContent = 'Scadenze urgenti (Prep)';
+        if (labels[1]) labels[1].textContent = 'Ultimi in Stand-by';
+        let prep = E.getBySection('prep').slice();
+        prep.sort(function (a, b) {
+          const da = E.daysUntil(a.scadenza); const db = E.daysUntil(b.scadenza);
+          if (da === null && db === null) return 0;
+          if (da === null) return 1;
+          if (db === null) return -1;
+          return da - db;
+        });
+        document.getElementById('homeUrgent').innerHTML = renderCardList(prep.filter(function (c) {
+          const d = E.daysUntil(c.scadenza);
+          return d !== null && d <= 21;
+        }).slice(0, 12), 'Nessuna scadenza urgente');
+        document.getElementById('homeStandby').innerHTML = renderCardList(E.getBySection('standby').slice(0, 8), 'Nessun cliente in stand-by');
+      }
+
+      const badge = document.getElementById('badgePrep');
+      if (st.prep > 0) { badge.textContent = st.prep; badge.classList.add('show'); }
+      else badge.classList.remove('show');
+    }
+
+    function renderNote() {
+      let list = E.getBySection('note');
+      if (noteFilter === 'tappa') list = list.filter(function (c) { return !!(c.tappa || '').trim(); });
+      if (noteFilter === 'sped') list = list.filter(function (c) { return !!(c.spedizione || '').trim(); });
+      list.sort(function (a, b) { return String(a.nome || '').localeCompare(String(b.nome || ''), 'it'); });
+      document.getElementById('noteList').innerHTML = renderCardList(list, 'Nessun cliente in Note');
+    }
+
+    function renderPrep() {
+      let list = E.getBySection('prep').slice();
+      if (prepSort === 'nome') {
+        list.sort(function (a, b) { return String(a.nome || '').localeCompare(String(b.nome || ''), 'it'); });
+      } else {
+        list.sort(function (a, b) {
+          const da = E.daysUntil(a.scadenza); const db = E.daysUntil(b.scadenza);
+          if (da === null && db === null) return 0;
+          if (da === null) return 1;
+          if (db === null) return -1;
+          return da - db;
+        });
+      }
+      document.getElementById('prepList').innerHTML = renderCardList(list, 'Nessun cliente in Prep');
+    }
+
+    function renderConsigli() {
+      const prep = E.getBySection('prep');
+      const standby = E.getBySection('standby');
+      // semplificato: diretti = senza spedizione impostata; sped = con indizio tecnico nel nome zona o standby
+      const diretti = prep.filter(function (c) { return !(c.spedizione || '').trim(); });
+      const sped = prep.filter(function (c) { return !!(c.spedizione || '').trim(); }).concat(standby);
+      document.getElementById('consigliDiretti').innerHTML = renderCardList(diretti, 'Nessun percorso diretto');
+      document.getElementById('consigliSped').innerHTML = renderCardList(sped, 'Nessuna spedizione / stand-by');
+    }
+
+    function renderStandby() {
+      document.getElementById('standbyList').innerHTML = renderCardList(E.getBySection('standby'), 'Nessun stand-by');
+    }
+    function renderInstallati() {
+      const list = E.getBySection('installati').slice().sort(function (a, b) {
+        return String(a.nome || '').localeCompare(String(b.nome || ''), 'it');
+      });
+      document.getElementById('installatiList').innerHTML = renderCardList(list, 'Nessun installato');
+    }
+    function renderOrdini() {
+      const ord = E.getOrdini();
+      if (!ord.length) {
+        document.getElementById('ordiniList').innerHTML = '<div class="empty">Nessun ordine. Gestiscili dalla versione desktop.</div>';
+        return;
+      }
+      document.getElementById('ordiniList').innerHTML = ord.slice(0, 50).map(function (o) {
+        return '<article class="client-card"><div class="name">' + esc(o.nome || o.descrizione || o.tipo || 'Ordine') +
+          '</div><div class="meta">' + esc(o.fase || o.stato || '') +
+          (o.dataScarico ? (' · Scarico ' + esc(o.dataScarico)) : '') +
+          '</div></article>';
+      }).join('');
+    }
+
+    function renderAll() {
+      renderHome();
+      if (currentView === 'note') renderNote();
+      if (currentView === 'prep') renderPrep();
+      if (currentView === 'consigli') renderConsigli();
+      if (currentView === 'standby') renderStandby();
+      if (currentView === 'installati') renderInstallati();
+      if (currentView === 'ordini') renderOrdini();
+    }
+
+    function openClient(id) {
+      const c = E.findClient(id);
+      if (!c) return;
+      activeClientId = id;
+      document.getElementById('sheetName').textContent = c.nome || 'Cliente';
+      const parts = [
+        E.sectionOf(c),
+        E.modelsLabel(c),
+        E.cleanAddress(c.localita || ''),
+        c.scadenza ? ('Scad. ' + E.formatScadenza(c.scadenza)) : ''
+      ].filter(Boolean);
+      document.getElementById('sheetMeta').textContent = parts.join(' · ');
+
+      const sec = E.sectionOf(c);
+      let html = '';
+      html += '<button type="button" class="primary" onclick="toast(\'Scheda completa: usa Desktop per modifica avanzata\')">📋 Info cliente</button>';
+      if (sec === 'prep' || sec === 'standby') {
+        html += '<button type="button" class="primary" onclick="openToNote()">→ Porta in Note</button>';
+      }
+      if (sec === 'prep') {
+        html += '<button type="button" class="warn" onclick="doStandby()">⏸️ Stand-by</button>';
+      }
+      if (sec === 'standby') {
+        html += '<button type="button" class="warn" onclick="doUnstandby()">↩️ Togli Stand-by</button>';
+      }
+      if (sec !== 'installati') {
+        html += '<button type="button" class="ok" onclick="doInstallato()">✅ Installato</button>';
+      }
+      html += '<button type="button" class="danger" onclick="doDelete()">🗑️ Elimina</button>';
+      html += '<button type="button" class="ghost" onclick="closeSheet()">Chiudi</button>';
+      document.getElementById('sheetActions').innerHTML = html;
+      document.getElementById('clientSheet').classList.add('open');
+    }
+
+    function closeSheet() {
+      document.getElementById('clientSheet').classList.remove('open');
+    }
+
+    function openToNote() {
+      closeSheet();
+      const c = E.findClient(activeClientId);
+      if (!c) return;
+      document.getElementById('noteSheetName').textContent = c.nome || '';
+      setNoteMode((c.spedizione || '').trim() ? 'spedizione' : 'tappa');
+      document.getElementById('noteTappa').value = c.tappa || '';
+      document.getElementById('noteSped').value = c.spedizione || '';
+      document.getElementById('noteData').value = c.data || '';
+      // datalist tappe/sped
+      const tappe = {};
+      E.getClients().forEach(function (x) {
+        if ((x.tappa || '').trim()) tappe[x.tappa.trim()] = 1;
+      });
+      document.getElementById('tappeList').innerHTML = Object.keys(tappe).sort().map(function (t) {
+        return '<option value="' + esc(t) + '">';
+      }).join('');
+      document.getElementById('spedList').innerHTML = ['Cliente stesso'].concat(E.getSpedizioni()).map(function (s) {
+        return '<option value="' + esc(s) + '">';
+      }).join('');
+      document.getElementById('noteSheet').classList.add('open');
+    }
+
+    function closeNoteSheet() {
+      document.getElementById('noteSheet').classList.remove('open');
+    }
+
+    function setNoteMode(mode) {
+      noteMode = mode;
+      document.getElementById('modeTappa').classList.toggle('on', mode === 'tappa');
+      document.getElementById('modeSped').classList.toggle('on', mode === 'spedizione');
+      document.getElementById('fieldTappa').hidden = mode !== 'tappa';
+      document.getElementById('fieldSped').hidden = mode !== 'spedizione';
+    }
+
+    function confirmToNote() {
+      const opts = { data: document.getElementById('noteData').value || '' };
+      if (noteMode === 'spedizione') {
+        const s = document.getElementById('noteSped').value.trim();
+        if (!s) { toast('Inserisci una spedizione'); return; }
+        opts.spedizione = s;
+      } else {
+        const t = document.getElementById('noteTappa').value.trim();
+        if (!t) { toast('Inserisci una tappa'); return; }
+        opts.tappa = t;
+      }
+      E.moveToNote(activeClientId, opts);
+      closeNoteSheet();
+      toast('Spostato in Note');
+      renderAll();
+    }
+
+    function doStandby() {
+      E.markStandby(activeClientId);
+      closeSheet();
+      toast('In Stand-by');
+      renderAll();
+    }
+    function doUnstandby() {
+      E.unmarkStandby(activeClientId);
+      closeSheet();
+      toast('Tolto da Stand-by');
+      renderAll();
+    }
+    function doInstallato() {
+      E.markInstallato(activeClientId);
+      closeSheet();
+      toast('Segnato installato');
+      renderAll();
+    }
+    function doDelete() {
+      if (!confirm('Eliminare questo cliente?')) return;
+      E.deleteClient(activeClientId);
+      closeSheet();
+      toast('Eliminato');
+      renderAll();
+    }
+
+    // init
+    E.load();
+    E.onChange(function () { renderAll(); });
+    renderAll();
+
+    // se desktop ampio, suggerisci desktop
+    try {
+      if (window.matchMedia('(min-width: 900px)').matches) {
+        /* no auto-redirect: utente ha aperto mobile volutamente */
+      }
+    } catch (e) {}
+  </script>
+</body>
+</html>

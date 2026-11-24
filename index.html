@@ -1,6 +1,33 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
+<script>
+/* Redirect telefoni → interfaccia mobile dedicata (stesso motore dati) */
+(function(){
+  try {
+    var params = new URLSearchParams(location.search || '');
+    if (params.get('desktop') === '1') {
+      try { sessionStorage.setItem('note_clienti_force_desktop', '1'); } catch(e) {}
+      return;
+    }
+    if (params.get('mobile') === '1') {
+      location.replace('mobile.html');
+      return;
+    }
+    try {
+      if (sessionStorage.getItem('note_clienti_force_desktop') === '1') return;
+    } catch(e) {}
+    var ua = navigator.userAgent || '';
+    var mobile = /iPhone|iPod|Android.+Mobile|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+    var narrow = false;
+    try { narrow = window.matchMedia('(max-width: 768px)').matches; } catch(e) {}
+    if (mobile || narrow) {
+      location.replace('mobile.html');
+    }
+  } catch(e) {}
+})();
+</script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -6298,27 +6325,133 @@
         }
 
     
-        /* ===== iPhone / app: bottom tab bar ===== */
-        .iphone-tabbar {
-            display: none;
-        }
-        @media (max-width: 600px) {
+        /* ===== Mobile / iPhone app shell ===== */
+        .iphone-tabbar { display: none; }
+        .mobile-more-sheet { display: none; }
+        @media (max-width: 768px) {
+            body.mobile-app {
+                --mobile-tab-h: 58px;
+                background: #f8fafc;
+            }
+            body.mobile-app .portal-nav,
+            body.mobile-app .portal-nav-toggle,
+            body.mobile-app .portal-nav-backdrop {
+                display: none !important;
+            }
+            body.mobile-app .app-layout {
+                display: block !important;
+                min-height: 100vh;
+                min-height: 100dvh;
+            }
+            body.mobile-app .app-main,
+            body.mobile-app main.app-main,
+            body.mobile-app .main-content,
+            body.mobile-app #appMain,
+            body.mobile-app .content-area {
+                margin: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                padding: 10px 12px calc(var(--mobile-tab-h) + env(safe-area-inset-bottom) + 16px) !important;
+            }
+            /* fallback se il contenuto è diretto nel layout */
+            body.mobile-app .app-layout > .view-panel,
+            body.mobile-app .view-panel.active {
+                padding-bottom: calc(var(--mobile-tab-h) + env(safe-area-inset-bottom) + 12px);
+            }
+            body.mobile-app .container.main-content {
+                margin: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                padding: 10px 12px calc(72px + env(safe-area-inset-bottom)) !important;
+            }
+            body.mobile-app .header-jumbo { display: none !important; }
+            body.mobile-app .header-bar {
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-bottom: 10px;
+            }
+            body.mobile-app .header-bar h1 {
+                font-size: 1.2rem !important;
+                line-height: 1.2;
+            }
+            body.mobile-app .header-actions {
+                width: 100%;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            body.mobile-app .header-actions .btn {
+                min-height: 40px;
+                font-size: 0.82rem;
+            }
+            body.mobile-app .card,
+            body.mobile-app .consigli-card,
+            body.mobile-app .dist-calc-card,
+            body.mobile-app .place-find-card {
+                border-radius: 14px;
+                margin-bottom: 12px;
+            }
+            body.mobile-app .input-control,
+            body.mobile-app input[type="text"],
+            body.mobile-app input[type="search"],
+            body.mobile-app input[type="date"],
+            body.mobile-app select,
+            body.mobile-app textarea {
+                font-size: 16px !important; /* evita zoom iOS */
+                min-height: 44px;
+                border-radius: 12px;
+            }
+            body.mobile-app .btn {
+                min-height: 42px;
+                border-radius: 12px;
+                -webkit-tap-highlight-color: transparent;
+            }
+            body.mobile-app .modal {
+                max-width: 100% !important;
+                width: calc(100vw - 20px) !important;
+                max-height: min(88vh, 720px);
+                overflow: auto;
+                border-radius: 18px;
+            }
+            body.mobile-app .modal-overlay {
+                padding: 10px;
+                align-items: flex-end;
+            }
+            body.mobile-app table.consigli-table,
+            body.mobile-app table.note-compact-table,
+            body.mobile-app .installati-table-wrap table {
+                min-width: 0 !important;
+                font-size: 0.78rem;
+            }
+            body.mobile-app .consigli-table-wrap,
+            body.mobile-app .note-compact-wrap,
+            body.mobile-app .installati-table-wrap {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                border-radius: 12px;
+            }
+            body.mobile-app .app-refresh-btn {
+                top: max(10px, env(safe-area-inset-top));
+                right: 10px;
+                z-index: 850;
+            }
+
             .iphone-tabbar {
                 display: flex;
                 position: fixed;
                 left: 0;
                 right: 0;
                 bottom: 0;
-                z-index: 900;
-                background: rgba(255,255,255,0.92);
-                -webkit-backdrop-filter: saturate(180%) blur(16px);
-                backdrop-filter: saturate(180%) blur(16px);
+                z-index: 950;
+                background: rgba(255,255,255,0.94);
+                -webkit-backdrop-filter: saturate(180%) blur(18px);
+                backdrop-filter: saturate(180%) blur(18px);
                 border-top: 1px solid rgba(15,23,42,0.08);
-                padding: 6px 4px max(8px, env(safe-area-inset-bottom));
+                padding: 4px 2px max(6px, env(safe-area-inset-bottom));
                 justify-content: space-around;
                 align-items: stretch;
-                gap: 2px;
-                box-shadow: 0 -4px 20px rgba(15,23,42,0.06);
+                gap: 0;
+                box-shadow: 0 -6px 24px rgba(15,23,42,0.08);
             }
             .iphone-tabbar .itab {
                 flex: 1;
@@ -6718,6 +6851,81 @@
             }
         }
 
+
+        /* Mobile more sheet */
+        .mobile-more-sheet[hidden] { display: none !important; }
+        .mobile-more-sheet:not([hidden]) {
+            display: block;
+            position: fixed;
+            inset: 0;
+            z-index: 1200;
+        }
+        .mobile-more-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(15,23,42,0.45);
+        }
+        .mobile-more-panel {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #fff;
+            border-radius: 20px 20px 0 0;
+            padding: 10px 16px calc(16px + env(safe-area-inset-bottom));
+            box-shadow: 0 -12px 40px rgba(15,23,42,0.18);
+            max-height: 78vh;
+            overflow: auto;
+            animation: mobileMoreUp 0.28s cubic-bezier(0.22,1,0.36,1);
+        }
+        @keyframes mobileMoreUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .mobile-more-handle {
+            width: 40px;
+            height: 4px;
+            border-radius: 999px;
+            background: #cbd5e1;
+            margin: 4px auto 12px;
+        }
+        .mobile-more-title {
+            font-weight: 800;
+            font-size: 1.05rem;
+            color: #0f172a;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+        .mobile-more-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .mobile-more-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            min-height: 76px;
+            padding: 10px 6px;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            background: linear-gradient(180deg, #fff 0%, #faf5f8 100%);
+            color: #334155;
+            font-size: 0.72rem;
+            font-weight: 700;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .mobile-more-item span:first-child { font-size: 1.35rem; line-height: 1; }
+        .mobile-more-item:active { background: #fdf2f8; border-color: #f9a8d4; }
+        .mobile-more-close {
+            width: 100%;
+            justify-content: center;
+            min-height: 44px;
+        }
     </style>
 </head>
 <body class="locked">
@@ -7651,15 +7859,34 @@
 
 </div><!-- /.main-content -->
 
-<nav class="iphone-tabbar" id="iphoneTabbar" aria-label="Navigazione iPhone">
-    <div class="itab-wrap"><button type="button" class="itab active" data-view="note" onclick="switchView('note')"><span class="itab-ico">📋</span><span>Note</span></button></div>
-    <div class="itab-wrap"><button type="button" class="itab" data-view="prep" onclick="switchView('prep')"><span class="itab-ico">📥</span><span>Prep</span><span class="itab-badge" id="tabPrepBadge" style="display:none">0</span></button></div>
-    <div class="itab-wrap"><button type="button" class="itab" data-view="ordini" onclick="switchView('ordini')"><span class="itab-ico">📦</span><span>Ordini</span><span class="itab-badge" id="tabOrdiniBadge" style="display:none">0</span></button></div>
-    <div class="itab-wrap"><button type="button" class="itab" data-view="installati" onclick="switchView('installati')"><span class="itab-ico">✅</span><span>Installati</span></button></div>
-    <div class="itab-wrap"><button type="button" class="itab" data-view="menu" onclick="openPortalNavFromTab()"><span class="itab-ico">☰</span><span>Altro</span></button></div>
+<nav class="iphone-tabbar" id="iphoneTabbar" aria-label="Navigazione mobile">
+    <div class="itab-wrap"><button type="button" class="itab" data-view="dashboard" onclick="switchView('dashboard')"><span class="itab-ico">📊</span><span>Home</span></button></div>
+    <div class="itab-wrap"><button type="button" class="itab active" data-view="note" onclick="switchView('note')"><span class="itab-ico">📝</span><span>Note</span></button></div>
+    <div class="itab-wrap"><button type="button" class="itab" data-view="prep" onclick="switchView('prep')"><span class="itab-ico">📋</span><span>Prep</span><span class="itab-badge" id="tabPrepBadge" style="display:none">0</span></button></div>
+    <div class="itab-wrap"><button type="button" class="itab" data-view="consigli" onclick="switchView('consigli')"><span class="itab-ico">💡</span><span>Consigli</span></button></div>
+    <div class="itab-wrap"><button type="button" class="itab" data-view="menu" onclick="openMobileMoreSheet()"><span class="itab-ico">☰</span><span>Altro</span></button></div>
 </nav>
 
 </div><!-- /.app-layout -->
+
+<!-- Sheet mobile "Altro" -->
+<div id="mobileMoreSheet" class="mobile-more-sheet" hidden aria-hidden="true">
+    <div class="mobile-more-backdrop" onclick="closeMobileMoreSheet()"></div>
+    <div class="mobile-more-panel" role="dialog" aria-label="Altre sezioni">
+        <div class="mobile-more-handle"></div>
+        <div class="mobile-more-title">Sezioni</div>
+        <div class="mobile-more-grid">
+            <button type="button" class="mobile-more-item" onclick="mobileGo('calendario')"><span>📅</span><span>Calendario</span></button>
+            <button type="button" class="mobile-more-item" onclick="mobileGo('percorso')"><span>🗺️</span><span>Percorso</span></button>
+            <button type="button" class="mobile-more-item" onclick="mobileGo('ordini')"><span>📦</span><span>Ordini</span></button>
+            <button type="button" class="mobile-more-item" onclick="mobileGo('installati')"><span>✅</span><span>Installati</span></button>
+            <button type="button" class="mobile-more-item" onclick="mobileGo('standby')"><span>⏸️</span><span>Stand-by</span></button>
+            <button type="button" class="mobile-more-item" onclick="mobileGo('meteo')"><span>🌤️</span><span>Meteo</span></button>
+            <button type="button" class="mobile-more-item" onclick="closeMobileMoreSheet();try{forceAppUpdate()}catch(e){}"><span>🔄</span><span>Aggiorna app</span></button>
+        </div>
+        <button type="button" class="btn mobile-more-close" onclick="closeMobileMoreSheet()">Chiudi</button>
+    </div>
+</div>
 
 <div id="modelsModal" class="modal-overlay">
     <div class="modal">
@@ -11430,7 +11657,11 @@
 
 
     function isMobileAppView() {
-        return window.matchMedia('(max-width: 600px)').matches;
+        try {
+            if (window.matchMedia('(max-width: 768px)').matches) return true;
+            if (/iPhone|iPod|Android.+Mobile/i.test(navigator.userAgent || '')) return true;
+        } catch (e) {}
+        return false;
     }
 
     function isIphoneLike() {
@@ -11439,23 +11670,42 @@
         } catch (e) { return isMobileAppView(); }
     }
 
-    window.openPortalNavFromTab = function() {
+    function syncMobileAppClass() {
         try {
-            if (typeof openPortalNav === 'function') openPortalNav();
-            else if (typeof togglePortalNav === 'function') togglePortalNav();
-            else {
-                document.body.classList.remove('nav-collapsed');
-            }
-        } catch (e) {
-            document.body.classList.remove('nav-collapsed');
-        }
+            if (isMobileAppView()) document.body.classList.add('mobile-app');
+            else document.body.classList.remove('mobile-app');
+        } catch (e) {}
+    }
+
+    window.openPortalNavFromTab = function() {
+        openMobileMoreSheet();
+    };
+
+    window.openMobileMoreSheet = function() {
+        const el = document.getElementById('mobileMoreSheet');
+        if (!el) return;
+        el.hidden = false;
+        el.setAttribute('aria-hidden', 'false');
+        try { document.body.style.overflow = 'hidden'; } catch (e) {}
+    };
+    window.closeMobileMoreSheet = function() {
+        const el = document.getElementById('mobileMoreSheet');
+        if (!el) return;
+        el.hidden = true;
+        el.setAttribute('aria-hidden', 'true');
+        try { document.body.style.overflow = ''; } catch (e) {}
+    };
+    window.mobileGo = function(view) {
+        closeMobileMoreSheet();
+        try { switchView(view); } catch (e) {}
     };
 
     function updateIphoneTabbar(view) {
+        syncMobileAppClass();
         const bar = document.getElementById('iphoneTabbar');
         if (!bar) return;
         const v = view || (typeof currentView !== 'undefined' ? currentView : 'note');
-        const primary = { note:1, prep:1, ordini:1, installati:1 };
+        const primary = { dashboard:1, note:1, prep:1, consigli:1 };
         bar.querySelectorAll('.itab').forEach(function(btn) {
             const dv = btn.getAttribute('data-view');
             let active = false;
@@ -11463,7 +11713,6 @@
             else active = (dv === v);
             btn.classList.toggle('active', active);
         });
-        // badge prep / ordini
         try {
             const prepN = (clients || []).filter(function(c) { return typeof isInPrep === 'function' && isInPrep(c); }).length;
             const elp = document.getElementById('tabPrepBadge');
@@ -11472,15 +11721,14 @@
                 else elp.style.display = 'none';
             }
         } catch (e) {}
-        try {
-            const ordN = (typeof ordini !== 'undefined' && Array.isArray(ordini)) ? ordini.length : 0;
-            const elo = document.getElementById('tabOrdiniBadge');
-            if (elo) {
-                if (ordN > 0) { elo.style.display = ''; elo.textContent = String(ordN); }
-                else elo.style.display = 'none';
-            }
-        } catch (e) {}
     }
+
+    // attiva shell mobile all'avvio e al resize
+    try {
+        syncMobileAppClass();
+        window.addEventListener('resize', function() { try { syncMobileAppClass(); } catch (e) {} });
+        window.addEventListener('orientationchange', function() { try { syncMobileAppClass(); } catch (e) {} });
+    } catch (e) {}
 
     // Su iPhone: preferisci vista compatta Note (se l'utente non ha già scelto)
     (function initIphoneNoteDefaults() {
@@ -22122,6 +22370,7 @@
     };
 
     window.switchView = function(view) {
+        try { closeMobileMoreSheet(); } catch (e) {}
         try { updateIphoneTabbar(view); } catch (e) {}
 
         currentView = view;
@@ -22214,8 +22463,13 @@
     };
     (function initPortalNavState() {
         try {
+            if (typeof isMobileAppView === 'function' && isMobileAppView()) {
+                document.body.classList.add('nav-collapsed', 'mobile-app');
+            }
             const saved = localStorage.getItem('note_clienti_nav_collapsed');
-            if (saved === '1') document.body.classList.add('nav-collapsed');
+            if (typeof isMobileAppView === 'function' && isMobileAppView()) {
+                document.body.classList.add('nav-collapsed');
+            } else if (saved === '1') document.body.classList.add('nav-collapsed');
             else if (saved === '0') document.body.classList.remove('nav-collapsed');
             else if (window.matchMedia && window.matchMedia('(max-width: 900px)').matches) {
                 document.body.classList.add('nav-collapsed');
