@@ -7083,11 +7083,17 @@
 
     <div class="place-find-card" id="placeFindCard">
         <div class="dist-calc-title">📍 Trova paese sulla mappa</div>
-        <p class="dist-calc-hint">Scrivi un comune italiano (anche non in elenco: ricerca online). Verrà mostrato sulla mappa.</p>
+        <p class="dist-calc-hint">Scrivi un <strong>comune</strong> o un <strong>indirizzo completo</strong>, oppure cerca un <strong>cliente</strong> (usa l’indirizzo salvato in Pre-pianificazione / Note).</p>
         <div class="place-find-row">
-            <input type="text" id="placeFindInput" class="input-control" list="distCitiesDatalist" placeholder="Es. Ostuni, Roma, Gallipoli…" autocomplete="off"
+            <input type="text" id="placeFindInput" class="input-control" list="distCitiesDatalist" placeholder="Es. Via Roma 12, Napoli oppure Ostuni…" autocomplete="off"
                 onkeydown="if(event.key==='Enter'){event.preventDefault();cercaPaeseSuMappa();}">
             <button type="button" class="btn btn-primary" id="placeFindBtn" onclick="cercaPaeseSuMappa()">Cerca</button>
+        </div>
+        <label class="dist-client-label" style="display:block;margin-top:10px;">Oppure digita il nome del cliente</label>
+        <div class="dist-client-search-wrap" style="margin-bottom:8px;">
+            <input type="text" id="placeFindClientSearch" class="input-control dist-client-search" placeholder="Nome cliente (Prep prioritario)…" autocomplete="off"
+                oninput="filterPlaceClientList()" onfocus="filterPlaceClientList()" onkeydown="onPlaceClientSearchKey(event)">
+            <div id="placeFindClientList" class="dist-client-list" hidden></div>
         </div>
         <div id="placeFindStatus" class="place-find-status" hidden></div>
         <div id="placeFindMap" class="place-find-map" hidden></div>
@@ -18471,9 +18477,99 @@
     async function geocodePlaceForDistance(query) {
         const q = (query || '').trim();
         if (!q) return null;
-        const base = q.replace(/\s*\([^)]*\)\s*/g, ' ').trim();
+        // per indirizzi LED Manager: togli solo coda Contratto/API, conserva via+paese
+        let cleanedQ = q;
+        try {
+            if (typeof cleanLedManagerAddressTail === 'function') {
+                cleanedQ = cleanLedManagerAddressTail(q) || q;
+            }
+        } catch (e) {}
+        const base = cleanedQ.replace(/\s*\([^)]*\)\s*/g, ' ').trim();
         const lower = base.toLowerCase();
         const nq = (typeof normalizePlaceName === 'function') ? normalizePlaceName(base) : lower;
+        const looksStreet = /\b(via|viale|v\.le|corso|piazza|p\.zza|strada|contrada|localita|località|vicolo|largo)\b/i.test(base)
+            || /\d{1,4}[a-zA-Z]?\b/.test(base)
+            || (base.indexOf(',') >= 0 && base.length > 12);
+
+        // --- A0) Indirizzo completo: Nominatim (precisione via/civico) ---
+        if (looksStreet) {
+            try {
+                const variants = [base, base + ', Italia', cleanedQ + ', Italia'];
+                for (let vi = 0; vi < variants.length; vi++) {
+                    const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=6&addressdetails=1&countrycodes=it&q=' +
+                        encodeURIComponent(variants[vi]);
+                    const controller = new AbortController();
+                    const timer = setTimeout(function() { controller.abort(); }, 3500);
+                    const res = await fetch(url, {
+                        signal: controller.signal,
+                        headers: { 'Accept': 'application/json' }
+                    });
+                    clearTimeout(timer);
+                    if (!res.ok) continue;
+                    const data = await res.json();
+                    const arr = Array.isArray(data) ? data : [];
+                    // preferisci risultati con road/house_number
+                    let best = null;
+                    for (let i = 0; i < arr.length; i++) {
+                        const r = arr[i];
+                        if (!r || r.lat == null || r.lon == null) continue;
+                        const a = r.address || {};
+                        const score = (a.house_number ? 4 : 0) + (a.road ? 3 : 0) + (a.pedestrian ? 2 : 0) +
+                            (a.city || a.town || a.village ? 1 : 0);
+                        if (!best || score > best._score) best = Object.assign({ _score: score }, r);
+                    }
+                    if (best) {
+                        const label = best.display_name || base;
+                        try {
+                            if (typeof loadGeoCache === 'function') {
+                                const cache = loadGeoCache();
+                                const key = (typeof geoKey === 'function') ? geoKey(base, '') : lower;
+                                cache[key] = { lat: Number(best.lat), lng: Number(best.lon), precise: true, label: label };
+                                if (typeof saveGeoCache === 'function') saveGeoCache(cache);
+                            }
+                        } catch (e) {}
+                        return {
+                            lat: Number(best.lat),
+                            lng: Number(best.lon),
+                            label: label,
+                            approx: !(best.address && (best.address.road || best.address.house_number)),
+                            source: 'nominatim-street'
+                        };
+                    }
+                }
+            } catch (e) {
+                console.warn('Nominatim street geocode fail', e);
+            }
+            // Photon con indirizzo completo
+            try {
+                const url = 'https://photon.komoot.io/api/?limit=6&lang=it&q=' + encodeURIComponent(base + ', Italia');
+                const controller = new AbortController();
+                const timer = setTimeout(function() { controller.abort(); }, 3000);
+                const res = await fetch(url, { signal: controller.signal });
+                clearTimeout(timer);
+                if (res.ok) {
+                    const data = await res.json();
+                    const feats = (data && data.features) ? data.features : [];
+                    for (let i = 0; i < feats.length; i++) {
+                        const f = feats[i];
+                        const c = f && f.geometry && f.geometry.coordinates;
+                        if (!c || c.length < 2) continue;
+                        const props = f.properties || {};
+                        const label = [props.name, props.street, props.housenumber, props.city || props.town || props.village, props.country]
+                            .filter(Boolean).join(', ') || base;
+                        return {
+                            lat: Number(c[1]),
+                            lng: Number(c[0]),
+                            label: label,
+                            approx: false,
+                            source: 'photon-street'
+                        };
+                    }
+                }
+            } catch (e) {
+                console.warn('Photon street fail', e);
+            }
+        }
 
         // --- A) Match ESATTO nel database locale (solo preciso) ---
         if (CITY_COORDS) {
@@ -19096,11 +19192,14 @@
     document.addEventListener('click', function(e) {
         const t = e.target;
         if (t && (t.closest && (t.closest('#distFromClientSearch') || t.closest('#distToClientSearch') ||
-            t.closest('#distFromClientList') || t.closest('#distToClientList')))) return;
+            t.closest('#distFromClientList') || t.closest('#distToClientList') ||
+            t.closest('#placeFindClientSearch') || t.closest('#placeFindClientList')))) return;
         const a = document.getElementById('distFromClientList');
         const b = document.getElementById('distToClientList');
+        const p = document.getElementById('placeFindClientList');
         if (a) a.hidden = true;
         if (b) b.hidden = true;
+        if (p) p.hidden = true;
     }, true);
 
     window.populateDistClientSelects = populateDistClientSelects;
@@ -19163,6 +19262,133 @@
     }, true);
 
 
+
+    window.filterPlaceClientList = function() {
+        const searchEl = document.getElementById('placeFindClientSearch');
+        const listEl = document.getElementById('placeFindClientList');
+        if (!searchEl || !listEl) return;
+        if (!window._distClientCache) {
+            try { populateDistClientSelects(); } catch (e) {}
+        }
+        const q = String(searchEl.value || '').toLowerCase().trim();
+        const words = q ? q.split(/\s+/).filter(Boolean) : [];
+        let items = window._distClientCache || [];
+        // prioritizza Prep
+        items = items.slice().sort(function(a, b) {
+            if (a.section !== b.section) return a.section === 'Prep' ? -1 : 1;
+            return String(a.nome || '').localeCompare(String(b.nome || ''), 'it');
+        });
+        if (words.length) {
+            items = items.filter(function(it) {
+                return words.every(function(w) { return it.search.indexOf(w) >= 0; });
+            });
+        }
+        items = items.slice(0, 40);
+        if (!items.length) {
+            listEl.innerHTML = '<div class="dist-client-list-empty">' +
+                (q ? 'Nessun cliente trovato' : 'Nessun cliente in Prep / Note') + '</div>';
+            listEl.hidden = false;
+            return;
+        }
+        let html = '';
+        items.forEach(function(it, idx) {
+            const sec = it.section === 'Prep' ? 'Prep' : 'Note';
+            html += '<button type="button" class="dist-client-list-item' + (idx === 0 ? ' active' : '') + '" ' +
+                'data-addr="' + String(it.localita).replace(/"/g, '&quot;') + '" ' +
+                'data-name="' + String(it.nome).replace(/"/g, '&quot;') + '" ' +
+                'onclick="pickPlaceClient(this)">' +
+                '<span class="dc-name">' + String(it.nome).replace(/</g, '&lt;') + '</span>' +
+                '<span class="dc-addr">' + String(it.localita).replace(/</g, '&lt;') + '</span>' +
+                '<span class="dc-sec">' + sec + '</span>' +
+                '</button>';
+        });
+        listEl.innerHTML = html;
+        listEl.hidden = false;
+    };
+
+    window.pickPlaceClient = function(btn) {
+        if (!btn) return;
+        let addr = btn.getAttribute('data-addr') || '';
+        const name = btn.getAttribute('data-name') || '';
+        try {
+            if (typeof cleanLedManagerAddressTail === 'function') {
+                addr = cleanLedManagerAddressTail(addr) || addr;
+            }
+        } catch (e) {}
+        const input = document.getElementById('placeFindInput');
+        const searchEl = document.getElementById('placeFindClientSearch');
+        const listEl = document.getElementById('placeFindClientList');
+        if (input) input.value = addr;
+        if (searchEl) searchEl.value = name;
+        if (listEl) listEl.hidden = true;
+        if (typeof window.cercaPaeseSuMappa === 'function') window.cercaPaeseSuMappa();
+    };
+
+    window.onPlaceClientSearchKey = function(ev) {
+        const listEl = document.getElementById('placeFindClientList');
+        if (!listEl || listEl.hidden) {
+            if (ev.key === 'Enter') {
+                ev.preventDefault();
+                // se ha digitato un nome, prova a risolvere
+                resolvePlaceFindClientAndSearch();
+            }
+            return;
+        }
+        const items = listEl.querySelectorAll('.dist-client-list-item');
+        if (!items.length) return;
+        let idx = -1;
+        items.forEach(function(el, i) { if (el.classList.contains('active')) idx = i; });
+        if (ev.key === 'ArrowDown') {
+            ev.preventDefault();
+            if (idx >= 0) items[idx].classList.remove('active');
+            idx = Math.min(items.length - 1, idx + 1);
+            items[idx].classList.add('active');
+            try { items[idx].scrollIntoView({ block: 'nearest' }); } catch (e) {}
+        } else if (ev.key === 'ArrowUp') {
+            ev.preventDefault();
+            if (idx >= 0) items[idx].classList.remove('active');
+            idx = Math.max(0, idx - 1);
+            items[idx].classList.add('active');
+            try { items[idx].scrollIntoView({ block: 'nearest' }); } catch (e) {}
+        } else if (ev.key === 'Enter') {
+            ev.preventDefault();
+            const active = listEl.querySelector('.dist-client-list-item.active') || items[0];
+            if (active) pickPlaceClient(active);
+        } else if (ev.key === 'Escape') {
+            listEl.hidden = true;
+        }
+    };
+
+    function resolvePlaceFindClientAndSearch() {
+        const searchEl = document.getElementById('placeFindClientSearch');
+        const input = document.getElementById('placeFindInput');
+        const q = String((searchEl && searchEl.value) || '').trim().toLowerCase();
+        if (!q) {
+            if (typeof window.cercaPaeseSuMappa === 'function') window.cercaPaeseSuMappa();
+            return;
+        }
+        if (!window._distClientCache) {
+            try { populateDistClientSelects(); } catch (e) {}
+        }
+        const words = q.split(/\s+/).filter(Boolean);
+        let items = (window._distClientCache || []).filter(function(it) {
+            return words.every(function(w) { return it.search.indexOf(w) >= 0; });
+        });
+        // Prep first
+        items.sort(function(a, b) {
+            if (a.section !== b.section) return a.section === 'Prep' ? -1 : 1;
+            return a.nome.localeCompare(b.nome, 'it');
+        });
+        if (items.length) {
+            let addr = items[0].localita;
+            try {
+                if (typeof cleanLedManagerAddressTail === 'function') addr = cleanLedManagerAddressTail(addr) || addr;
+            } catch (e) {}
+            if (input) input.value = addr;
+        }
+        if (typeof window.cercaPaeseSuMappa === 'function') window.cercaPaeseSuMappa();
+    }
+
     window.cercaPaeseSuMappa = async function() {
         const input = document.getElementById('placeFindInput');
         const status = document.getElementById('placeFindStatus');
@@ -19170,17 +19396,44 @@
         const btn = document.getElementById('placeFindBtn');
         if (!input || !status || !mapEl) return;
 
-        const q = input.value.trim();
+        let q = input.value.trim();
         if (!q) {
+            // se ha scritto solo il nome cliente nel campo sotto
+            const cs = document.getElementById('placeFindClientSearch');
+            if (cs && cs.value.trim()) {
+                resolvePlaceFindClientAndSearch();
+                return;
+            }
             status.hidden = false;
             status.className = 'place-find-status error';
-            status.textContent = 'Scrivi il nome di un paese.';
+            status.textContent = 'Scrivi un paese, un indirizzo o un nome cliente.';
             return;
         }
 
+        // Se il testo coincide con un nome cliente, usa l'indirizzo salvato (Prep prioritario)
+        try {
+            if (!window._distClientCache) populateDistClientSelects();
+            const ql = q.toLowerCase();
+            const matches = (window._distClientCache || []).filter(function(it) {
+                return String(it.nome || '').toLowerCase() === ql ||
+                    String(it.nome || '').toLowerCase().indexOf(ql) >= 0;
+            }).sort(function(a, b) {
+                if (a.section !== b.section) return a.section === 'Prep' ? -1 : 1;
+                return a.nome.localeCompare(b.nome, 'it');
+            });
+            if (matches.length === 1 || (matches.length && String(matches[0].nome || '').toLowerCase() === ql)) {
+                let addr = matches[0].localita;
+                if (typeof cleanLedManagerAddressTail === 'function') addr = cleanLedManagerAddressTail(addr) || addr;
+                if (addr) {
+                    q = addr;
+                    input.value = addr;
+                }
+            }
+        } catch (e) {}
+
         status.hidden = false;
         status.className = 'place-find-status loading';
-        status.textContent = '🛰️ Ricerca posizione…';
+        status.textContent = '🛰️ Ricerca indirizzo preciso…';
         mapEl.hidden = true;
         if (btn) btn.disabled = true;
 
