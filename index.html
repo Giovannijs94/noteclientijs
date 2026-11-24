@@ -3201,6 +3201,37 @@
         .consigli-table tr:hover td { background: #f8fafc; }
         .consigli-table tr.consigli-client-row:hover td { background: #fdf2f8; }
         .consigli-table tr.consigli-client-row:active td { background: #fce7f3; }
+
+        /* Stand-by: riga intera evidenziata in arancione */
+        .consigli-table tr.consigli-row-standby td,
+        .consigli-table tbody tr.consigli-client-row.consigli-row-standby td {
+            background: #ffedd5 !important;
+            border-bottom: 1px solid #fdba74 !important;
+            color: #9a3412;
+        }
+        .consigli-table tr.consigli-row-standby:hover td,
+        .consigli-table tbody tr.consigli-client-row.consigli-row-standby:hover td {
+            background: #fed7aa !important;
+        }
+        .consigli-table tr.consigli-row-standby .c-name {
+            color: #c2410c !important;
+            font-weight: 800;
+        }
+        .consigli-table tr.consigli-row-standby .c-muted {
+            color: #b45309 !important;
+        }
+        .consigli-sb-badge {
+            display: inline-block;
+            margin-left: 6px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 0.68rem;
+            font-weight: 800;
+            background: #ea580c;
+            color: #fff;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
         .consigli-table .c-name { font-weight: 800; color: var(--primary); }
         .consigli-table .c-name.c-click {
             cursor: pointer;
@@ -21197,19 +21228,25 @@
         const safeId = String(id).replace(/'/g, "\\'");
         const nome = client.nome || 'Cliente';
         const inPrep = (typeof isInPrep === 'function') ? isInPrep(client) : (client.inPrep === true || client.inPrep === 'true');
+        const isStandby = !!(client.standby) && !client.installato;
         // riusa modal azioni compatte se presente, altrimenti menu semplice
         const body = document.getElementById('compactActionBody');
         const nameEl = document.getElementById('compactActionClientName');
         const modal = document.getElementById('compactActionModal');
         if (body && modal) {
-            if (nameEl) nameEl.textContent = nome;
+            if (nameEl) nameEl.textContent = nome + (isStandby ? ' (Stand-by)' : '');
             let html = '';
             html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;background:#0f172a;color:#fff;border:none;" data-cact="scheda">📋 Apri scheda</button>';
-            if (inPrep) {
+            if (inPrep || isStandby) {
                 html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;background:#9d174d;color:#fff;border:none;" data-cact="note">→ Porta in Note clienti</button>';
             }
-            html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;background:#d97706;color:#fff;border:none;" data-cact="standby">⏸️ Metti in Stand-by</button>';
+            if (isStandby) {
+                html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;background:#ea580c;color:#fff;border:none;" data-cact="unstandby">↩️ Togli da Stand-by</button>';
+            } else {
+                html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;background:#d97706;color:#fff;border:none;" data-cact="standby">⏸️ Metti in Stand-by</button>';
+            }
             html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;background:#16a34a;color:#fff;border:none;" data-cact="installato">✅ Segna Installato</button>';
+            html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;color:#b91c1c;border-color:#fca5a5;" data-cact="delete">🗑️ Elimina cliente</button>';
             body.innerHTML = html;
             body.querySelectorAll('[data-cact]').forEach(function(btn) {
                 btn.addEventListener('click', function() {
@@ -21218,16 +21255,29 @@
                     if (act === 'scheda') {
                         try { editClient(safeId); } catch (e) {}
                     } else if (act === 'note') {
-                        try { movePrepClientToNote(safeId); } catch (e) {
+                        try {
+                            // se era stand-by, toglilo prima di portare in Note
+                            const cl = (clients || []).find(function(x) { return String(x.id) === String(safeId); });
+                            if (cl && cl.standby) { cl.standby = false; }
+                            movePrepClientToNote(safeId);
+                        } catch (e) {
                             try { moveToNote(safeId); } catch (e2) {}
                         }
                     } else if (act === 'standby') {
                         try { markStandby(safeId); } catch (e) {}
+                    } else if (act === 'unstandby') {
+                        try { unmarkStandby(safeId); } catch (e) {
+                            const cl = (clients || []).find(function(x) { return String(x.id) === String(safeId); });
+                            if (cl) { cl.standby = false; saveToLocalStorage(); }
+                        }
                     } else if (act === 'installato') {
                         try { markInstallato(safeId); } catch (e) {}
+                    } else if (act === 'delete') {
+                        try { deleteClient(safeId); } catch (e) {}
                     }
                     setTimeout(function() {
                         try { if (typeof renderConsigliPage === 'function') renderConsigliPage(); } catch (e) {}
+                        try { if (typeof renderPrepPage === 'function') renderPrepPage(); } catch (e) {}
                     }, 300);
                 });
             });
@@ -21236,20 +21286,30 @@
         }
         // fallback senza modal
         const choice = prompt(
-            nome + '\n\n1 = Apri scheda\n2 = Porta in Note\n3 = Stand-by\n4 = Installato\n\nScrivi 1-4:'
+            nome + '\n\n1 = Apri scheda\n2 = Porta in Note\n3 = Stand-by / togli\n4 = Installato\n\nScrivi 1-4:'
         );
         if (choice === '1') editClient(id);
         else if (choice === '2') { try { movePrepClientToNote(id); } catch (e) { moveToNote(id); } }
-        else if (choice === '3') markStandby(id);
+        else if (choice === '3') {
+            if (isStandby) { try { unmarkStandby(id); } catch (e) {} }
+            else markStandby(id);
+        }
         else if (choice === '4') markInstallato(id);
     };
 
     function consigliClientNameHtml(c) {
-        return '<span class="c-name">' + String(c.nome || '—').replace(/</g, '&lt;') + '</span>';
+        const isSb = !!(c && (c.standby === true || c.standby === 'true')) && !c.installato;
+        return '<span class="c-name">' + String(c.nome || '—').replace(/</g, '&lt;') + '</span>' +
+            (isSb ? '<span class="consigli-sb-badge">⏸️ Stand-by</span>' : '');
     }
     function consigliClientRowAttrs(c) {
         const safeId = String(c.id).replace(/'/g, "\\'");
-        return ' class="consigli-client-row" style="cursor:pointer;" title="Clicca per scheda o spostamenti" onclick="openConsigliClientMenu(\'' + safeId + '\')"';
+        const isSb = !!(c && (c.standby === true || c.standby === 'true')) && !c.installato;
+        const cls = 'consigli-client-row' + (isSb ? ' consigli-row-standby' : '');
+        const st = isSb
+            ? 'cursor:pointer;background:#ffedd5;'
+            : 'cursor:pointer;';
+        return ' class="' + cls + '" style="' + st + '" title="Clicca per scheda o spostamenti" onclick="openConsigliClientMenu(\'' + safeId + '\')"';
     }
     function consigliClientActsHtml(c) {
         return '';
@@ -21261,7 +21321,8 @@
         const badge = document.getElementById('navConsigliCount');
         const all = clients || [];
 
-        const allPrep = all.filter(function(c) {
+        const allPrepOnly = all.filter(function(c) {
+            if (c.installato || c.standby) return false;
             return typeof isInPrep === 'function' ? isInPrep(c) : (c.inPrep === true || c.inPrep === 'true');
         });
         const allNote = all.filter(function(c) {
@@ -21269,8 +21330,10 @@
         });
         const allInstallati = all.filter(function(c) { return !!c.installato; });
         const allStandby = all.filter(function(c) { return !!c.standby && !c.installato; });
+        // Pool pianificazione: Prep attivi + Stand-by (da differenziare in arancione)
+        const allPrep = allPrepOnly.concat(allStandby);
 
-        if (badge) badge.textContent = allPrep.length;
+        if (badge) badge.textContent = allPrepOnly.length;
         if (!box) return;
 
         const today = new Date();
@@ -21520,6 +21583,7 @@
             '<div class="consigli-kpi"><div class="k-val">' + allPrep.length + '</div><div class="k-lbl">In Prep</div></div>' +
             '<div class="consigli-kpi ok"><div class="k-val">' + prepDiretti.length + '</div><div class="k-lbl">Consegna diretta (voi)</div></div>' +
             '<div class="consigli-kpi warn"><div class="k-val">' + prepSpedTech.length + '</div><div class="k-lbl">Da spedire a tecnici</div></div>' +
+            '<div class="consigli-kpi" style="border-color:#fdba74;"><div class="k-val" style="color:#c2410c;">' + allStandby.length + '</div><div class="k-lbl">In Stand-by</div></div>' +
             '<div class="consigli-kpi"><div class="k-val">' + routesDiretti.length + '</div><div class="k-lbl">Percorsi proposti</div></div>' +
             '<div class="consigli-kpi"><div class="k-val">' + allNote.length + '</div><div class="k-lbl">Già in Note</div></div>' +
             '</div>';
@@ -21533,7 +21597,7 @@
         // ========== PERCORSI DIRETTI ==========
         html += '<div id="consigli-diretti" class="consigli-card">';
         html += '<h3>🚚 Percorsi consegna diretta (da Casamassima) <span class="consigli-badge ok">' + prepDiretti.length + ' clienti</span></h3>';
-        html += '<p style="margin:0 0 12px;font-size:0.85rem;color:#64748b;">Clienti <strong>senza tecnico di zona esterno</strong>: li consegnate voi. Partenza sempre da <strong>Casamassima (BA)</strong>. Ordine fermate: prima urgenza scadenza, poi distanza geografica.</p>';
+        html += '<p style="margin:0 0 12px;font-size:0.85rem;color:#64748b;">Clienti <strong>senza tecnico di zona esterno</strong> (Prep + Stand-by in <span style="color:#c2410c;font-weight:700;">arancione</span>): li consegnate voi. Partenza da <strong>Casamassima (BA)</strong>. Ordine: urgenza scadenza, poi distanza.</p>';
 
         if (!prepDiretti.length) {
             html += '<p class="c-muted">Nessun cliente Prep da consegna diretta: tutti risultano in zone con installatore esterno, oppure Prep è vuota.</p>';
