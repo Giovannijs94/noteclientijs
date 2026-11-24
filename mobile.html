@@ -457,9 +457,210 @@
       color: var(--muted);
     }
     .desktop-link a { color: var(--primary); font-weight: 700; }
+
+    /* ===== Intro mobile dedicata ===== */
+    .m-intro {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(120% 80% at 50% 20%, #be185d 0%, #9d174d 42%, #4a044e 100%);
+      overflow: hidden;
+      transition: opacity 0.7s ease, visibility 0.7s ease;
+    }
+    .m-intro.is-out {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .m-intro-glow {
+      position: absolute;
+      width: 280px;
+      height: 280px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.22) 0%, transparent 70%);
+      top: 18%;
+      left: 50%;
+      transform: translateX(-50%);
+      animation: mGlow 3.2s ease-in-out infinite alternate;
+      pointer-events: none;
+    }
+    @keyframes mGlow {
+      from { opacity: 0.5; transform: translateX(-50%) scale(0.92); }
+      to { opacity: 1; transform: translateX(-50%) scale(1.08); }
+    }
+    .m-intro-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(2px);
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    .m-intro-orb.o1 {
+      width: 140px; height: 140px;
+      background: #f472b6;
+      top: -30px; right: -40px;
+      animation: mFloat 6s ease-in-out infinite;
+    }
+    .m-intro-orb.o2 {
+      width: 100px; height: 100px;
+      background: #c084fc;
+      bottom: 12%; left: -30px;
+      animation: mFloat 7.5s ease-in-out infinite reverse;
+    }
+    @keyframes mFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(18px); }
+    }
+    .m-intro-inner {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      padding: 24px 28px calc(24px + env(safe-area-inset-bottom));
+      max-width: 340px;
+    }
+    .m-intro-mark {
+      width: 88px;
+      height: 88px;
+      margin: 0 auto 18px;
+      border-radius: 24px;
+      background: rgba(255,255,255,0.14);
+      border: 1px solid rgba(255,255,255,0.22);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: mPop 0.8s cubic-bezier(0.22,1,0.36,1) both;
+    }
+    @keyframes mPop {
+      from { opacity: 0; transform: scale(0.7) translateY(12px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .m-intro-js {
+      font-size: 2.1rem;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      color: #fff;
+      line-height: 1;
+    }
+    .m-intro-js .s { color: #fda4af; }
+    .m-intro-rgb {
+      display: flex;
+      gap: 5px;
+      justify-content: center;
+      margin-top: 10px;
+    }
+    .m-intro-rgb i {
+      width: 9px; height: 9px; border-radius: 50%;
+      display: block;
+      animation: mBlink 1.6s ease-in-out infinite;
+    }
+    .m-intro-rgb i.r { background: #f87171; }
+    .m-intro-rgb i.g { background: #4ade80; animation-delay: 0.2s; }
+    .m-intro-rgb i.b { background: #60a5fa; animation-delay: 0.4s; }
+    @keyframes mBlink {
+      0%, 100% { opacity: 0.45; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.15); }
+    }
+    .m-intro-title {
+      margin: 0 0 8px;
+      color: #fff;
+      font-size: 1.55rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      animation: mFadeUp 0.85s 0.15s both;
+    }
+    .m-intro-sub {
+      margin: 0 0 6px;
+      color: rgba(255,255,255,0.88);
+      font-size: 0.95rem;
+      font-weight: 600;
+      animation: mFadeUp 0.85s 0.28s both;
+    }
+    .m-intro-desc {
+      margin: 0 auto 22px;
+      color: rgba(255,255,255,0.7);
+      font-size: 0.82rem;
+      line-height: 1.45;
+      max-width: 280px;
+      animation: mFadeUp 0.85s 0.4s both;
+    }
+    @keyframes mFadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .m-intro-bar {
+      width: 120px;
+      height: 3px;
+      margin: 0 auto 18px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.2);
+      overflow: hidden;
+      animation: mFadeUp 0.85s 0.45s both;
+    }
+    .m-intro-bar span {
+      display: block;
+      height: 100%;
+      width: 0;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #fda4af, #fff);
+      animation: mLoad 2.8s 0.5s ease forwards;
+    }
+    @keyframes mLoad {
+      to { width: 100%; }
+    }
+    .m-intro-skip {
+      border: 1px solid rgba(255,255,255,0.35);
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 12px 22px;
+      border-radius: 999px;
+      min-height: 44px;
+      cursor: pointer;
+      animation: mFadeUp 0.85s 0.55s both;
+    }
+    .m-intro-skip:active {
+      background: rgba(255,255,255,0.22);
+    }
+    .m-intro-foot {
+      position: absolute;
+      bottom: calc(18px + env(safe-area-inset-bottom));
+      left: 0; right: 0;
+      text-align: center;
+      color: rgba(255,255,255,0.55);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      z-index: 2;
+    }
   </style>
 </head>
 <body>
+
+  <!-- Intro mobile dedicata -->
+  <div class="m-intro" id="mobileIntro" role="dialog" aria-label="Introduzione">
+    <div class="m-intro-glow"></div>
+    <div class="m-intro-orb o1"></div>
+    <div class="m-intro-orb o2"></div>
+    <div class="m-intro-inner">
+      <div class="m-intro-mark">
+        <div>
+          <div class="m-intro-js"><span class="j">J</span><span class="s">S</span></div>
+          <div class="m-intro-rgb" aria-hidden="true"><i class="r"></i><i class="g"></i><i class="b"></i></div>
+        </div>
+      </div>
+      <h2 class="m-intro-title">Note Clienti</h2>
+      <p class="m-intro-sub">Versione mobile</p>
+      <p class="m-intro-desc">Gestisci Prep, Note, spedizioni e consigli<br>ovunque ti trovi, con un tocco.</p>
+      <div class="m-intro-bar"><span></span></div>
+      <button type="button" class="m-intro-skip" id="mobileIntroSkip" onclick="finishMobileIntro()">Entra nell'app ›</button>
+    </div>
+    <div class="m-intro-foot">JS INSEGNE DIGITALI · JUMBOSCREEN®</div>
+  </div>
   <header class="topbar">
     <h1 id="topTitle">Home <span class="brand-dot" aria-hidden="true"><i class="r"></i><i class="g"></i><i class="b"></i></span></h1>
     <div class="topbar-actions">
@@ -1014,6 +1215,28 @@
       };
       reader.readAsText(file);
     }
+
+
+    function finishMobileIntro() {
+      const el = document.getElementById('mobileIntro');
+      if (!el || el.classList.contains('is-out')) return;
+      el.classList.add('is-out');
+      try { sessionStorage.setItem('note_clienti_mobile_intro_seen', '1'); } catch (e) {}
+      setTimeout(function () {
+        try { el.remove(); } catch (e) { el.style.display = 'none'; }
+      }, 750);
+    }
+
+    (function initMobileIntro() {
+      try {
+        if (sessionStorage.getItem('note_clienti_mobile_intro_seen') === '1') {
+          const el = document.getElementById('mobileIntro');
+          if (el) el.remove();
+          return;
+        }
+      } catch (e) {}
+      setTimeout(function () { try { finishMobileIntro(); } catch (e) {} }, 4200);
+    })();
 
     // init
     E.load();
