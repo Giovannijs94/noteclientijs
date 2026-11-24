@@ -279,8 +279,65 @@
       exportedAt: new Date().toISOString(),
       clients: clients,
       models: savedModels,
+      savedModels: savedModels,
       spedizioni: savedSpedizioni,
-      ordini: ordini
+      savedSpedizioni: savedSpedizioni,
+      ordini: ordini,
+      data: clients
+    };
+  }
+
+  function importFromBackup(data) {
+    if (!data || typeof data !== 'object') throw new Error('File non valido');
+    // formati supportati: array diretto, {clients}, {data}, backup desktop completo
+    let list = null;
+    if (Array.isArray(data)) list = data;
+    else if (Array.isArray(data.clients)) list = data.clients;
+    else if (Array.isArray(data.data)) list = data.data;
+    else if (data.note_clienti_data && Array.isArray(data.note_clienti_data)) list = data.note_clienti_data;
+    if (!list) throw new Error('Nel file non ci sono clienti riconoscibili');
+
+    clients = list;
+
+    if (Array.isArray(data.models)) savedModels = data.models;
+    else if (Array.isArray(data.savedModels)) savedModels = data.savedModels;
+    else if (Array.isArray(data.modelli)) savedModels = data.modelli;
+
+    if (Array.isArray(data.spedizioni)) savedSpedizioni = data.spedizioni;
+    else if (Array.isArray(data.savedSpedizioni)) savedSpedizioni = data.savedSpedizioni;
+
+    if (Array.isArray(data.ordini)) ordini = data.ordini;
+
+    // se il backup desktop ha messo tutto in localStorage-like keys
+    try {
+      if (data.localStorage && typeof data.localStorage === 'object') {
+        const ls = data.localStorage;
+        if (ls.note_clienti_data) {
+          const parsed = typeof ls.note_clienti_data === 'string' ? JSON.parse(ls.note_clienti_data) : ls.note_clienti_data;
+          if (Array.isArray(parsed)) clients = parsed;
+        }
+        if (ls.note_clienti_modelli) {
+          const parsed = typeof ls.note_clienti_modelli === 'string' ? JSON.parse(ls.note_clienti_modelli) : ls.note_clienti_modelli;
+          if (Array.isArray(parsed)) savedModels = parsed;
+        }
+        if (ls.note_clienti_spedizioni) {
+          const parsed = typeof ls.note_clienti_spedizioni === 'string' ? JSON.parse(ls.note_clienti_spedizioni) : ls.note_clienti_spedizioni;
+          if (Array.isArray(parsed)) savedSpedizioni = parsed;
+        }
+        if (ls.note_clienti_ordini) {
+          const parsed = typeof ls.note_clienti_ordini === 'string' ? JSON.parse(ls.note_clienti_ordini) : ls.note_clienti_ordini;
+          if (Array.isArray(parsed)) ordini = parsed;
+        }
+      }
+    } catch (e) {}
+
+    save();
+    try { localStorage.setItem('note_clienti_last_backup', new Date().toISOString()); } catch (e) {}
+    return {
+      clients: clients.length,
+      models: savedModels.length,
+      spedizioni: savedSpedizioni.length,
+      ordini: ordini.length
     };
   }
 
@@ -315,6 +372,7 @@
     cleanAddress: cleanAddress,
     stats: stats,
     exportBackup: exportBackup,
+    importFromBackup: importFromBackup,
     toUpper: toUpper
   };
 

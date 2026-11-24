@@ -585,11 +585,12 @@
         <button type="button" class="more-item" onclick="goFromMore('standby')"><span>⏸️</span><span>Stand-by</span></button>
         <button type="button" class="more-item" onclick="goFromMore('installati')"><span>✅</span><span>Installati</span></button>
         <button type="button" class="more-item" onclick="goFromMore('ordini')"><span>📦</span><span>Ordini</span></button>
-        <button type="button" class="more-item" onclick="location.href='index.html'"><span>🖥️</span><span>Desktop</span></button>
-        <button type="button" class="more-item" onclick="location.href='index.html#percorso'"><span>🗺️</span><span>Percorso*</span></button>
-        <button type="button" class="more-item" onclick="location.href='index.html#calendario'"><span>📅</span><span>Calendario*</span></button>
+        <button type="button" class="more-item" onclick="exportBackupMobile()"><span>💾</span><span>Esporta JSON</span></button>
+        <button type="button" class="more-item" onclick="document.getElementById('importFileMobile').click()"><span>📂</span><span>Importa JSON</span></button>
+        <button type="button" class="more-item" onclick="location.href='index.html?desktop=1'"><span>🖥️</span><span>Desktop</span></button>
       </div>
-      <p style="font-size:0.72rem;color:#94a3b8;text-align:center;margin:0 0 10px;">* Percorso e Calendario si aprono nella versione desktop completa</p>
+      <input type="file" id="importFileMobile" accept=".json,application/json,text/plain,*/*" style="display:none" onchange="importBackupMobile(event)">
+      <p style="font-size:0.72rem;color:#94a3b8;text-align:center;margin:0 0 10px;">Importa il backup scaricato dal PC. Sostituisce i dati presenti su questo iPhone.</p>
       <div class="sheet-actions">
         <button type="button" class="ghost" onclick="closeMore()">Chiudi</button>
       </div>
@@ -948,6 +949,70 @@
       closeSheet();
       toast('Eliminato');
       renderAll();
+    }
+
+    function exportBackupMobile() {
+      try {
+        const data = E.exportBackup();
+        const json = JSON.stringify(data, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const day = new Date().toISOString().slice(0, 10);
+        a.href = url;
+        a.download = 'backup_note_clienti_' + day + '.json';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function () {
+          try { document.body.removeChild(a); URL.revokeObjectURL(url); } catch (e) {}
+        }, 300);
+        closeMore();
+        toast('Backup esportato');
+      } catch (err) {
+        alert('Errore export: ' + (err && err.message ? err.message : err));
+      }
+    }
+
+    function importBackupMobile(event) {
+      const file = event && event.target && event.target.files && event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function () {
+        try {
+          let text = String(reader.result || '');
+          // rimuovi eventuali BOM
+          if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+          let data;
+          try {
+            data = JSON.parse(text);
+          } catch (e1) {
+            // a volte c'è testo extra: prova a isolare il JSON
+            const start = text.indexOf('{');
+            const startArr = text.indexOf('[');
+            let s = -1;
+            if (start >= 0 && (startArr < 0 || start < startArr)) s = start;
+            else s = startArr;
+            if (s < 0) throw e1;
+            data = JSON.parse(text.slice(s));
+          }
+          if (!confirm('Importare questo backup?\n\nI clienti ora presenti su questo telefono verranno sostituiti.')) {
+            event.target.value = '';
+            return;
+          }
+          const res = E.importFromBackup(data);
+          closeMore();
+          renderAll();
+          toast('Import ok: ' + res.clients + ' clienti');
+        } catch (err) {
+          console.error(err);
+          alert('Import fallito: ' + (err && err.message ? err.message : err));
+        }
+        try { event.target.value = ''; } catch (e) {}
+      };
+      reader.onerror = function () {
+        alert('Impossibile leggere il file');
+      };
+      reader.readAsText(file);
     }
 
     // init
