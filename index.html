@@ -1719,34 +1719,38 @@
             line-height: 1.4;
         }
 
-        /* FASE INTRO */
+        /* FASE INTRO — tempi più dolci e distesi */
         .login-overlay.login-phase-intro .login-elegant-kicker {
             opacity: 0;
-            animation: introFadeUp 1s ease 0.3s forwards;
+            animation: introFadeUp 1.25s cubic-bezier(0.22, 1, 0.36, 1) 0.45s forwards;
         }
         .login-overlay.login-phase-intro .login-elegant-line {
             opacity: 0;
-            animation: introLineIn 0.85s ease 0.9s forwards;
+            animation: introLineIn 1.1s ease 1.15s forwards;
         }
         .login-overlay.login-phase-intro .login-shared-brand {
             opacity: 0;
-            animation: introBrandIn 1s cubic-bezier(0.16, 1, 0.3, 1) 1.15s forwards;
+            animation: introBrandIn 1.35s cubic-bezier(0.16, 1, 0.3, 1) 1.55s forwards;
         }
         .login-overlay.login-phase-intro .login-intro-title {
             opacity: 0;
-            animation: introFadeUp 0.95s ease 2.2s forwards;
+            animation: introFadeUp 1.15s cubic-bezier(0.22, 1, 0.36, 1) 2.85s forwards;
         }
         .login-overlay.login-phase-intro .login-intro-sub {
             opacity: 0;
-            animation: introFadeUp 0.95s ease 2.55s forwards;
+            animation: introFadeUp 1.15s cubic-bezier(0.22, 1, 0.36, 1) 3.25s forwards;
         }
         .login-overlay.login-phase-intro .login-intro-slogan {
             opacity: 0;
-            animation: introFadeUp 0.95s ease 2.9s forwards;
+            animation: introFadeUp 1.2s cubic-bezier(0.22, 1, 0.36, 1) 3.7s forwards;
         }
         @keyframes introBrandIn {
-            from { opacity: 0; transform: translateY(16px) scale(0.94); }
+            from { opacity: 0; transform: translateY(22px) scale(0.92); }
             to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes introFadeUp {
+            from { opacity: 0; transform: translateY(14px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         /* FASE MORPH v2: la card si apre INTORNO al logo (logo resta protagonista) */
@@ -2529,23 +2533,30 @@
             transform: none;
         }
         .login-skip {
-            position: absolute;
+            position: fixed;
             bottom: max(20px, env(safe-area-inset-bottom));
             right: 20px;
-            z-index: 4;
-            background: rgba(255, 255, 255, 0.12);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #fce7f3;
-            font-size: 0.78rem;
-            font-weight: 700;
-            padding: 8px 14px;
+            z-index: 10050 !important;
+            background: rgba(255, 255, 255, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            color: #fff;
+            font-size: 0.82rem;
+            font-weight: 800;
+            padding: 12px 18px;
             border-radius: 999px;
             cursor: pointer;
             backdrop-filter: blur(8px);
             transition: background 0.2s, opacity 0.4s;
+            pointer-events: auto !important;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
         }
-        .login-skip:hover { background: rgba(255, 255, 255, 0.22); color: #fff; }
-        .login-skip.hidden { opacity: 0; pointer-events: none; }
+        .login-skip:hover { background: rgba(255, 255, 255, 0.28); color: #fff; }
+        .login-skip.hidden { opacity: 0; pointer-events: none !important; visibility: hidden; }
+        .login-overlay.login-phase-login {
+            cursor: default;
+        }
         body.locked .app-layout,
         body.locked .btn-back-to-top,
         body.locked .portal-nav-toggle,
@@ -2555,8 +2566,14 @@
         @media (prefers-reduced-motion: reduce) {
             .login-intro { display: none !important; }
             .login-box { opacity: 1 !important; transform: none !important; pointer-events: auto !important; }
-            .login-skip { display: none !important; }
             .login-overlay::before { animation: none; }
+            .login-form-block {
+                opacity: 1 !important;
+                transform: none !important;
+                max-height: none !important;
+                pointer-events: auto !important;
+                filter: none !important;
+            }
         }
 
         .app-layout {
@@ -3182,7 +3199,36 @@
         }
         .consigli-table tr:last-child td { border-bottom: none; }
         .consigli-table tr:hover td { background: #f8fafc; }
+        .consigli-table tr.consigli-client-row:hover td { background: #fdf2f8; }
+        .consigli-table tr.consigli-client-row:active td { background: #fce7f3; }
         .consigli-table .c-name { font-weight: 800; color: var(--primary); }
+        .consigli-table .c-name.c-click {
+            cursor: pointer;
+            text-decoration: underline;
+            text-decoration-color: rgba(157,23,77,0.35);
+            text-underline-offset: 2px;
+        }
+        .consigli-table .c-name.c-click:hover { color: #9d174d; }
+        .consigli-client-acts {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .consigli-act-btn {
+            min-height: 30px;
+            padding: 3px 8px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            color: #334155;
+            cursor: pointer;
+        }
+        .consigli-act-btn.primary { background: #9d174d; color: #fff; border-color: #9d174d; }
+        .consigli-act-btn.ok { background: #16a34a; color: #fff; border-color: #16a34a; }
+        .consigli-act-btn.warn { background: #d97706; color: #fff; border-color: #d97706; }
+        .consigli-act-btn:hover { filter: brightness(1.05); }
         .consigli-table .c-muted { color: #64748b; font-size: 0.78rem; }
         .consigli-prio {
             display: inline-block;
@@ -5052,31 +5098,42 @@
     
         .prep-mini-row {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             justify-content: space-between;
-            gap: 10px;
-            padding: 10px 0;
+            gap: 8px;
+            padding: 7px 6px;
             border-bottom: 1px solid #e2e8f0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.12s;
         }
+        .prep-mini-row:hover { background: #fdf2f8; }
+        .prep-mini-row:active { background: #fce7f3; }
         .prep-mini-row:last-child { border-bottom: none; }
         .prep-mini-name {
             font-weight: 800;
-            color: #0f172a;
-            font-size: 0.95rem;
+            color: #9d174d;
+            font-size: 0.88rem;
+            text-decoration: underline;
+            text-decoration-color: rgba(157,23,77,0.25);
+            text-underline-offset: 2px;
         }
         .prep-mini-meta {
-            font-size: 0.78rem;
+            font-size: 0.72rem;
             color: #64748b;
-            margin-top: 2px;
-            line-height: 1.35;
+            margin-top: 1px;
+            line-height: 1.3;
         }
+        .prep-mini-actions { display: none !important; }
         .prep-mini-btn {
             flex-shrink: 0;
-            min-height: 40px;
-            padding: 8px 12px;
-            font-size: 0.8rem;
+            min-height: 32px;
+            padding: 4px 8px;
+            font-size: 0.75rem;
             white-space: nowrap;
         }
+        .prep-mini-tech { margin-top: 3px !important; }
+        .prep-tech-badge { font-size: 0.68rem; padding: 1px 6px; }
         .prep-multi-bar {
             display: none;
             align-items: center;
@@ -6685,7 +6742,7 @@
             </form>
         </div>
     </div>
-    <button type="button" class="login-skip" id="loginSkipIntro" onclick="finishLoginIntro()">Salta intro ›</button>
+    <button type="button" class="login-skip" id="loginSkipIntro" onclick="event.preventDefault();event.stopPropagation();finishLoginIntro();">Salta intro ›</button>
 </div>
 
 <button type="button" class="portal-nav-toggle" id="portalNavToggle" onclick="togglePortalNav()" title="Menu" aria-label="Apri o chiudi menu">
@@ -7242,7 +7299,7 @@
             <span id="prepMiniListTitle">Clienti per regione</span>
             <button type="button" class="btn prep-multi-toggle" id="prepMultiToggleBtn" onclick="togglePrepMultiSelect()" title="Attiva selezione multipla per eliminare più clienti">☑️ Selezione multipla</button>
         </div>
-        <p id="prepMiniListDesc" style="font-size:0.8rem;color:var(--text-muted);margin-bottom:10px;">Raggruppati per regione. Su ogni cliente: <strong>📦 Spedisci</strong> oppure <strong>→ Note</strong> con tappa.</p>
+        <p id="prepMiniListDesc" style="font-size:0.8rem;color:var(--text-muted);margin-bottom:10px;">Raggruppati per regione. Clicca sul cliente per scheda, spedizione, Note, Stand-by o Installato.</p>
         <div class="prep-multi-bar" id="prepMultiBar">
             <span class="prep-multi-count" id="prepMultiCount">0 selezionati</span>
             <button type="button" class="btn" onclick="prepSelectAllVisible()" style="min-height:36px;padding:6px 12px;font-size:0.82rem;">Seleziona tutti</button>
@@ -7642,7 +7699,7 @@
         <div class="confirm-icon" style="background:linear-gradient(135deg,#dbeafe,#bfdbfe);">📦</div>
         <h3>Spedizione cliente</h3>
         <p class="confirm-desc" style="margin-bottom:8px;">Cliente: <strong id="prepShipClientName"></strong></p>
-        <p class="confirm-desc" style="margin-bottom:12px;font-size:0.82rem;color:#64748b;">Scegli dove spedire. Con i tecnici puoi creare <strong>gruppi interni</strong> (es. dentro Candela: prima e seconda spedizione) senza mescolare i clienti.</p>
+        <p class="confirm-desc" style="margin-bottom:12px;font-size:0.82rem;color:#64748b;">Scegli dove spedire (cliente stesso / tecnico) oppure apri la scelta libera <strong>tappa o spedizione</strong> per Note. Con i tecnici puoi creare gruppi interni senza mescolare i clienti.</p>
         <div id="prepShipOptions" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;"></div>
         <div class="confirm-actions">
             <button type="button" class="btn" onclick="closePrepShipModal()">Annulla</button>
@@ -7679,16 +7736,25 @@
 </div>
 
 <div id="prepToNoteModal" class="modal-overlay confirm-modal">
-    <div class="modal" style="max-width:440px;">
+    <div class="modal" style="max-width:460px;">
         <div class="confirm-icon" style="background:linear-gradient(135deg,#dbeafe,#bfdbfe);">📋</div>
         <h3>Porta in Note clienti</h3>
         <p class="confirm-desc" style="margin-bottom:8px;">Cliente: <strong id="prepToNoteClientName"></strong></p>
-        <p class="confirm-desc" style="margin-bottom:12px;font-size:0.82rem;color:#64748b;">Scegli la <strong>tappa</strong> (esistente o nuova) e la <strong>data di installazione</strong>.</p>
+        <p class="confirm-desc" style="margin-bottom:12px;font-size:0.82rem;color:#64748b;">Scegli <strong>tappa</strong> oppure <strong>spedizione</strong>, e la <strong>data di installazione</strong>.</p>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <button type="button" class="btn" id="prepToNoteModeTappa" style="flex:1;justify-content:center;" onclick="setPrepToNoteMode('tappa')">🚩 Tappa</button>
+            <button type="button" class="btn" id="prepToNoteModeSped" style="flex:1;justify-content:center;" onclick="setPrepToNoteMode('spedizione')">📦 Spedizione</button>
+        </div>
         <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;text-align:left;">
-            <div>
+            <div id="prepToNoteTappaBlock">
                 <label style="font-size:0.78rem;font-weight:700;color:#64748b;display:block;margin-bottom:4px;">Tappa</label>
                 <input type="text" id="prepToNoteTappaInput" class="input-control" list="tappeDatalist" placeholder="Scrivi o seleziona tappa..." style="text-align:left;" autocomplete="off">
                 <div id="prepToNoteTappeList" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
+            </div>
+            <div id="prepToNoteSpedBlock" hidden>
+                <label style="font-size:0.78rem;font-weight:700;color:#64748b;display:block;margin-bottom:4px;">Spedizione</label>
+                <input type="text" id="prepToNoteSpedInput" class="input-control" list="spedizioniDatalist" placeholder="Cliente stesso o tecnico..." style="text-align:left;" autocomplete="off">
+                <div id="prepToNoteSpedList" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
             </div>
             <div>
                 <label style="font-size:0.78rem;font-weight:700;color:#64748b;display:block;margin-bottom:4px;">Data installazione</label>
@@ -9474,8 +9540,11 @@
         if (client) {
             client.installato = true;
             client.standby = false;
+            client.inPrep = false;
             saveToLocalStorage();
             render();
+            try { if (typeof renderConsigliPage === 'function') renderConsigliPage(); } catch (e) {}
+            try { if (typeof renderPrepPage === 'function') renderPrepPage(); } catch (e) {}
         }
         pendingInstallId = null;
         document.getElementById('confirmInstallModal').style.display = 'none';
@@ -9516,6 +9585,7 @@
             render();
             try { if (typeof renderPrepPage === 'function') renderPrepPage(); } catch (e) {}
             try { if (typeof renderStandbyPage === 'function') renderStandbyPage(); } catch (e) {}
+            try { if (typeof renderConsigliPage === 'function') renderConsigliPage(); } catch (e) {}
         }
         pendingStandbyId = null;
         document.getElementById('confirmStandbyModal').style.display = 'none';
@@ -9565,7 +9635,9 @@
         const hasTappa = !!(client.tappa || '').trim();
         const hasSped = !!(client.spedizione || '').trim();
         if (!hasTappa && !hasSped) {
-            alert('Assegna prima una Tappa o una Spedizione, poi potrai passarlo in Note clienti.');
+            // Stesso flusso di Pre-pianificazione / Consigli: scegli tappa o spedizione
+            try { movePrepClientToNote(id); return; } catch (e) {}
+            alert('Assegna una Tappa o una Spedizione per portarlo in Note clienti.');
             return;
         }
         client.inPrep = false;
@@ -9574,6 +9646,7 @@
         saveToLocalStorage();
         render();
         if (typeof renderPrepPage === 'function') renderPrepPage();
+        try { if (typeof renderConsigliPage === 'function') renderConsigliPage(); } catch (e) {}
     };
 
     window.updateStageInPrep = function(id, value) {
@@ -15352,6 +15425,12 @@
             });
         }
 
+        // 4) Scelta libera: tappa o spedizione personalizzata → Note
+        html += '<div style="font-size:0.78rem;font-weight:700;color:#64748b;margin-top:10px;">Oppure porta in Note con scelta libera</div>';
+        html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;border-color:#9d174d;color:#9d174d;" ' +
+            'data-ship-action="note-free">' +
+            '📋 Tappa o spedizione personalizzata<br><span style="font-weight:500;font-size:0.78rem;opacity:.9;">Scegli tappa oppure una spedizione (anche nuova)</span></button>';
+
         box.innerHTML = html;
         // Binding sicuro (evita problemi con virgolette nei nomi tecnici)
         box.querySelectorAll('[data-ship-action]').forEach(function(btn) {
@@ -15364,6 +15443,11 @@
                 } else if (action === 'tecnico') {
                     const tech = btn.getAttribute('data-ship-tecnico') || '';
                     confirmPrepShipTecnico(tech);
+                } else if (action === 'note-free') {
+                    try { closePrepShipModal(); } catch (e) {}
+                    try { movePrepClientToNote(_prepShipClientId || id); } catch (e2) {
+                        try { moveToNote(_prepShipClientId || id); } catch (e3) {}
+                    }
                 }
             });
         });
@@ -15668,6 +15752,58 @@
         return Object.keys(set).sort(function(a, b) { return a.localeCompare(b, 'it'); });
     }
 
+
+    let _prepToNoteMode = 'tappa'; // tappa | spedizione
+
+    window.setPrepToNoteMode = function(mode) {
+        _prepToNoteMode = (mode === 'spedizione') ? 'spedizione' : 'tappa';
+        const tBlock = document.getElementById('prepToNoteTappaBlock');
+        const sBlock = document.getElementById('prepToNoteSpedBlock');
+        const btnT = document.getElementById('prepToNoteModeTappa');
+        const btnS = document.getElementById('prepToNoteModeSped');
+        if (tBlock) tBlock.hidden = (_prepToNoteMode !== 'tappa');
+        if (sBlock) sBlock.hidden = (_prepToNoteMode !== 'spedizione');
+        if (btnT) {
+            btnT.style.background = _prepToNoteMode === 'tappa' ? '#9d174d' : '';
+            btnT.style.color = _prepToNoteMode === 'tappa' ? '#fff' : '';
+            btnT.style.borderColor = _prepToNoteMode === 'tappa' ? '#9d174d' : '';
+        }
+        if (btnS) {
+            btnS.style.background = _prepToNoteMode === 'spedizione' ? '#9d174d' : '';
+            btnS.style.color = _prepToNoteMode === 'spedizione' ? '#fff' : '';
+            btnS.style.borderColor = _prepToNoteMode === 'spedizione' ? '#9d174d' : '';
+        }
+        try {
+            if (_prepToNoteMode === 'tappa') {
+                const t = document.getElementById('prepToNoteTappaInput');
+                if (t) t.focus();
+            } else {
+                const s = document.getElementById('prepToNoteSpedInput');
+                if (s) s.focus();
+            }
+        } catch (e) {}
+    };
+
+    function getExistingSpedizioniList() {
+        const set = {};
+        try {
+            (typeof savedSpedizioni !== 'undefined' ? savedSpedizioni : []).forEach(function(s) {
+                const v = String(s || '').trim();
+                if (v) set[v] = 1;
+            });
+        } catch (e) {}
+        set['Cliente stesso'] = 1;
+        (clients || []).forEach(function(c) {
+            const s = String((c && c.spedizione) || '').trim();
+            if (s) set[s] = 1;
+        });
+        return Object.keys(set).sort(function(a, b) {
+            if (a === 'Cliente stesso') return -1;
+            if (b === 'Cliente stesso') return 1;
+            return a.localeCompare(b, 'it');
+        });
+    }
+
     window.movePrepClientToNote = function(id) {
         const client = clients.find(function(c) { return String(c.id) === String(id); });
         if (!client) return;
@@ -15676,13 +15812,22 @@
         if (nameEl) nameEl.textContent = client.nome || '—';
 
         const tappaInp = document.getElementById('prepToNoteTappaInput');
+        const spedInp = document.getElementById('prepToNoteSpedInput');
         const dataInp = document.getElementById('prepToNoteDataInput');
         const listEl = document.getElementById('prepToNoteTappeList');
+        const spedListEl = document.getElementById('prepToNoteSpedList');
+
+        // default mode: se già ha spedizione → spedizione, altrimenti tappa
+        const hasSped = !!(client.spedizione || '').trim();
+        setPrepToNoteMode(hasSped ? 'spedizione' : 'tappa');
 
         const suggested = String(client.tappa || client.localita || '').trim();
-        if (tappaInp) tappaInp.value = suggested ? ((typeof toAppUpper === 'function') ? toAppUpper(suggested) : suggested) : '';
+        if (tappaInp) tappaInp.value = (!hasSped && suggested) ? ((typeof toAppUpper === 'function') ? toAppUpper(suggested) : suggested) : '';
+        if (spedInp) {
+            const sv = String(client.spedizione || '').trim();
+            spedInp.value = sv ? ((typeof toAppUpper === 'function') ? toAppUpper(sv) : sv) : '';
+        }
 
-        // Data: usa data già presente, oppure scadenza come suggerimento
         if (dataInp) {
             let d = String(client.data || '').trim();
             if (!d && client.scadenza) {
@@ -15697,7 +15842,6 @@
             dataInp.value = d || '';
         }
 
-        // Pulsanti tappe esistenti
         if (listEl) {
             const tappe = getExistingTappeList();
             if (!tappe.length) {
@@ -15719,11 +15863,25 @@
             }
         }
 
+        if (spedListEl) {
+            const speds = getExistingSpedizioniList();
+            spedListEl.innerHTML = speds.map(function(s) {
+                return '<button type="button" class="btn" style="padding:6px 10px;font-size:0.78rem;min-height:32px;" data-sped="' +
+                    String(s).replace(/"/g, '&quot;').replace(/</g, '&lt;') + '">📦 ' +
+                    String(s).replace(/</g, '&lt;') + '</button>';
+            }).join('');
+            spedListEl.querySelectorAll('[data-sped]').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    if (spedInp) {
+                        spedInp.value = btn.getAttribute('data-sped') || '';
+                        try { spedInp.focus(); } catch (e) {}
+                    }
+                });
+            });
+        }
+
         const modal = document.getElementById('prepToNoteModal');
         if (modal) modal.style.display = 'flex';
-        try {
-            if (tappaInp) { tappaInp.focus(); }
-        } catch (e) {}
     };
 
     window.confirmPrepToNote = function() {
@@ -15734,19 +15892,38 @@
             return;
         }
         const tappaInp = document.getElementById('prepToNoteTappaInput');
+        const spedInp = document.getElementById('prepToNoteSpedInput');
         const dataInp = document.getElementById('prepToNoteDataInput');
         let tappa = String((tappaInp && tappaInp.value) || '').trim();
-        if (!tappa) {
-            alert('Inserisci o seleziona una tappa.');
-            if (tappaInp) try { tappaInp.focus(); } catch (e) {}
-            return;
+        let sped = String((spedInp && spedInp.value) || '').trim();
+        if (typeof toAppUpper === 'function') {
+            if (tappa) tappa = toAppUpper(tappa);
+            if (sped) sped = toAppUpper(sped);
         }
-        if (typeof toAppUpper === 'function') tappa = toAppUpper(tappa);
-        const dataVal = String((dataInp && dataInp.value) || '').trim();
+        const mode = _prepToNoteMode || 'tappa';
 
-        client.tappa = tappa;
-        client.spedizione = '';
-        client.spedizioneGruppo = '';
+        if (mode === 'spedizione') {
+            if (!sped) {
+                alert('Inserisci o seleziona una spedizione (es. Cliente stesso o un tecnico).');
+                if (spedInp) try { spedInp.focus(); } catch (e) {}
+                return;
+            }
+            client.spedizione = sped;
+            client.tappa = '';
+            client.spedizioneGruppo = client.spedizioneGruppo || '';
+            try { if (typeof autoSaveNewSpedizione === 'function') autoSaveNewSpedizione(sped); } catch (e) {}
+        } else {
+            if (!tappa) {
+                alert('Inserisci o seleziona una tappa.');
+                if (tappaInp) try { tappaInp.focus(); } catch (e) {}
+                return;
+            }
+            client.tappa = tappa;
+            client.spedizione = '';
+            client.spedizioneGruppo = '';
+        }
+
+        const dataVal = String((dataInp && dataInp.value) || '').trim();
         client.inPrep = false;
         client.installato = false;
         client.standby = false;
@@ -15756,6 +15933,8 @@
         saveToLocalStorage();
         try { render(); } catch (e) {}
         try { if (typeof renderPrepPage === 'function') renderPrepPage(); } catch (e) {}
+        try { if (typeof renderConsigliPage === 'function') renderConsigliPage(); } catch (e) {}
+        try { if (typeof notifyPlanningDataChanged === 'function') notifyPlanningDataChanged(); } catch (e) {}
     };
 
 
@@ -15783,7 +15962,7 @@
             } else if (_prepListMode === 'modello') {
                 desc.innerHTML = 'Filtra per <strong>passo</strong>, <strong>dimensione CM</strong> o <strong>indoor/outdoor</strong> dal modello.';
             } else {
-                desc.innerHTML = 'Raggruppati per regione. Su ogni cliente: <strong>📦 Spedisci</strong> oppure <strong>→ Note</strong> con tappa.';
+                desc.innerHTML = 'Raggruppati per regione. Clicca sul cliente per scheda, spedizione, Note, Stand-by o Installato.';
             }
         }
         try { renderPrepPage(); } catch (e) {}
@@ -16088,12 +16267,7 @@
                     hint += '<span class="prep-tech-badge ' + (zone.badgeClass || '') + '">🗺️ Zona ' +
                         String(zone.tappaName || zone.tecnico).replace(/</g, '&lt;') + '</span>';
                 }
-                actions +=
-                    '<button type="button" class="btn btn-primary prep-mini-btn" onclick="openPrepShipModal(\'' + safeId + '\')" title="Scegli spedizione: cliente stesso o tecnico">📦 Spedisci</button>' +
-                    '<button type="button" class="btn prep-mini-btn" onclick="editClient(\'' + safeId + '\')" title="Modifica scheda">✏️ Modifica</button>' +
-                    '<button type="button" class="btn prep-mini-btn" style="background:#fff7ed;color:#c2410c;border-color:#fed7aa;" onclick="movePrepClientToStandby(\'' + safeId + '\')" title="Sposta in Stand-by">⏸️ Stand-by</button>' +
-                    '<button type="button" class="btn-icon danger prep-mini-btn" onclick="deleteClient(\'' + safeId + '\')" title="Elimina">🗑️</button>' +
-                    '<button type="button" class="btn prep-mini-btn" onclick="movePrepClientToNote(\'' + safeId + '\')">→ Note</button>';
+                actions = ''; // azioni nel menu al click sulla riga
 
                 const hintHtml = hint
                     ? ('<div class="prep-mini-tech" style="margin-top:6px;">' + hint + '</div>')
@@ -16108,14 +16282,15 @@
                     : '';
 
                 return '<div class="prep-mini-row' + (isSel ? ' prep-selected' : '') +
-                    '" data-client-id="' + safeId + '" style="display:flex;gap:10px;justify-content:space-between;align-items:flex-start;">' +
+                    '" data-client-id="' + safeId + '" style="display:flex;gap:8px;justify-content:space-between;align-items:flex-start;" ' +
+                    'onclick="if(event.target.closest(\'.prep-mini-check,a.client-location-link,button,input\'))return;openPrepClientMenu(\'' + safeId + '\')">' +
                     checkHtml +
                     '<div class="prep-mini-info" style="min-width:0;flex:1;">' +
                     '<div class="prep-mini-name">' + String(c.nome || '').replace(/</g, '&lt;') + '</div>' +
                     '<div class="prep-mini-meta">' +
                     '📦 <strong>Modello:</strong> ' + String(models).replace(/</g, '&lt;') + '<br>' +
                     '🔧 <strong>Montaggio:</strong> ' + (mont ? String(mont).replace(/</g, '&lt;') : '—') + '<br>' +
-                    '📍 <strong>Indirizzo:</strong> <a href="#" class="client-location-link" title="Apri in Percorso → Trova paese sulla mappa" data-localita="' +
+                    '📍 <strong>Indirizzo:</strong> <a href="#" class="client-location-link" onclick="event.stopPropagation();" title="Apri in Percorso → Trova paese sulla mappa" data-localita="' +
                     String(placeQuery).replace(/"/g, '&quot;').replace(/</g, '&lt;') + '">' +
                     String(paese).replace(/</g, '&lt;') + '</a><br>' +
                     '📅 <strong>Scadenza:</strong> <span style="' + scadCls + '">' + String(scadTxt).replace(/</g, '&lt;') + '</span>' +
@@ -20716,7 +20891,8 @@
                     else if (d === 0) scadInfo += ' · oggi';
                     else scadInfo += ' · tra ' + d + 'g';
                 }
-                html += '<div class="consigli-q-item">' +
+                const safeQid = String(c.id).replace(/'/g, "\\'");
+                html += '<div class="consigli-q-item" style="cursor:pointer;" title="Clicca per scheda o spostamenti" onclick="openConsigliClientMenu(\'' + safeQid + '\')">' +
                     '<strong>' + String(c.nome || '—').replace(/</g, '&lt;') + '</strong>' +
                     '<span class="consigli-q-meta">📍 ' + String(c.localita || '—').replace(/</g, '&lt;') +
                     (c.regione ? (' · ' + String(c.regione).replace(/</g, '&lt;')) : '') + '</span>' +
@@ -20970,8 +21146,116 @@
     window.renderDashboardPage = renderDashboardPage;
 
     // ===== CONSIGLI PIANIFICAZIONE (regole intelligenti su Prep) =====
+
+
+    /** Menu azioni cliente in Pre-pianificazione (riga cliccabile) */
+    window.openPrepClientMenu = function(id) {
+        const client = (clients || []).find(function(c) { return String(c.id) === String(id); });
+        if (!client) return;
+        const safeId = String(id).replace(/'/g, "\\'");
+        const nome = client.nome || 'Cliente';
+        const body = document.getElementById('compactActionBody');
+        const nameEl = document.getElementById('compactActionClientName');
+        const modal = document.getElementById('compactActionModal');
+        if (body && modal) {
+            if (nameEl) nameEl.textContent = nome;
+            let html = '';
+            html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;background:#0f172a;color:#fff;border:none;" data-pact="scheda">📋 Apri scheda</button>';
+            html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;background:#b45309;color:#fff;border:none;" data-pact="spedisci">📦 Spedisci</button>';
+            html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;background:#9d174d;color:#fff;border:none;" data-pact="note">→ Porta in Note (tappa o spedizione)</button>';
+            html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;background:#d97706;color:#fff;border:none;" data-pact="standby">⏸️ Metti in Stand-by</button>';
+            html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;background:#16a34a;color:#fff;border:none;" data-pact="installato">✅ Segna Installato</button>';
+            html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;color:#b91c1c;border-color:#fca5a5;" data-pact="delete">🗑️ Elimina</button>';
+            body.innerHTML = html;
+            body.querySelectorAll('[data-pact]').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    const act = btn.getAttribute('data-pact');
+                    try { closeCompactActionModal(); } catch (e) { modal.style.display = 'none'; }
+                    if (act === 'scheda') { try { editClient(safeId); } catch (e) {} }
+                    else if (act === 'spedisci') { try { openPrepShipModal(safeId); } catch (e) {} }
+                    else if (act === 'note') { try { movePrepClientToNote(safeId); } catch (e) {} }
+                    else if (act === 'standby') { try { movePrepClientToStandby(safeId); } catch (e) { try { markStandby(safeId); } catch (e2) {} } }
+                    else if (act === 'installato') { try { markInstallato(safeId); } catch (e) {} }
+                    else if (act === 'delete') { try { deleteClient(safeId); } catch (e) {} }
+                    setTimeout(function() {
+                        try { if (typeof renderPrepPage === 'function') renderPrepPage(); } catch (e) {}
+                        try { if (typeof renderConsigliPage === 'function') renderConsigliPage(); } catch (e) {}
+                    }, 350);
+                });
+            });
+            modal.style.display = 'flex';
+            return;
+        }
+        // fallback
+        try { editClient(id); } catch (e) {}
+    };
+
+    /** Menu azioni cliente da Consigli pianificazione */
+    window.openConsigliClientMenu = function(id) {
+        const client = (clients || []).find(function(c) { return String(c.id) === String(id); });
+        if (!client) return;
+        const safeId = String(id).replace(/'/g, "\\'");
+        const nome = client.nome || 'Cliente';
+        const inPrep = (typeof isInPrep === 'function') ? isInPrep(client) : (client.inPrep === true || client.inPrep === 'true');
+        // riusa modal azioni compatte se presente, altrimenti menu semplice
+        const body = document.getElementById('compactActionBody');
+        const nameEl = document.getElementById('compactActionClientName');
+        const modal = document.getElementById('compactActionModal');
+        if (body && modal) {
+            if (nameEl) nameEl.textContent = nome;
+            let html = '';
+            html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;background:#0f172a;color:#fff;border:none;" data-cact="scheda">📋 Apri scheda</button>';
+            if (inPrep) {
+                html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;background:#9d174d;color:#fff;border:none;" data-cact="note">→ Porta in Note clienti</button>';
+            }
+            html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;background:#d97706;color:#fff;border:none;" data-cact="standby">⏸️ Metti in Stand-by</button>';
+            html += '<button type="button" class="btn" style="width:100%;justify-content:center;padding:12px;background:#16a34a;color:#fff;border:none;" data-cact="installato">✅ Segna Installato</button>';
+            body.innerHTML = html;
+            body.querySelectorAll('[data-cact]').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    const act = btn.getAttribute('data-cact');
+                    try { closeCompactActionModal(); } catch (e) { modal.style.display = 'none'; }
+                    if (act === 'scheda') {
+                        try { editClient(safeId); } catch (e) {}
+                    } else if (act === 'note') {
+                        try { movePrepClientToNote(safeId); } catch (e) {
+                            try { moveToNote(safeId); } catch (e2) {}
+                        }
+                    } else if (act === 'standby') {
+                        try { markStandby(safeId); } catch (e) {}
+                    } else if (act === 'installato') {
+                        try { markInstallato(safeId); } catch (e) {}
+                    }
+                    setTimeout(function() {
+                        try { if (typeof renderConsigliPage === 'function') renderConsigliPage(); } catch (e) {}
+                    }, 300);
+                });
+            });
+            modal.style.display = 'flex';
+            return;
+        }
+        // fallback senza modal
+        const choice = prompt(
+            nome + '\n\n1 = Apri scheda\n2 = Porta in Note\n3 = Stand-by\n4 = Installato\n\nScrivi 1-4:'
+        );
+        if (choice === '1') editClient(id);
+        else if (choice === '2') { try { movePrepClientToNote(id); } catch (e) { moveToNote(id); } }
+        else if (choice === '3') markStandby(id);
+        else if (choice === '4') markInstallato(id);
+    };
+
+    function consigliClientNameHtml(c) {
+        return '<span class="c-name">' + String(c.nome || '—').replace(/</g, '&lt;') + '</span>';
+    }
+    function consigliClientRowAttrs(c) {
+        const safeId = String(c.id).replace(/'/g, "\\'");
+        return ' class="consigli-client-row" style="cursor:pointer;" title="Clicca per scheda o spostamenti" onclick="openConsigliClientMenu(\'' + safeId + '\')"';
+    }
+    function consigliClientActsHtml(c) {
+        return '';
+    }
+
     function renderConsigliPage() {
-        // Indirizzi sempre allineati a Pre-pianificazione (stesso array clients)
         try { if (typeof sanitizeAllClientAddresses === 'function') sanitizeAllClientAddresses({ silent: true, light: true }); } catch (e) {}
         const box = document.getElementById('consigliContainer');
         const badge = document.getElementById('navConsigliCount');
@@ -21281,10 +21565,10 @@
                     let leg = 0;
                     if (typeof haversineKm === 'function') leg = Math.round(haversineKm(prev, x.coords) * 1.35);
                     prev = x.coords;
-                    html += '<tr>' +
+                    html += '<tr' + consigliClientRowAttrs(c) + '>' +
                         '<td><strong>' + (i + 1) + '</strong></td>' +
                         '<td><span class="consigli-prio ' + p.cls + '">' + p.label + '</span></td>' +
-                        '<td><span class="c-name">' + esc(c.nome) + '</span></td>' +
+                        '<td>' + consigliClientNameHtml(c) + '</td>' +
                         '<td>' + esc(luogo(c)) + '</td>' +
                         '<td>' + esc(fmtScad(c)) + '</td>' +
                         '<td class="c-muted">' + esc(modelsShort(c)) + '</td>' +
@@ -21333,9 +21617,9 @@
                     const d = daysLeft(c);
                     const pr = prioInfo(d);
                     const conf = String(c.confOrdine || '').trim() || '—';
-                    html += '<tr>' +
+                    html += '<tr' + consigliClientRowAttrs(c) + '>' +
                         '<td><span class="consigli-prio ' + pr.cls + '">' + pr.label + '</span></td>' +
-                        '<td><span class="c-name">' + esc(c.nome) + '</span></td>' +
+                        '<td>' + consigliClientNameHtml(c) + '</td>' +
                         '<td>' + esc(luogo(c)) + '</td>' +
                         '<td>' + esc(fmtScad(c)) + '</td>' +
                         '<td class="c-muted">' + esc(modelsShort(c)) + '</td>' +
@@ -21780,41 +22064,92 @@
         return false;
     }
 
-    window.finishLoginIntro = function() {
-        const overlay = document.getElementById('loginOverlay');
-        const skip = document.getElementById('loginSkipIntro');
-        if (!overlay) return;
-        if (overlay.classList.contains('login-phase-login')) return;
-        overlay.classList.remove('login-phase-intro');
-        overlay.classList.add('login-phase-morph');
-        if (skip) skip.classList.add('hidden');
-        // v2: prima nasce la card intorno al logo, poi sale il form
-        setTimeout(function() {
-            overlay.classList.remove('login-phase-morph');
-            overlay.classList.add('login-phase-login');
-            setTimeout(function() {
-                const input = document.getElementById('loginPassword');
-                if (input) try { input.focus(); } catch (e) {}
-            }, 320);
-        }, 880);
-    };
-
-    (function startLoginIntro() {
-        if (checkAuthOnLoad()) return;
+    window.finishLoginIntro = function(forceImmediate) {
         try {
-            if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            const overlay = document.getElementById('loginOverlay');
+            const skip = document.getElementById('loginSkipIntro');
+            if (!overlay) return;
+            if (overlay.classList.contains('login-phase-login') && !forceImmediate) return;
+            if (skip) skip.classList.add('hidden');
+
+            function showLoginForm() {
+                try {
+                    overlay.classList.remove('login-phase-intro', 'login-phase-morph');
+                    overlay.classList.add('login-phase-login');
+                    // fallback hard: form sempre visibile e cliccabile
+                    const form = document.getElementById('loginBox');
+                    if (form) {
+                        form.style.opacity = '1';
+                        form.style.transform = 'none';
+                        form.style.maxHeight = 'none';
+                        form.style.overflow = 'visible';
+                        form.style.pointerEvents = 'auto';
+                        form.style.filter = 'none';
+                    }
+                    const input = document.getElementById('loginPassword');
+                    if (input) {
+                        setTimeout(function() { try { input.focus(); } catch (e) {} }, 120);
+                    }
+                } catch (e) { console.warn('showLoginForm', e); }
+            }
+
+            if (forceImmediate) {
+                showLoginForm();
+                return;
+            }
+
+            overlay.classList.remove('login-phase-intro');
+            overlay.classList.add('login-phase-morph');
+            // morph dolce, poi login
+            setTimeout(showLoginForm, 900);
+            setTimeout(function() {
+                if (!overlay.classList.contains('login-phase-login')) showLoginForm();
+            }, 1800);
+        } catch (e) {
+            console.warn('finishLoginIntro', e);
+            try {
                 const overlay = document.getElementById('loginOverlay');
                 if (overlay) {
                     overlay.classList.remove('login-phase-intro', 'login-phase-morph');
                     overlay.classList.add('login-phase-login');
                 }
-                const skip = document.getElementById('loginSkipIntro');
-                if (skip) skip.classList.add('hidden');
+            } catch (e2) {}
+        }
+    };
+
+    (function startLoginIntro() {
+        try {
+            if (typeof checkAuthOnLoad === 'function' && checkAuthOnLoad()) return;
+        } catch (e) {}
+
+        const overlay = document.getElementById('loginOverlay');
+        const skip = document.getElementById('loginSkipIntro');
+
+        // Solo il pulsante Salta intro (non tutto lo schermo)
+        if (skip) {
+            const go = function(ev) {
+                try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+                window.finishLoginIntro(true);
+            };
+            skip.addEventListener('click', go, true);
+            skip.addEventListener('touchend', go, true);
+        }
+
+        try {
+            if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                window.finishLoginIntro(true);
                 return;
             }
         } catch (e) {}
-        // Intro elegante, poi morph verso password
-        setTimeout(function() { window.finishLoginIntro(); }, 4800);
+
+        // Intro completa ~5.2s, poi morph; fail-safe a 8s
+        setTimeout(function() { try { window.finishLoginIntro(false); } catch (e) {} }, 5200);
+        setTimeout(function() {
+            try {
+                const o = document.getElementById('loginOverlay');
+                if (o && !o.classList.contains('login-phase-login')) window.finishLoginIntro(true);
+            } catch (e) {}
+        }, 8000);
     })();
 
     init();
