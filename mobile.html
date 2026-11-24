@@ -637,6 +637,109 @@
       letter-spacing: 0.04em;
       z-index: 2;
     }
+
+    /* Gruppi tappe / spedizioni */
+    .group-block {
+      margin-bottom: 14px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: #fff;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(15,23,42,0.04);
+    }
+    .group-block.sped {
+      border-color: #fdba74;
+      background: linear-gradient(180deg, #fffbeb 0%, #fff 28%);
+    }
+    .group-block.tappa {
+      border-color: #f9a8d4;
+      background: linear-gradient(180deg, #fdf2f8 0%, #fff 28%);
+    }
+    .group-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 12px 12px 10px;
+      cursor: pointer;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .group-head .gh-left {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .group-head .gh-title {
+      font-weight: 800;
+      font-size: 0.92rem;
+      color: var(--primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .group-block.sped .group-head .gh-title { color: #c2410c; }
+    .group-head .gh-sub {
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .group-count {
+      flex-shrink: 0;
+      min-width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-size: 0.75rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 8px;
+    }
+    .group-block.sped .group-count {
+      background: #ffedd5;
+      color: #c2410c;
+    }
+    .group-body {
+      padding: 0 8px 8px;
+    }
+    .group-body[hidden] { display: none !important; }
+    .subgroup-label {
+      font-size: 0.7rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #b45309;
+      margin: 8px 4px 6px;
+      padding: 4px 8px;
+      background: #fff7ed;
+      border-radius: 8px;
+      display: inline-block;
+    }
+    .group-block .client-card {
+      margin-bottom: 6px;
+    }
+    .group-block .client-card:last-child { margin-bottom: 0; }
+    .type-banner {
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 6px 0 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .type-banner::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
   </style>
 </head>
 <body>
@@ -690,9 +793,9 @@
   <!-- NOTE -->
   <section id="view-note" class="view">
     <div class="filters" id="noteFilters">
-      <button type="button" class="active" data-f="all" onclick="setNoteFilter('all')">Tutti</button>
-      <button type="button" data-f="tappa" onclick="setNoteFilter('tappa')">Tappe</button>
-      <button type="button" data-f="sped" onclick="setNoteFilter('sped')">Spedizioni</button>
+      <button type="button" class="active" data-f="all" onclick="setNoteFilter('all')">Tutti i gruppi</button>
+      <button type="button" data-f="tappa" onclick="setNoteFilter('tappa')">Solo tappe</button>
+      <button type="button" data-f="sped" onclick="setNoteFilter('sped')">Solo spedizioni</button>
     </div>
     <div id="noteList"></div>
   </section>
@@ -764,6 +867,10 @@
         <label>Spedizione</label>
         <input type="text" id="noteSped" placeholder="Cliente stesso o tecnico" list="spedList">
         <datalist id="spedList"></datalist>
+      </div>
+      <div class="field" id="fieldGruppo" hidden>
+        <label>Gruppo interno (opzionale)</label>
+        <input type="text" id="noteGruppo" placeholder="Es. Prima spedizione, Secondo giro…">
       </div>
       <div class="field">
         <label>Data installazione</label>
@@ -969,12 +1076,136 @@
       else badge.classList.remove('show');
     }
 
+    function toggleGroup(id) {
+      const body = document.getElementById(id);
+      if (!body) return;
+      body.hidden = !body.hidden;
+    }
+
+    function groupClientsByTappe(list) {
+      const map = {};
+      list.forEach(function (c) {
+        const t = String(c.tappa || '').trim();
+        if (!t) return;
+        if (!map[t]) map[t] = [];
+        map[t].push(c);
+      });
+      return Object.keys(map).sort(function (a, b) { return a.localeCompare(b, 'it'); }).map(function (k) {
+        return { name: k, clients: map[k].sort(function (a, b) { return String(a.nome || '').localeCompare(String(b.nome || ''), 'it'); }) };
+      });
+    }
+
+    function groupClientsBySpedizioni(list) {
+      // spedizione → (gruppo interno opzionale) → clients
+      const map = {};
+      list.forEach(function (c) {
+        const s = String(c.spedizione || '').trim();
+        if (!s) return;
+        const g = String(c.spedizioneGruppo || '').trim() || '_default';
+        if (!map[s]) map[s] = {};
+        if (!map[s][g]) map[s][g] = [];
+        map[s][g].push(c);
+      });
+      return Object.keys(map).sort(function (a, b) { return a.localeCompare(b, 'it'); }).map(function (sped) {
+        const groups = map[sped];
+        const gKeys = Object.keys(groups).sort(function (a, b) {
+          if (a === '_default') return 1;
+          if (b === '_default') return -1;
+          return a.localeCompare(b, 'it');
+        });
+        const subgroups = gKeys.map(function (gk) {
+          return {
+            name: gk === '_default' ? '' : gk,
+            clients: groups[gk].sort(function (a, b) { return String(a.nome || '').localeCompare(String(b.nome || ''), 'it'); })
+          };
+        });
+        const total = subgroups.reduce(function (n, g) { return n + g.clients.length; }, 0);
+        return { name: sped, subgroups: subgroups, total: total };
+      });
+    }
+
+    function renderGroupBlock(opts) {
+      // opts: { id, type: 'tappa'|'sped', title, sub, count, bodyHtml }
+      const cls = opts.type === 'sped' ? 'sped' : 'tappa';
+      const icon = opts.type === 'sped' ? '📦' : '🚩';
+      return '<div class="group-block ' + cls + '">' +
+        '<div class="group-head" onclick="toggleGroup(\'' + opts.id + '\')">' +
+          '<div class="gh-left">' +
+            '<div class="gh-title">' + icon + ' ' + esc(opts.title) + '</div>' +
+            (opts.sub ? ('<div class="gh-sub">' + esc(opts.sub) + '</div>') : '') +
+          '</div>' +
+          '<span class="group-count">' + opts.count + '</span>' +
+        '</div>' +
+        '<div class="group-body" id="' + opts.id + '">' + opts.bodyHtml + '</div>' +
+      '</div>';
+    }
+
     function renderNote() {
-      let list = E.getBySection('note');
-      if (noteFilter === 'tappa') list = list.filter(function (c) { return !!(c.tappa || '').trim(); });
-      if (noteFilter === 'sped') list = list.filter(function (c) { return !!(c.spedizione || '').trim(); });
-      list.sort(function (a, b) { return String(a.nome || '').localeCompare(String(b.nome || ''), 'it'); });
-      document.getElementById('noteList').innerHTML = renderCardList(list, 'Nessun cliente in Note');
+      const all = E.getBySection('note');
+      const showTappe = noteFilter === 'all' || noteFilter === 'tappa';
+      const showSped = noteFilter === 'all' || noteFilter === 'sped';
+
+      const tappe = groupClientsByTappe(all);
+      const spedizioni = groupClientsBySpedizioni(all);
+      const unassigned = all.filter(function (c) {
+        return !(c.tappa || '').trim() && !(c.spedizione || '').trim();
+      }).sort(function (a, b) { return String(a.nome || '').localeCompare(String(b.nome || ''), 'it'); });
+
+      let html = '';
+
+      if (showTappe) {
+        html += '<div class="type-banner">Tappe</div>';
+        if (!tappe.length) {
+          html += '<div class="empty">Nessuna tappa ancora. Porta un cliente in Note scegliendo una tappa.</div>';
+        } else {
+          tappe.forEach(function (g, i) {
+            const id = 'tg_' + i;
+            html += renderGroupBlock({
+              id: id,
+              type: 'tappa',
+              title: g.name,
+              sub: g.clients.length + (g.clients.length === 1 ? ' cliente' : ' clienti'),
+              count: g.clients.length,
+              bodyHtml: g.clients.map(renderCard).join('')
+            });
+          });
+        }
+      }
+
+      if (showSped) {
+        html += '<div class="type-banner">Spedizioni</div>';
+        if (!spedizioni.length) {
+          html += '<div class="empty">Nessuna spedizione ancora. Porta un cliente in Note scegliendo una spedizione.</div>';
+        } else {
+          spedizioni.forEach(function (s, i) {
+            const id = 'sg_' + i;
+            let body = '';
+            s.subgroups.forEach(function (sub) {
+              if (sub.name) {
+                body += '<div class="subgroup-label">📁 Gruppo ' + esc(sub.name) + ' · ' + sub.clients.length + '</div>';
+              }
+              body += sub.clients.map(renderCard).join('');
+            });
+            const subCount = s.subgroups.filter(function (x) { return !!x.name; }).length;
+            html += renderGroupBlock({
+              id: id,
+              type: 'sped',
+              title: s.name,
+              sub: s.total + ' clienti' + (subCount ? (' · ' + subCount + ' gruppi interni') : ''),
+              count: s.total,
+              bodyHtml: body
+            });
+          });
+        }
+      }
+
+      if (noteFilter === 'all' && unassigned.length) {
+        html += '<div class="type-banner">Senza tappa / spedizione</div>';
+        html += renderCardList(unassigned);
+      }
+
+      if (!html) html = '<div class="empty">Nessun cliente in Note</div>';
+      document.getElementById('noteList').innerHTML = html;
     }
 
     function renderPrep() {
@@ -1082,6 +1313,8 @@
       setNoteMode((c.spedizione || '').trim() ? 'spedizione' : 'tappa');
       document.getElementById('noteTappa').value = c.tappa || '';
       document.getElementById('noteSped').value = c.spedizione || '';
+      const ng = document.getElementById('noteGruppo');
+      if (ng) ng.value = c.spedizioneGruppo || '';
       document.getElementById('noteData').value = c.data || '';
       // datalist tappe/sped
       const tappe = {};
@@ -1107,6 +1340,8 @@
       document.getElementById('modeSped').classList.toggle('on', mode === 'spedizione');
       document.getElementById('fieldTappa').hidden = mode !== 'tappa';
       document.getElementById('fieldSped').hidden = mode !== 'spedizione';
+      const fg = document.getElementById('fieldGruppo');
+      if (fg) fg.hidden = mode !== 'spedizione';
     }
 
     function confirmToNote() {
@@ -1115,14 +1350,16 @@
         const s = document.getElementById('noteSped').value.trim();
         if (!s) { toast('Inserisci una spedizione'); return; }
         opts.spedizione = s;
+        const g = (document.getElementById('noteGruppo') && document.getElementById('noteGruppo').value || '').trim();
+        if (g) opts.gruppo = g;
       } else {
-        const t = document.getElementById('noteTappa').value.trim();
-        if (!t) { toast('Inserisci una tappa'); return; }
-        opts.tappa = t;
+        const tp = document.getElementById('noteTappa').value.trim();
+        if (!tp) { toast('Inserisci una tappa'); return; }
+        opts.tappa = tp;
       }
       E.moveToNote(activeClientId, opts);
       closeNoteSheet();
-      toast('Spostato in Note');
+      toast(noteMode === 'spedizione' ? 'In spedizione' + (opts.gruppo ? ' / ' + opts.gruppo : '') : 'In tappa ' + opts.tappa);
       renderAll();
     }
 
