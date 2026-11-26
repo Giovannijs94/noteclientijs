@@ -2781,11 +2781,14 @@
 
 
     
+
     // ===== Percorso mobile (OSM / Leaflet) =====
     var PERC_CASA = { lat: 40.9569, lng: 16.9186, label: 'Casamassima (BA)' };
     var _percMap = null;
-    var _percLayer = null;
-    var _geoCache = {};
+    var _percRouteLine = null;
+    var _percMarkers = [];
+    var _percCurrentTappa = '';
+    var _percStops = []; // ordered points with client + coords
 
     function haversineKm(a, b) {
       var R = 6371;
@@ -2797,23 +2800,81 @@
       return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
     }
 
-    async function geocodeQuery(q) {
-      q = String(q || '').trim();
-      if (!q) return null;
-      var key = q.toLowerCase();
+    function buildClientGeoQuery(c) {
+      if (!c) return '';
+      // indirizzo completo come in prep/note (via + paese), senza "Assegnato..."
+      var raw = String(c.localita || c.indirizzo || '').trim();
+      raw = raw.replace(/\s*Assegnato[\s\S]*$/i, '').trim();
+      raw = raw.replace(/\s*contratto[\s\S]*$/i, '').trim();
+      var parts = [];
+      if (raw) parts.push(raw);
+      // se manca il paese nella stringa, aggiungi provincia/regione
+      var prov = String(c.provincia || '').trim();
+      var reg = String(c.regione || '').trim();
+      if (prov && raw.toLowerCase().indexOf(prov.toLowerCase()) < 0) parts.push(prov);
+      if (reg && raw.toLowerCase().indexOf(reg.toLowerCase()) < 0) parts.push(reg);
+      parts.push('Italia');
+      return parts.filter(Boolean).join(', ');
+    }
+
+    var _geoCache = {};
+    async function geocodePrecise(query) {
+      query = String(query || '').trim();
+      if (!query) return null;
+      var key = query.toLowerCase();
       if (_geoCache[key]) return _geoCache[key];
-      try {
-        var url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=it&q=' + encodeURIComponent(q);
-        var res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-        var arr = await res.json();
-        if (arr && arr[0]) {
-          var pt = { lat: parseFloat(arr[0].lat), lng: parseFloat(arr[0].lon), label: arr[0].display_name };
-          _geoCache[key] = pt;
-          return pt;
-        }
-      } catch (e) { console.warn(e); }
+
+      // 1) ricerca strutturata preferendo indirizzi
+      var attempts = [
+        { q: query, street: '', city: '' },
+      ];
+      // se sembra "via X, Citta" prova anche split
+      var m = query.match(/^(.+?),\s*([^,]+?)(?:\s*\([A-Z]{2}\))?,\s*/i);
+      if (m) {
+        attempts.unshift({ q: query, street: m[1].trim(), city: m[2].trim() });
+      }
+
+      for (var ai = 0; ai < attempts.length; ai++) {
+        try {
+          var params = new URLSearchParams();
+          params.set('format', 'json');
+          params.set('limit', '3');
+          params.set('addressdetails', '1');
+          params.set('countrycodes', 'it');
+          if (attempts[ai].street && attempts[ai].city) {
+            params.set('street', attempts[ai].street);
+            params.set('city', attempts[ai].city);
+          } else {
+            params.set('q', attempts[ai].q);
+          }
+          var res = await fetch('https://nominatim.openstreetmap.org/search?' + params.toString(), {
+            headers: { 'Accept': 'application/json' }
+          });
+          var arr = await res.json();
+          if (arr && arr.length) {
+            // preferisci risultato con road/house_number
+            var best = arr[0];
+            for (var i = 0; i < arr.length; i++) {
+              var ad = arr[i].address || {};
+              if (ad.road || ad.pedestrian || ad.house_number) { best = arr[i]; break; }
+            }
+            var pt = {
+              lat: parseFloat(best.lat),
+              lng: parseFloat(best.lon),
+              label: best.display_name,
+              precision: (best.address && (best.address.house_number || best.address.road)) ? 'street' : 'place'
+            };
+            _geoCache[key] = pt;
+            return pt;
+          }
+        } catch (e) { console.warn(e); }
+        // nominatim rate limit gentile
+        await new Promise(function (r) { setTimeout(r, 350); });
+      }
       return null;
     }
+
+    async function geocodeQuery(q) { return geocodePrecise(q); }
 
     function resolveClientOrPlace(text) {
       text = String(text || '').trim();
@@ -2826,24 +2887,22 @@
           String(c.nome || '').toLowerCase().indexOf(low) >= 0;
       });
       if (hit) {
-        var addr = E.cleanAddress(hit.localita || '') || hit.localita || hit.nome;
-        var q = [addr, hit.provincia, hit.regione, 'Italia'].filter(Boolean).join(', ');
-        return geocodeQuery(q).then(function (pt) {
-          if (pt) return { lat: pt.lat, lng: pt.lng, label: hit.nome, client: hit };
+        return geocodePrecise(buildClientGeoQuery(hit)).then(function (pt) {
+          if (pt) return { lat: pt.lat, lng: pt.lng, label: hit.nome, client: hit, precision: pt.precision };
           return null;
         });
       }
-      return geocodeQuery(text);
+      return geocodePrecise(text);
     }
 
     function getNoteTappeGroups() {
       var list = E.getBySection('note') || [];
       var map = {};
       list.forEach(function (c) {
-        var t = String(c.tappa || '').trim();
-        if (!t) return;
-        if (!map[t]) map[t] = [];
-        map[t].push(c);
+        var tp = String(c.tappa || '').trim();
+        if (!tp) return;
+        if (!map[tp]) map[tp] = [];
+        map[tp].push(c);
       });
       return Object.keys(map).sort(function (a, b) { return a.localeCompare(b, 'it'); }).map(function (name) {
         return { name: name, clients: map[name] };
@@ -2884,16 +2943,17 @@
 
     function percorsoBackList() {
       destroyPercMap();
+      _percStops = [];
+      _percCurrentTappa = '';
       document.getElementById('percorsoDetail').hidden = true;
       document.getElementById('percorsoTappeList').hidden = false;
     }
 
     function destroyPercMap() {
-      try {
-        if (_percMap) { _percMap.remove(); }
-      } catch (e) {}
+      try { if (_percMap) _percMap.remove(); } catch (e) {}
       _percMap = null;
-      _percLayer = null;
+      _percRouteLine = null;
+      _percMarkers = [];
     }
 
     function nearestOrder(start, points) {
@@ -2913,91 +2973,216 @@
       return ordered;
     }
 
-    async function percorsoOpenTappa(name) {
-      var groups = getNoteTappeGroups();
-      var g = groups.find(function (x) { return x.name === name; });
-      if (!g) return;
-      document.getElementById('percorsoTappeList').hidden = true;
-      document.getElementById('percorsoDetail').hidden = false;
-      document.getElementById('percorsoDetailTitle').textContent = name;
-      document.getElementById('percorsoRouteMeta').textContent = 'Calcolo posizioni…';
-      document.getElementById('percorsoStops').innerHTML = '';
-      destroyPercMap();
-      toast('Calcolo percorso…');
-
-      var points = [];
-      for (var i = 0; i < g.clients.length; i++) {
-        var c = g.clients[i];
-        var addr = E.cleanAddress(c.localita || '') || c.localita || '';
-        var q = [addr, c.provincia, c.regione, 'Italia'].filter(Boolean).join(', ');
-        var pt = await geocodeQuery(q);
-        if (!pt) pt = { lat: PERC_CASA.lat + 0.02 * (i + 1), lng: PERC_CASA.lng + 0.02 * (i + 1), label: addr || c.nome, approx: true };
-        points.push({ lat: pt.lat, lng: pt.lng, client: c, label: c.nome, addr: addr });
-      }
-      var ordered = nearestOrder(PERC_CASA, points);
-      var total = 0;
-      var prev = PERC_CASA;
+    function totalKmChain(ordered) {
+      var total = 0, prev = PERC_CASA;
       ordered.forEach(function (p) {
         total += haversineKm(prev, p);
         prev = p;
       });
+      return total;
+    }
 
-      document.getElementById('percorsoRouteMeta').textContent =
-        ordered.length + ' fermate · ~' + total.toFixed(1) + ' km (ordine ottimizzato da Casamassima)';
-
-      var html = '<li><div class="num start">🏠</div><div class="body"><strong>Casamassima (BA)</strong><span>Partenza</span></div></li>';
-      ordered.forEach(function (p, idx) {
-        html += '<li><div class="num">' + (idx + 1) + '</div><div class="body"><strong>' +
-          esc(p.client.nome || '') + '</strong><span>' + esc(p.addr || '') +
+    function renderStopsList() {
+      var html = '<li><div class="num start">🏠</div><div class="body"><strong>Casamassima (BA)</strong><span>Partenza fissa</span></div></li>';
+      _percStops.forEach(function (p, idx) {
+        var prec = p.precision === 'street' ? ' · 📍 preciso' : (p.approx ? ' · approx' : '');
+        html += '<li>' +
+          '<div class="num">' + (idx + 1) + '</div>' +
+          '<div class="body" style="flex:1;">' +
+          '<strong>' + esc(p.client.nome || '') + '</strong>' +
+          '<span>' + esc(p.addr || '') + prec +
           (p.client.scadenza ? (' · Scad. ' + esc(E.formatScadenza(p.client.scadenza))) : '') +
-          '</span></div></li>';
+          '</span></div>' +
+          '<div style="display:flex;flex-direction:column;gap:4px;">' +
+          '<button type="button" class="ghost" style="min-height:32px;padding:0 10px;font-size:0.75rem;" onclick="percorsoMoveStop(' + idx + ',-1)">↑</button>' +
+          '<button type="button" class="ghost" style="min-height:32px;padding:0 10px;font-size:0.75rem;" onclick="percorsoMoveStop(' + idx + ',1)">↓</button>' +
+          '</div></li>';
       });
       document.getElementById('percorsoStops').innerHTML = html;
+      document.getElementById('percorsoRouteMeta').textContent =
+        _percStops.length + ' fermate · ~' + totalKmChain(_percStops).toFixed(1) + ' km in linea · usa «Ricalcola percorso» per strade reali';
+    }
 
-      setTimeout(function () {
-        if (typeof L === 'undefined') {
-          document.getElementById('percorsoRouteMeta').textContent += ' · Mappa non disponibile';
-          return;
-        }
-        destroyPercMap();
+    function percorsoMoveStop(idx, dir) {
+      var j = idx + dir;
+      if (j < 0 || j >= _percStops.length) return;
+      var tmp = _percStops[idx];
+      _percStops[idx] = _percStops[j];
+      _percStops[j] = tmp;
+      renderStopsList();
+      drawPercorsoMap(false);
+    }
+
+    async function fetchOsrmRoute(points) {
+      // points: [{lat,lng}, ...] including start
+      if (!points || points.length < 2) return null;
+      try {
+        var coords = points.map(function (p) { return p.lng + ',' + p.lat; }).join(';');
+        var url = 'https://router.project-osrm.org/route/v1/driving/' + coords + '?overview=full&geometries=geojson';
+        var res = await fetch(url);
+        var data = await res.json();
+        if (data && data.routes && data.routes[0]) return data.routes[0];
+      } catch (e) { console.warn(e); }
+      return null;
+    }
+
+    async function drawPercorsoMap(detailed) {
+      if (typeof L === 'undefined') return;
+      var mapEl = document.getElementById('percorsoMap');
+      if (!mapEl) return;
+
+      if (!_percMap) {
         _percMap = L.map('percorsoMap', { zoomControl: true }).setView([PERC_CASA.lat, PERC_CASA.lng], 9);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
           attribution: '&copy; OpenStreetMap'
         }).addTo(_percMap);
-        var latlngs = [[PERC_CASA.lat, PERC_CASA.lng]];
-        L.marker([PERC_CASA.lat, PERC_CASA.lng]).addTo(_percMap).bindPopup('🏠 Casamassima');
-        ordered.forEach(function (p, idx) {
-          latlngs.push([p.lat, p.lng]);
-          L.marker([p.lat, p.lng]).addTo(_percMap).bindPopup((idx + 1) + '. ' + (p.client.nome || ''));
+      }
+      // clear old layers
+      _percMarkers.forEach(function (m) { try { _percMap.removeLayer(m); } catch (e) {} });
+      _percMarkers = [];
+      if (_percRouteLine) {
+        try { _percMap.removeLayer(_percRouteLine); } catch (e) {}
+        _percRouteLine = null;
+      }
+
+      var chain = [PERC_CASA].concat(_percStops);
+      var homeIcon = L.circleMarker([PERC_CASA.lat, PERC_CASA.lng], {
+        radius: 9, color: '#15803d', fillColor: '#22c55e', fillOpacity: 0.95, weight: 2
+      }).addTo(_percMap).bindPopup('🏠 Casamassima (partenza)');
+      _percMarkers.push(homeIcon);
+
+      _percStops.forEach(function (p, idx) {
+        var mk = L.circleMarker([p.lat, p.lng], {
+          radius: 8,
+          color: '#9d174d',
+          fillColor: p.precision === 'street' ? '#f472b6' : '#fb7185',
+          fillOpacity: 0.95,
+          weight: 2
+        }).addTo(_percMap).bindPopup(
+          '<strong>' + (idx + 1) + '. ' + esc(p.client.nome || '') + '</strong><br>' +
+          esc(p.addr || '') +
+          (p.precision === 'street' ? '<br><em>Posizione precisa</em>' : '')
+        );
+        _percMarkers.push(mk);
+      });
+
+      var latlngs = chain.map(function (p) { return [p.lat, p.lng]; });
+
+      if (detailed) {
+        document.getElementById('percorsoRouteMeta').textContent = 'Calcolo percorso stradale dettagliato…';
+        var route = await fetchOsrmRoute(chain);
+        if (route && route.geometry && route.geometry.coordinates) {
+          var geo = route.geometry.coordinates.map(function (c) { return [c[1], c[0]]; });
+          _percRouteLine = L.polyline(geo, { color: '#9d174d', weight: 5, opacity: 0.9 }).addTo(_percMap);
+          var km = (route.distance || 0) / 1000;
+          var min = Math.round((route.duration || 0) / 60);
+          document.getElementById('percorsoRouteMeta').textContent =
+            _percStops.length + ' fermate · ' + km.toFixed(1) + ' km su strada · ~' + min + ' min';
+          _percMap.fitBounds(_percRouteLine.getBounds().pad(0.18));
+          return;
+        }
+      }
+
+      _percRouteLine = L.polyline(latlngs, { color: '#9d174d', weight: 4, opacity: 0.75, dashArray: detailed ? null : '6 8' }).addTo(_percMap);
+      try { _percMap.fitBounds(_percRouteLine.getBounds().pad(0.2)); } catch (e) {}
+      document.getElementById('percorsoRouteMeta').textContent =
+        _percStops.length + ' fermate · ~' + totalKmChain(_percStops).toFixed(1) + ' km (linea) · tocca «Ricalcola percorso» per le strade';
+    }
+
+    async function percorsoOpenTappa(name) {
+      var groups = getNoteTappeGroups();
+      var g = groups.find(function (x) { return x.name === name; });
+      if (!g) return;
+      _percCurrentTappa = name;
+      document.getElementById('percorsoTappeList').hidden = true;
+      document.getElementById('percorsoDetail').hidden = false;
+      document.getElementById('percorsoDetailTitle').textContent = name;
+      document.getElementById('percorsoRouteMeta').textContent = 'Geocoding preciso indirizzi…';
+      document.getElementById('percorsoStops').innerHTML = '';
+      destroyPercMap();
+      toast('Calcolo posizioni precise…');
+
+      var points = [];
+      for (var i = 0; i < g.clients.length; i++) {
+        var c = g.clients[i];
+        var q = buildClientGeoQuery(c);
+        var pt = await geocodePrecise(q);
+        if (!pt) {
+          // fallback: solo paese/provincia
+          var fb = [c.provincia, c.regione, 'Italia'].filter(Boolean).join(', ');
+          pt = await geocodePrecise(fb);
+        }
+        if (!pt) {
+          pt = { lat: PERC_CASA.lat + 0.015 * (i + 1), lng: PERC_CASA.lng + 0.015 * (i + 1), approx: true, label: q };
+        }
+        points.push({
+          lat: pt.lat,
+          lng: pt.lng,
+          client: c,
+          label: c.nome,
+          addr: E.cleanAddress(c.localita || '') || c.localita || q,
+          precision: pt.precision || (pt.approx ? 'approx' : 'place'),
+          approx: !!pt.approx
         });
-        var line = L.polyline(latlngs, { color: '#9d174d', weight: 4, opacity: 0.85 }).addTo(_percMap);
-        _percMap.fitBounds(line.getBounds().pad(0.2));
-      }, 120);
+        await new Promise(function (r) { setTimeout(r, 300); });
+      }
+
+      _percStops = nearestOrder(PERC_CASA, points);
+      renderStopsList();
+
+      // toolbar ricalcola
+      var meta = document.getElementById('percorsoRouteMeta');
+      if (meta && !document.getElementById('percorsoRecalcBar')) {
+        meta.insertAdjacentHTML('afterend',
+          '<div id="percorsoRecalcBar" class="row" style="gap:8px;margin:8px 0 12px;display:flex;">' +
+          '<button type="button" onclick="percorsoRecalcRoad()" style="flex:1;min-height:44px;border:none;border-radius:12px;background:var(--primary);color:#fff;font-weight:800;">🛣️ Percorso dettagliato</button>' +
+          '<button type="button" onclick="percorsoAutoOrder()" style="flex:1;min-height:44px;border:none;border-radius:12px;background:var(--primary-soft);color:var(--primary);font-weight:800;">✨ Auto ordine</button>' +
+          '</div>');
+      }
+
+      await drawPercorsoMap(false);
+    }
+
+    function percorsoAutoOrder() {
+      if (!_percStops.length) return;
+      _percStops = nearestOrder(PERC_CASA, _percStops.slice());
+      renderStopsList();
+      drawPercorsoMap(false);
+      toast('Ordine ricalcolato');
+    }
+
+    async function percorsoRecalcRoad() {
+      if (!_percStops.length) return;
+      toast('Percorso stradale…');
+      await drawPercorsoMap(true);
     }
 
     async function percorsoFind() {
       var q = (document.getElementById('percFindInput') || {}).value || '';
       var out = document.getElementById('percFindResult');
       if (!String(q).trim()) { out.textContent = 'Inserisci un nome o indirizzo'; return; }
-      out.textContent = 'Cerco…';
+      out.textContent = 'Cerco in modo preciso…';
       var pt = await resolveClientOrPlace(q);
       if (!pt) { out.textContent = 'Nessun risultato'; return; }
-      out.textContent = pt.label || q;
+      out.textContent = (pt.label || q) + (pt.precision === 'street' ? ' · preciso' : '');
       document.getElementById('percorsoTappeList').hidden = true;
       document.getElementById('percorsoDetail').hidden = false;
       document.getElementById('percorsoDetailTitle').textContent = 'Ricerca';
       document.getElementById('percorsoRouteMeta').textContent = pt.label || '';
       document.getElementById('percorsoStops').innerHTML = '';
+      _percStops = [];
       setTimeout(function () {
         if (typeof L === 'undefined') return;
         destroyPercMap();
-        _percMap = L.map('percorsoMap').setView([pt.lat, pt.lng], 13);
+        _percMap = L.map('percorsoMap').setView([pt.lat, pt.lng], 16);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
           attribution: '&copy; OpenStreetMap'
         }).addTo(_percMap);
-        L.marker([pt.lat, pt.lng]).addTo(_percMap).bindPopup(pt.label || q).openPopup();
+        L.circleMarker([pt.lat, pt.lng], {
+          radius: 9, color: '#9d174d', fillColor: '#f472b6', fillOpacity: 1, weight: 2
+        }).addTo(_percMap).bindPopup(pt.label || q).openPopup();
       }, 100);
     }
 
@@ -3014,17 +3199,24 @@
         out.textContent = 'Compila entrambi i campi';
         return;
       }
-      out.textContent = 'Calcolo…';
+      out.textContent = 'Calcolo preciso…';
       var pa = await resolveClientOrPlace(a);
       var pb = await resolveClientOrPlace(b);
       if (!pa || !pb) {
         out.textContent = 'Impossibile geolocalizzare uno dei due punti';
         return;
       }
-      var km = haversineKm(pa, pb);
-      out.textContent = '~' + km.toFixed(1) + ' km  ·  ' + (pa.label || a) + ' → ' + (pb.label || b);
+      // prova anche distanza stradale
+      var route = await fetchOsrmRoute([pa, pb]);
+      var line = haversineKm(pa, pb);
+      if (route) {
+        out.textContent = (route.distance / 1000).toFixed(1) + ' km su strada (~' +
+          Math.round(route.duration / 60) + ' min) · linea ' + line.toFixed(1) + ' km\n' +
+          (pa.label || a) + ' → ' + (pb.label || b);
+      } else {
+        out.textContent = '~' + line.toFixed(1) + ' km  ·  ' + (pa.label || a) + ' → ' + (pb.label || b);
+      }
     }
-
 
     function finishMobileIntro() {
       const el = document.getElementById('mobileIntro');
