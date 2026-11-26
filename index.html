@@ -8127,6 +8127,7 @@
         </details>
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">
             <button type="button" class="btn btn-primary" onclick="saveSupabaseConfigDesktop()">💾 Salva config</button>
+            <button type="button" class="btn" onclick="supabaseTestDesktop()">🔌 Test connessione</button>
             <button type="button" class="btn" style="background:#0f172a;color:#fff;border:none;" onclick="supabasePushDesktop()">⬆️ Carica su cloud</button>
             <button type="button" class="btn" style="background:#2563eb;color:#fff;border:none;" onclick="supabasePullDesktop()">⬇️ Scarica da cloud</button>
             <button type="button" class="btn" onclick="clearSupabaseConfigDesktop()">Rimuovi config</button>
@@ -11304,6 +11305,23 @@
             }
         } catch (e) {}
         return payload;
+    };
+
+    window.supabaseTestDesktop = async function() {
+        if (typeof NoteClientiSupabase === 'undefined') { alert('Modulo cloud non caricato. Premi Ctrl+F5.'); return; }
+        try {
+            try {
+                NoteClientiSupabase.saveConfig({
+                    url: (document.getElementById('sbUrlInput') || {}).value || '',
+                    key: (document.getElementById('sbKeyInput') || {}).value || '',
+                    rowId: (document.getElementById('sbRowInput') || {}).value || 'main'
+                });
+            } catch (e) { alert(e.message || e); return; }
+            var r = await NoteClientiSupabase.testConnection();
+            alert(r.message + '\n\nProject: ' + r.projectUrl + '\nAPI: ' + r.url);
+        } catch (err) {
+            alert(err && err.message ? err.message : String(err));
+        }
     };
     window.supabasePushDesktop = async function() {
         if (typeof NoteClientiSupabase === 'undefined') {

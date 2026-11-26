@@ -1,6 +1,6 @@
 /**
  * Sync Note Clienti ↔ Supabase (progetto privato dell'utente)
- * Tabella attesa: note_clienti_sync (id text PK, data jsonb, updated_at timestamptz)
+ * Tabella: public.note_clienti_sync (id text PK, data jsonb, updated_at timestamptz)
  */
 (function (global) {
   'use strict';
@@ -11,12 +11,29 @@
     rowId: 'note_clienti_supabase_row'
   };
 
+  function normalizeUrl(raw) {
+    var u = String(raw || '').trim();
+    u = u.replace(/[\r\n\t]/g, '').replace(/\s+/g, '');
+    u = u.replace(/^['"]|['"]$/g, '');
+    u = u.replace(/\/+$/, '');
+    u = u.replace(/\/rest\/v1.*$/i, '');
+    u = u.replace(/\/+$/, '');
+    if (/supabase\.com\/dashboard/i.test(u)) {
+      throw new Error('URL dashboard non valido. Usa Project URL: https://CODICE.supabase.co');
+    }
+    if (u && !/^https?:\/\//i.test(u)) u = 'https://' + u;
+    return u;
+  }
+
   function loadConfig() {
     try {
+      var url = '';
+      try { url = normalizeUrl(localStorage.getItem(KEYS.url) || ''); }
+      catch (e) { url = String(localStorage.getItem(KEYS.url) || '').replace(/\/+$/, ''); }
       return {
-        url: (localStorage.getItem(KEYS.url) || '').replace(/\/+$/, ''),
-        key: localStorage.getItem(KEYS.key) || '',
-        rowId: localStorage.getItem(KEYS.rowId) || 'main'
+        url: url,
+        key: String(localStorage.getItem(KEYS.key) || '').trim().replace(/^['"]|['"]$/g, ''),
+        rowId: (localStorage.getItem(KEYS.rowId) || 'main').trim() || 'main'
       };
     } catch (e) {
       return { url: '', key: '', rowId: 'main' };
@@ -26,10 +43,12 @@
   function saveConfig(cfg) {
     cfg = cfg || {};
     try {
-      if (cfg.url != null) localStorage.setItem(KEYS.url, String(cfg.url).replace(/\/+$/, ''));
-      if (cfg.key != null) localStorage.setItem(KEYS.key, String(cfg.key));
-      if (cfg.rowId != null) localStorage.setItem(KEYS.rowId, String(cfg.rowId || 'main'));
-    } catch (e) {}
+      if (cfg.url != null) localStorage.setItem(KEYS.url, normalizeUrl(cfg.url));
+      if (cfg.key != null) localStorage.setItem(KEYS.key, String(cfg.key).trim().replace(/^['"]|['"]$/g, ''));
+      if (cfg.rowId != null) localStorage.setItem(KEYS.rowId, String(cfg.rowId || 'main').trim() || 'main');
+    } catch (e) {
+      if (e && e.message) throw e;
+    }
   }
 
   function clearConfig() {
@@ -44,62 +63,123 @@
     return !!(c.url && c.key);
   }
 
-  function headers(cfg) {
-    return {
+  function headers(cfg, prefer) {
+    var h = {
       'apikey': cfg.key,
       'Authorization': 'Bearer ' + cfg.key,
-      'Content-Type': 'application/json',
-      'Prefer': 'return=representation'
+      'Content-Type': 'application/json'
+    };
+    if (prefer) h['Prefer'] = prefer;
+    return h;
+  }
+
+  function tableUrl(cfg) {
+    return normalizeUrl(cfg.url) + '/rest/v1/note_clienti_sync';
+  }
+
+  function friendlyHttpError(status, body, action, requestUrl) {
+    var msg = String(body || '');
+    var base =
+      action + ' fallito (' + status + ')\n' +
+      'URL usato: ' + (requestUrl || '—') + '\n\n';
+    if (status === 404 || /PGRST125|Invalid path/i.test(msg)) {
+      return base +
+        'La API non trova la tabella.\n' +
+        '• Project URL deve essere https://xxxxx.supabase.co\n' +
+        '• In SQL Editor esegui di nuovo lo script completo (con GRANT)\n' +
+        '• Table Editor: verifica che esista note_clienti_sync\n' +
+        '• Settings → API: schema public esposto\n' +
+        'Dettaglio: ' + msg.slice(0, 180);
+    }
+    if (status === 401 || status === 403) {
+      return base + 'Permesso negato. Usa la chiave anon/publishable e le policy/GRANT.\n' + msg.slice(0, 180);
+    }
+    return base + msg.slice(0, 280);
+  }
+
+  async function testConnection() {
+    var cfg = loadConfig();
+    if (!cfg.url || !cfg.key) throw new Error('Configura prima URL e chiave, poi Salva.');
+    var url = tableUrl(cfg) + '?select=id&limit=1';
+    var res = await fetch(url, { method: 'GET', headers: headers(cfg) });
+    var t = '';
+    try { t = await res.text(); } catch (e) {}
+    if (!res.ok) throw new Error(friendlyHttpError(res.status, t, 'Test', url));
+    var rows = [];
+    try { rows = JSON.parse(t); } catch (e) {}
+    return {
+      ok: true,
+      url: url,
+      projectUrl: cfg.url,
+      rows: Array.isArray(rows) ? rows.length : 0,
+      message: 'Connessione OK. Tabella raggiungibile (righe ora: ' + (Array.isArray(rows) ? rows.length : 0) + ').'
     };
   }
 
-  function restBase(cfg) {
-    return cfg.url + '/rest/v1/note_clienti_sync';
-  }
-
-  /**
-   * payload: oggetto completo backup { clients, models, spedizioni, ordini, ... }
-   */
   async function pushPayload(payload) {
     var cfg = loadConfig();
     if (!cfg.url || !cfg.key) throw new Error('Supabase non configurato (URL e chiave anon)');
+
     var body = {
       id: cfg.rowId || 'main',
       data: payload,
       updated_at: new Date().toISOString()
     };
-    var res = await fetch(restBase(cfg) + '?on_conflict=id', {
+
+    var urlUpsert = tableUrl(cfg) + '?on_conflict=id';
+    var res = await fetch(urlUpsert, {
       method: 'POST',
-      headers: Object.assign({}, headers(cfg), {
-        'Prefer': 'resolution=merge-duplicates,return=representation'
-      }),
+      headers: headers(cfg, 'resolution=merge-duplicates,return=representation'),
       body: JSON.stringify(body)
     });
-    if (!res.ok) {
-      var t = '';
-      try { t = await res.text(); } catch (e) {}
-      throw new Error('Upload fallito (' + res.status + '): ' + String(t).slice(0, 240));
+    if (res.ok) {
+      var rows = [];
+      try { rows = await res.json(); } catch (e) {}
+      return (rows && rows[0]) || body;
     }
-    var rows = [];
-    try { rows = await res.json(); } catch (e) {}
-    return (rows && rows[0]) || body;
+    var errText = '';
+    try { errText = await res.text(); } catch (e) {}
+
+    var urlInsert = tableUrl(cfg);
+    var res2 = await fetch(urlInsert, {
+      method: 'POST',
+      headers: headers(cfg, 'return=representation'),
+      body: JSON.stringify(body)
+    });
+    if (res2.ok) {
+      var rows2 = [];
+      try { rows2 = await res2.json(); } catch (e) {}
+      return (rows2 && rows2[0]) || body;
+    }
+
+    var urlPatch = tableUrl(cfg) + '?id=eq.' + encodeURIComponent(cfg.rowId || 'main');
+    var res3 = await fetch(urlPatch, {
+      method: 'PATCH',
+      headers: headers(cfg, 'return=representation'),
+      body: JSON.stringify({ data: payload, updated_at: body.updated_at })
+    });
+    if (res3.ok) {
+      var rows3 = [];
+      try { rows3 = await res3.json(); } catch (e) {}
+      return (rows3 && rows3[0]) || body;
+    }
+    var t3 = '';
+    try { t3 = await res3.text(); } catch (e) {}
+    throw new Error(friendlyHttpError(res3.status || res.status, t3 || errText, 'Upload', urlUpsert));
   }
 
   async function pullPayload() {
     var cfg = loadConfig();
     if (!cfg.url || !cfg.key) throw new Error('Supabase non configurato (URL e chiave anon)');
-    var q = restBase(cfg) + '?id=eq.' + encodeURIComponent(cfg.rowId || 'main') + '&select=id,data,updated_at';
-    var res = await fetch(q, {
-      method: 'GET',
-      headers: headers(cfg)
-    });
+    var q = tableUrl(cfg) + '?id=eq.' + encodeURIComponent(cfg.rowId || 'main') + '&select=id,data,updated_at';
+    var res = await fetch(q, { method: 'GET', headers: headers(cfg) });
     if (!res.ok) {
       var t = '';
       try { t = await res.text(); } catch (e) {}
-      throw new Error('Download fallito (' + res.status + '): ' + String(t).slice(0, 240));
+      throw new Error(friendlyHttpError(res.status, t, 'Download', q));
     }
     var rows = await res.json();
-    if (!rows || !rows.length) throw new Error('Nessun dato sul cloud (carica prima un backup da un dispositivo)');
+    if (!rows || !rows.length) throw new Error('Nessun dato sul cloud (carica prima da un dispositivo). La tabella può essere vuota.');
     return rows[0];
   }
 
@@ -110,16 +190,21 @@
     isConfigured: isConfigured,
     pushPayload: pushPayload,
     pullPayload: pullPayload,
+    testConnection: testConnection,
+    normalizeUrl: normalizeUrl,
     setupSql:
-      '-- Esegui nell\'SQL Editor di Supabase:\n' +
-      'create table if not exists note_clienti_sync (\n' +
+      '-- 1) SQL Editor → New query → Run TUTTO questo script\n' +
+      'create table if not exists public.note_clienti_sync (\n' +
       '  id text primary key,\n' +
       '  data jsonb not null,\n' +
       '  updated_at timestamptz default now()\n' +
-      ');\n' +
-      'alter table note_clienti_sync enable row level security;\n' +
-      '-- Policy semplice per uso interno (solo chi ha URL+chiave del TUO progetto):\n' +
-      'create policy \"note_clienti_sync_all\" on note_clienti_sync\n' +
-      '  for all using (true) with check (true);\n'
+      ');\n\n' +
+      'alter table public.note_clienti_sync enable row level security;\n\n' +
+      'drop policy if exists \"note_clienti_sync_all\" on public.note_clienti_sync;\n' +
+      'create policy \"note_clienti_sync_all\" on public.note_clienti_sync\n' +
+      '  for all to anon, authenticated using (true) with check (true);\n\n' +
+      'grant usage on schema public to anon, authenticated;\n' +
+      'grant select, insert, update, delete on table public.note_clienti_sync to anon, authenticated;\n\n' +
+      'notify pgrst, \'reload schema\';\n'
   };
 })(typeof window !== 'undefined' ? window : this);
