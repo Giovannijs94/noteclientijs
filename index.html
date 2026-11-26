@@ -8122,7 +8122,7 @@
         </div>
         <label style="display:flex;align-items:center;gap:10px;margin:10px 0;font-size:0.9rem;cursor:pointer;">
             <input type="checkbox" id="sbAutoSync" style="width:18px;height:18px;">
-            <span><strong>Aggiornamento automatico</strong> — carica sul cloud dopo ogni modifica (~4 sec) e <strong>scarica in automatico</strong> all’apertura se il cloud è più recente.</span>
+            <span><strong>Aggiornamento automatico</strong> — carica dopo ogni modifica (~4 sec); scarica all’apertura, quando torni sull’app e ogni ~2 minuti se il cloud è più recente.</span>
         </label>
         <details style="margin:10px 0;font-size:0.78rem;color:#64748b;">
             <summary style="cursor:pointer;font-weight:700;color:#334155;">SQL da eseguire nel progetto</summary>
@@ -11400,36 +11400,49 @@
                 return typeof buildDesktopCloudPayload === 'function' ? buildDesktopCloudPayload() : null;
             });
             // all'avvio: se auto e cloud più nuovo, chiedi download
+            function applyCloudDataDesktop(data) {
+                if (!data) return;
+                if (data.clients) {
+                    clients = data.clients;
+                    localStorage.setItem('note_clienti_data', JSON.stringify(clients));
+                }
+                if (data.models || data.savedModels) {
+                    savedModels = data.models || data.savedModels;
+                    localStorage.setItem('note_clienti_modelli', JSON.stringify(savedModels));
+                }
+                if (data.spedizioni || data.savedSpedizioni) {
+                    savedSpedizioni = data.spedizioni || data.savedSpedizioni;
+                    localStorage.setItem('note_clienti_spedizioni', JSON.stringify(savedSpedizioni));
+                }
+                if (data.ordini) {
+                    try { ordini = data.ordini; } catch (e) {}
+                    localStorage.setItem('note_clienti_ordini', JSON.stringify(data.ordini));
+                }
+                try { if (typeof saveToLocalStorage === 'function') saveToLocalStorage(); } catch (e) {}
+            }
             setTimeout(function() {
                 try {
                     if (!NoteClientiSupabase.isAutoEnabled()) return;
                     NoteClientiSupabase.autoPullIfNewer(function(data) {
-                        if (!data) return;
-                        if (data.clients) {
-                            clients = data.clients;
-                            localStorage.setItem('note_clienti_data', JSON.stringify(clients));
-                        }
-                        if (data.models || data.savedModels) {
-                            savedModels = data.models || data.savedModels;
-                            localStorage.setItem('note_clienti_modelli', JSON.stringify(savedModels));
-                        }
-                        if (data.spedizioni || data.savedSpedizioni) {
-                            savedSpedizioni = data.spedizioni || data.savedSpedizioni;
-                            localStorage.setItem('note_clienti_spedizioni', JSON.stringify(savedSpedizioni));
-                        }
-                        if (data.ordini) {
-                            try { ordini = data.ordini; } catch (e) {}
-                            localStorage.setItem('note_clienti_ordini', JSON.stringify(data.ordini));
-                        }
-                        try { if (typeof saveToLocalStorage === 'function') saveToLocalStorage(); } catch (e) {}
+                        applyCloudDataDesktop(data);
                         try {
                             if (typeof showToast === 'function') showToast('Cloud: dati aggiornati automaticamente');
-                            else console.log('Cloud: dati aggiornati automaticamente');
                         } catch (e) {}
                         location.reload();
                     }, { silent: true });
                 } catch (e) {}
             }, 1800);
+            // durante l'uso: focus + ogni 2 minuti
+            try {
+                NoteClientiSupabase.startAutoSyncLoop(function(data) {
+                    applyCloudDataDesktop(data);
+                    try {
+                        if (typeof showToast === 'function') showToast('Cloud: aggiornato durante l\'uso');
+                        else alert('Cloud: dati aggiornati');
+                    } catch (e) {}
+                    location.reload();
+                }, { intervalMs: 120000 });
+            } catch (e) {}
         }
         if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire);
         else wire();

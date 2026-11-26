@@ -291,6 +291,61 @@
     }
   }
 
+
+  var _liveTimer = null;
+  var _liveApplyFn = null;
+  var _liveRunning = false;
+
+  /**
+   * Durante l'uso: controlla il cloud a intervalli e quando la finestra torna in primo piano.
+   * applyFn(data) applica i dati; onApplied() callback opzionale dopo apply.
+   */
+  function startAutoSyncLoop(applyFn, opts) {
+    opts = opts || {};
+    _liveApplyFn = typeof applyFn === 'function' ? applyFn : null;
+    var intervalMs = typeof opts.intervalMs === 'number' ? opts.intervalMs : 120000; // 2 min
+
+    function tick(reason) {
+      if (!isConfigured() || !isAutoEnabled()) return;
+      if (!_liveApplyFn) return;
+      if (_liveRunning) return;
+      _liveRunning = true;
+      autoPullIfNewer(function (data) {
+        try {
+          _liveApplyFn(data);
+          if (typeof opts.onApplied === 'function') opts.onApplied(data);
+        } catch (e) { console.warn(e); }
+      }, { silent: true }).then(function (r) {
+        if (r && r.ok) console.log('[auto-sync live]', reason || 'tick', r.updated_at);
+      }).finally(function () {
+        _liveRunning = false;
+      });
+    }
+
+    if (_liveTimer) clearInterval(_liveTimer);
+    _liveTimer = setInterval(function () { tick('interval'); }, intervalMs);
+
+    function onVis() {
+      if (document.visibilityState === 'visible') tick('visible');
+    }
+    function onFocus() { tick('focus'); }
+
+    try {
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('focus', onFocus);
+    } catch (e) {}
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('focus', onFocus);
+
+    // primo controllo dopo pochi secondi (oltre a quello all'avvio)
+    setTimeout(function () { tick('startup'); }, 8000);
+
+    return function stop() {
+      if (_liveTimer) clearInterval(_liveTimer);
+      _liveTimer = null;
+    };
+  }
+
   global.NoteClientiSupabase = {
     loadConfig: loadConfig,
     saveConfig: saveConfig,
@@ -305,6 +360,7 @@
     scheduleAutoPush: scheduleAutoPush,
     runAutoPush: runAutoPush,
     autoPullIfNewer: autoPullIfNewer,
+    startAutoSyncLoop: startAutoSyncLoop,
     setupSql:
       '-- SQL Editor → Run\n' +
       'create table if not exists public.note_clienti_sync (\n' +
