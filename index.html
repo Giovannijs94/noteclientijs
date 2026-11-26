@@ -7274,6 +7274,44 @@
             min-height: 44px;
         }
     </style>
+
+<style id="desktop-dark-theme">
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --nc-bg: #0b1220;
+  --nc-card: #111827;
+  --nc-text: #f1f5f9;
+  --nc-muted: #94a3b8;
+  --nc-border: #1f2937;
+}
+html[data-theme="dark"] body {
+  background: #0b1220 !important;
+  color: #f1f5f9 !important;
+}
+html[data-theme="dark"] .app-header,
+html[data-theme="dark"] header,
+html[data-theme="dark"] .sidebar,
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .modal,
+html[data-theme="dark"] .settings-menu-panel,
+html[data-theme="dark"] .client-card,
+html[data-theme="dark"] .prep-card,
+html[data-theme="dark"] table {
+  background: #111827 !important;
+  color: #f1f5f9 !important;
+  border-color: #1f2937 !important;
+}
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+  background: #0f172a !important;
+  color: #f1f5f9 !important;
+  border-color: #334155 !important;
+}
+html[data-theme="dark"] .btn { border-color: #334155; }
+html[data-theme="dark"] a { color: #f9a8d4; }
+</style>
 </head>
 <body class="locked">
 
@@ -7478,6 +7516,9 @@
                     </button>
                     <button type="button" class="settings-menu-item" onclick="openSupabaseSyncModal(); closeSettingsMenu();">
                         <span class="icon">☁️</span> Cloud Supabase
+                    </button>
+                    <button type="button" class="settings-menu-item" onclick="toggleDesktopTheme(); closeSettingsMenu();">
+                        <span class="icon">🌓</span> Tema chiaro / scuro
                     </button>
                     <button type="button" class="settings-menu-item" onclick="supabasePushDesktop(); closeSettingsMenu();">
                         <span class="icon">⬆️</span> Carica su cloud
@@ -11803,6 +11844,31 @@
         }
         if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire);
         else wire();
+    })();
+
+
+    (function initDesktopTheme() {
+        function preferred() {
+            try {
+                var s = localStorage.getItem('note_clienti_theme');
+                if (s === 'dark' || s === 'light') return s;
+            } catch (e) {}
+            try {
+                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
+            } catch (e) {}
+            return 'light';
+        }
+        function apply(th) {
+            document.documentElement.setAttribute('data-theme', th === 'dark' ? 'dark' : 'light');
+            try { localStorage.setItem('note_clienti_theme', th === 'dark' ? 'dark' : 'light'); } catch (e) {}
+            var meta = document.querySelector('meta[name="theme-color"]');
+            if (meta) meta.setAttribute('content', th === 'dark' ? '#0b1220' : '#2f0f26');
+        }
+        window.toggleDesktopTheme = function() {
+            var cur = document.documentElement.getAttribute('data-theme') || preferred();
+            apply(cur === 'dark' ? 'light' : 'dark');
+        };
+        apply(preferred());
     })();
 
     window.exportBackup = function() {

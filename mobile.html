@@ -25,13 +25,148 @@
       --ok: #16a34a;
       --warn: #ea580c;
       --danger: #b91c1c;
-      --tab-h: 60px;
+      --tab-h: 72px;
       --safe-b: env(safe-area-inset-bottom, 0px);
       --safe-t: env(safe-area-inset-top, 0px);
       --radius: 14px;
+      --topbar-bg: rgba(255,255,255,0.92);
+      --tabbar-bg: rgba(255,255,255,0.97);
+      --sheet-bg: #ffffff;
+      --shadow: rgba(15,23,42,0.08);
+      --detail-bg: #f8fafc;
+      color-scheme: light;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
+    html[data-theme="dark"] {
+      --primary: #f472b6;
+      --primary-dark: #f9a8d4;
+      --primary-soft: rgba(244,114,182,0.14);
+      --bg: #0b1220;
+      --card: #111827;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --border: #1f2937;
+      --ok: #4ade80;
+      --warn: #fb923c;
+      --danger: #f87171;
+      --topbar-bg: rgba(15,23,42,0.92);
+      --tabbar-bg: rgba(15,23,42,0.96);
+      --sheet-bg: #111827;
+      --shadow: rgba(0,0,0,0.45);
+      --detail-bg: #0f172a;
+      color-scheme: dark;
+    }
+    html[data-theme="dark"] body { background: var(--bg); color: var(--text); }
+    html[data-theme="dark"] .topbar {
+      background: var(--topbar-bg);
+      border-bottom-color: var(--border);
+    }
+    html[data-theme="dark"] .tabbar {
+      background: var(--tabbar-bg);
+      border-top-color: rgba(255,255,255,0.06);
+      box-shadow: 0 -10px 30px var(--shadow);
+    }
+    html[data-theme="dark"] .client-card,
+    html[data-theme="dark"] .group-block,
+    html[data-theme="dark"] .stat-card,
+    html[data-theme="dark"] .search-box,
+    html[data-theme="dark"] .icon-btn {
+      background: var(--card);
+      border-color: var(--border);
+      color: var(--text);
+    }
+    html[data-theme="dark"] .sheet-panel {
+      background: var(--sheet-bg);
+      color: var(--text);
+    }
+    html[data-theme="dark"] .sheet-detail {
+      background: var(--detail-bg);
+      border-color: var(--border);
+      color: var(--text);
+    }
+    html[data-theme="dark"] .sheet-detail .sd-k { color: var(--muted); }
+    html[data-theme="dark"] .sheet-detail .sd-row { border-bottom-color: var(--border); }
+    html[data-theme="dark"] .filters button {
+      background: var(--card);
+      border-color: var(--border);
+      color: var(--muted);
+    }
+    html[data-theme="dark"] .filters button.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #0f172a;
+    }
+    html[data-theme="dark"] .more-item {
+      background: var(--card);
+      border-color: var(--border);
+      color: var(--text);
+    }
+    html[data-theme="dark"] .type-banner { color: var(--muted); }
+    html[data-theme="dark"] .type-banner::after { background: var(--border); }
+    html[data-theme="dark"] .empty { color: var(--muted); }
+    html[data-theme="dark"] input, html[data-theme="dark"] textarea, html[data-theme="dark"] select {
+      background: var(--detail-bg);
+      color: var(--text);
+      border-color: var(--border);
+    }
+    html[data-theme="dark"] .toast {
+      background: #1e293b;
+      color: #f8fafc;
+    }
+    html[data-theme="dark"] .client-card.is-pressed {
+      background: var(--primary-soft) !important;
+    }
+    html[data-theme="dark"] .tab.active {
+      color: var(--primary);
+      background: var(--primary-soft);
+    }
+    html[data-theme="dark"] meta { color: inherit; }
+
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    button, .tab, .client-card, .icon-btn, .more-item, .filters button, .group-head {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    /* Touch feedback globale */
+    .tab, .client-card, .icon-btn, .more-item, .filters button,
+    .sheet-actions button, .card-actions button, .group-head, .mode-row button {
+      transition: transform 0.12s ease, background 0.15s ease, box-shadow 0.15s ease, opacity 0.12s ease, color 0.15s ease;
+      will-change: transform;
+    }
+    .tab.is-pressed,
+    .icon-btn.is-pressed,
+    .more-item.is-pressed,
+    .filters button.is-pressed,
+    .sheet-actions button.is-pressed,
+    .card-actions button.is-pressed,
+    .mode-row button.is-pressed {
+      transform: scale(0.94);
+      opacity: 0.92;
+    }
+    .client-card.is-pressed {
+      transform: scale(0.985);
+      background: var(--primary-soft) !important;
+      box-shadow: inset 0 0 0 1px rgba(157,23,77,0.12);
+    }
+    .group-head.is-pressed {
+      background: rgba(157,23,77,0.06);
+    }
+    .sheet-actions button.primary.is-pressed { filter: brightness(0.92); }
+    .sheet-actions button.warn.is-pressed { filter: brightness(0.95); }
+    .sheet-actions button.ok.is-pressed { filter: brightness(0.95); }
+    .tab.is-pressed { background: rgba(157,23,77,0.12); }
+    .tab.active.is-pressed { background: rgba(157,23,77,0.2); }
+    .icon-btn:active, .icon-btn.is-pressed {
+      background: var(--primary-soft);
+      border-color: rgba(157,23,77,0.25);
+      transform: scale(0.94);
+    }
+    .client-card {
+      cursor: pointer;
+    }
+    .client-card:active { background: var(--primary-soft); }
     html, body {
       margin: 0;
       padding: 0;
@@ -50,7 +185,7 @@
       position: sticky;
       top: 0;
       z-index: 50;
-      background: rgba(255,255,255,0.92);
+      background: var(--topbar-bg, rgba(255,255,255,0.92));
       -webkit-backdrop-filter: blur(16px);
       backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--border);
@@ -791,6 +926,7 @@
   <header class="topbar">
     <h1 id="topTitle">Home <span class="brand-dot" aria-hidden="true"><i class="r"></i><i class="g"></i><i class="b"></i></span></h1>
     <div class="topbar-actions">
+      <button type="button" class="icon-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Tema chiaro/scuro">🌙</button>
       <button type="button" class="icon-btn" onclick="AppEngine.load(); renderAll(); toast('Dati aggiornati')" title="Ricarica">🔄</button>
       <button type="button" class="icon-btn" onclick="openMore()" title="Altro">☰</button>
     </div>
@@ -1341,6 +1477,44 @@
 
     <script>
     const E = window.AppEngine;
+
+    // Dark mode
+    function getPreferredTheme() {
+      try {
+        var saved = localStorage.getItem('note_clienti_theme');
+        if (saved === 'dark' || saved === 'light') return saved;
+      } catch (e) {}
+      try {
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
+      } catch (e) {}
+      return 'light';
+    }
+    function applyTheme(theme) {
+      var th = theme === 'dark' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', th);
+      try { localStorage.setItem('note_clienti_theme', th); } catch (e) {}
+      var btn = document.getElementById('themeToggleBtn');
+      if (btn) btn.textContent = th === 'dark' ? '☀️' : '🌙';
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', th === 'dark' ? '#0b1220' : '#9d174d');
+    }
+    function toggleTheme() {
+      var cur = document.documentElement.getAttribute('data-theme') || getPreferredTheme();
+      applyTheme(cur === 'dark' ? 'light' : 'dark');
+      try { toast(cur === 'dark' ? 'Tema chiaro' : 'Tema scuro'); } catch (e) {}
+    }
+    applyTheme(getPreferredTheme());
+    try {
+      if (window.matchMedia) {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function (e) {
+          try {
+            if (!localStorage.getItem('note_clienti_theme')) applyTheme(e.matches ? 'dark' : 'light');
+          } catch (err) {}
+        });
+      }
+    } catch (e) {}
+
+
     (function initSupabaseAutoMobile() {
       function wire() {
         if (typeof NoteClientiSupabase === 'undefined') return;
@@ -1530,6 +1704,50 @@
 
     
     // Swipe tra sezioni (mobile)
+    
+    // Touch feedback affidabile (iOS/Android)
+    (function initTouchFeedback() {
+      var SEL = '.tab, .client-card, .icon-btn, .more-item, .filters button, .sheet-actions button, .card-actions button, .group-head, .mode-row button';
+      function bind(el) {
+        if (!el || el.__tfBound) return;
+        el.__tfBound = true;
+        var clear = function () { el.classList.remove('is-pressed'); };
+        el.addEventListener('touchstart', function (e) {
+          if (e.touches && e.touches.length > 1) return;
+          el.classList.add('is-pressed');
+          try {
+            if (navigator.vibrate) navigator.vibrate(8);
+          } catch (err) {}
+        }, { passive: true });
+        el.addEventListener('touchend', clear, { passive: true });
+        el.addEventListener('touchcancel', clear, { passive: true });
+        el.addEventListener('mouseup', clear);
+        el.addEventListener('mouseleave', clear);
+        // se il touch scorre via dalla card
+        el.addEventListener('touchmove', function () {
+          el.classList.remove('is-pressed');
+        }, { passive: true });
+      }
+      function scan(root) {
+        (root || document).querySelectorAll(SEL).forEach(bind);
+      }
+      scan(document);
+      // osservatore per card/bottoni creati dinamicamente
+      try {
+        var mo = new MutationObserver(function (muts) {
+          muts.forEach(function (m) {
+            m.addedNodes && m.addedNodes.forEach(function (n) {
+              if (n.nodeType !== 1) return;
+              if (n.matches && n.matches(SEL)) bind(n);
+              if (n.querySelectorAll) scan(n);
+            });
+          });
+        });
+        mo.observe(document.body, { childList: true, subtree: true });
+      } catch (e) {}
+      window.refreshTouchFeedback = scan;
+    })();
+
     (function initSwipeNav() {
       var order = ['home', 'note', 'prep', 'consigli'];
       var startX = 0, startY = 0, tracking = false;
