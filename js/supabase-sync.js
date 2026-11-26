@@ -1,5 +1,5 @@
 /**
- * Sync Note Clienti ↔ Supabase (progetto privato dell'utente)
+ * Sync Note Clienti ↔ Supabase + auto-sync
  * Tabella: public.note_clienti_sync (id text PK, data jsonb, updated_at timestamptz)
  */
 (function (global) {
@@ -8,8 +8,15 @@
   var KEYS = {
     url: 'note_clienti_supabase_url',
     key: 'note_clienti_supabase_key',
-    rowId: 'note_clienti_supabase_row'
+    rowId: 'note_clienti_supabase_row',
+    auto: 'note_clienti_supabase_auto',
+    lastPush: 'note_clienti_supabase_last_push',
+    lastPull: 'note_clienti_supabase_last_pull'
   };
+
+  var _pushTimer = null;
+  var _pushing = false;
+  var _payloadProvider = null;
 
   function normalizeUrl(raw) {
     var u = String(raw || '').trim();
@@ -33,10 +40,11 @@
       return {
         url: url,
         key: String(localStorage.getItem(KEYS.key) || '').trim().replace(/^['"]|['"]$/g, ''),
-        rowId: (localStorage.getItem(KEYS.rowId) || 'main').trim() || 'main'
+        rowId: (localStorage.getItem(KEYS.rowId) || 'main').trim() || 'main',
+        auto: localStorage.getItem(KEYS.auto) === '1'
       };
     } catch (e) {
-      return { url: '', key: '', rowId: 'main' };
+      return { url: '', key: '', rowId: 'main', auto: false };
     }
   }
 
@@ -46,6 +54,7 @@
       if (cfg.url != null) localStorage.setItem(KEYS.url, normalizeUrl(cfg.url));
       if (cfg.key != null) localStorage.setItem(KEYS.key, String(cfg.key).trim().replace(/^['"]|['"]$/g, ''));
       if (cfg.rowId != null) localStorage.setItem(KEYS.rowId, String(cfg.rowId || 'main').trim() || 'main');
+      if (cfg.auto != null) localStorage.setItem(KEYS.auto, cfg.auto ? '1' : '0');
     } catch (e) {
       if (e && e.message) throw e;
     }
@@ -61,6 +70,10 @@
   function isConfigured() {
     var c = loadConfig();
     return !!(c.url && c.key);
+  }
+
+  function isAutoEnabled() {
+    return loadConfig().auto === true;
   }
 
   function headers(cfg, prefer) {
@@ -86,13 +99,11 @@
       return base +
         'La API non trova la tabella.\n' +
         '• Project URL deve essere https://xxxxx.supabase.co\n' +
-        '• In SQL Editor esegui di nuovo lo script completo (con GRANT)\n' +
-        '• Table Editor: verifica che esista note_clienti_sync\n' +
-        '• Settings → API: schema public esposto\n' +
+        '• Esegui lo script SQL completo\n' +
         'Dettaglio: ' + msg.slice(0, 180);
     }
     if (status === 401 || status === 403) {
-      return base + 'Permesso negato. Usa la chiave anon/publishable e le policy/GRANT.\n' + msg.slice(0, 180);
+      return base + 'Permesso negato. Verifica chiave anon e GRANT/RLS.\n' + msg.slice(0, 180);
     }
     return base + msg.slice(0, 280);
   }
@@ -112,7 +123,7 @@
       url: url,
       projectUrl: cfg.url,
       rows: Array.isArray(rows) ? rows.length : 0,
-      message: 'Connessione OK. Tabella raggiungibile (righe ora: ' + (Array.isArray(rows) ? rows.length : 0) + ').'
+      message: 'Connessione OK. Tabella raggiungibile (righe: ' + (Array.isArray(rows) ? rows.length : 0) + '). Auto-sync: ' + (cfg.auto ? 'ON' : 'OFF')
     };
   }
 
@@ -133,6 +144,7 @@
       body: JSON.stringify(body)
     });
     if (res.ok) {
+      try { localStorage.setItem(KEYS.lastPush, body.updated_at); } catch (e) {}
       var rows = [];
       try { rows = await res.json(); } catch (e) {}
       return (rows && rows[0]) || body;
@@ -147,6 +159,7 @@
       body: JSON.stringify(body)
     });
     if (res2.ok) {
+      try { localStorage.setItem(KEYS.lastPush, body.updated_at); } catch (e) {}
       var rows2 = [];
       try { rows2 = await res2.json(); } catch (e) {}
       return (rows2 && rows2[0]) || body;
@@ -159,6 +172,7 @@
       body: JSON.stringify({ data: payload, updated_at: body.updated_at })
     });
     if (res3.ok) {
+      try { localStorage.setItem(KEYS.lastPush, body.updated_at); } catch (e) {}
       var rows3 = [];
       try { rows3 = await res3.json(); } catch (e) {}
       return (rows3 && rows3[0]) || body;
@@ -179,8 +193,87 @@
       throw new Error(friendlyHttpError(res.status, t, 'Download', q));
     }
     var rows = await res.json();
-    if (!rows || !rows.length) throw new Error('Nessun dato sul cloud (carica prima da un dispositivo). La tabella può essere vuota.');
+    if (!rows || !rows.length) throw new Error('Nessun dato sul cloud (carica prima da un dispositivo).');
+    try { localStorage.setItem(KEYS.lastPull, rows[0].updated_at || new Date().toISOString()); } catch (e) {}
     return rows[0];
+  }
+
+  /** Registra una funzione che restituisce il payload backup corrente */
+  function setPayloadProvider(fn) {
+    _payloadProvider = typeof fn === 'function' ? fn : null;
+  }
+
+  /**
+   * Dopo ogni salvataggio locale: se auto-sync ON, carica sul cloud dopo debounce.
+   * delayMs default 4000
+   */
+  function scheduleAutoPush(delayMs) {
+    if (!isConfigured() || !isAutoEnabled()) return;
+    if (typeof _payloadProvider !== 'function') return;
+    if (_pushTimer) clearTimeout(_pushTimer);
+    _pushTimer = setTimeout(function () {
+      runAutoPush();
+    }, typeof delayMs === 'number' ? delayMs : 4000);
+  }
+
+  async function runAutoPush() {
+    if (!isConfigured() || !isAutoEnabled()) return;
+    if (_pushing) return;
+    if (typeof _payloadProvider !== 'function') return;
+    _pushing = true;
+    try {
+      var payload = _payloadProvider();
+      if (!payload) return;
+      await pushPayload(payload);
+      try {
+        if (typeof global.dispatchEvent === 'function') {
+          global.dispatchEvent(new CustomEvent('note-clienti-cloud-pushed', { detail: { at: new Date().toISOString() } }));
+        }
+      } catch (e) {}
+    } catch (err) {
+      console.warn('[auto-sync push]', err);
+    } finally {
+      _pushing = false;
+    }
+  }
+
+  /**
+   * All'apertura app: se cloud più recente dell'ultimo pull/push locale, scarica.
+   * applyFn(data) deve applicare i dati in locale.
+   * silent: se true non chiede conferma (default false → chiede)
+   */
+  async function autoPullIfNewer(applyFn, opts) {
+    opts = opts || {};
+    if (!isConfigured() || !isAutoEnabled()) return { skipped: true };
+    if (typeof applyFn !== 'function') return { skipped: true };
+    try {
+      var row = await pullPayload();
+      var cloudAt = row.updated_at ? Date.parse(row.updated_at) : 0;
+      var lastLocal = 0;
+      try {
+        lastLocal = Math.max(
+          Date.parse(localStorage.getItem(KEYS.lastPull) || '') || 0,
+          Date.parse(localStorage.getItem(KEYS.lastPush) || '') || 0
+        );
+      } catch (e) {}
+      // se non abbiamo mai sync locale, proponi comunque
+      if (cloudAt && lastLocal && cloudAt <= lastLocal + 2000) {
+        return { skipped: true, reason: 'locale aggiornato' };
+      }
+      if (!opts.silent) {
+        var ok = confirm(
+          'Cloud più aggiornato trovato.\nAggiornato: ' + (row.updated_at || '—') +
+          '\n\nScaricare ora i dati sul dispositivo?'
+        );
+        if (!ok) return { skipped: true, reason: 'utente ha rifiutato' };
+      }
+      applyFn(row.data);
+      try { localStorage.setItem(KEYS.lastPull, row.updated_at || new Date().toISOString()); } catch (e) {}
+      return { ok: true, updated_at: row.updated_at };
+    } catch (err) {
+      console.warn('[auto-sync pull]', err);
+      return { error: err && err.message ? err.message : String(err) };
+    }
   }
 
   global.NoteClientiSupabase = {
@@ -188,12 +281,17 @@
     saveConfig: saveConfig,
     clearConfig: clearConfig,
     isConfigured: isConfigured,
+    isAutoEnabled: isAutoEnabled,
     pushPayload: pushPayload,
     pullPayload: pullPayload,
     testConnection: testConnection,
     normalizeUrl: normalizeUrl,
+    setPayloadProvider: setPayloadProvider,
+    scheduleAutoPush: scheduleAutoPush,
+    runAutoPush: runAutoPush,
+    autoPullIfNewer: autoPullIfNewer,
     setupSql:
-      '-- 1) SQL Editor → New query → Run TUTTO questo script\n' +
+      '-- SQL Editor → Run\n' +
       'create table if not exists public.note_clienti_sync (\n' +
       '  id text primary key,\n' +
       '  data jsonb not null,\n' +

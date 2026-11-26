@@ -8120,6 +8120,10 @@
             <label>ID dataset (lascia main)</label>
             <input type="text" id="sbRowInput" class="input-control" placeholder="main" value="main">
         </div>
+        <label style="display:flex;align-items:center;gap:10px;margin:10px 0;font-size:0.9rem;cursor:pointer;">
+            <input type="checkbox" id="sbAutoSync" style="width:18px;height:18px;">
+            <span><strong>Aggiornamento automatico</strong> — dopo ogni modifica carica sul cloud (attendi ~4 sec). All’apertura propone il download se il cloud è più recente.</span>
+        </label>
         <details style="margin:10px 0;font-size:0.78rem;color:#64748b;">
             <summary style="cursor:pointer;font-weight:700;color:#334155;">SQL da eseguire nel progetto</summary>
             <pre id="sbSqlBox" style="white-space:pre-wrap;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-top:8px;font-size:0.72rem;"></pre>
@@ -8677,6 +8681,11 @@
         } catch (e) {}
         localStorage.setItem('note_clienti_data', JSON.stringify(clients));
         try { notifyPlanningDataChanged(); } catch (e) {}
+        try {
+            if (typeof NoteClientiSupabase !== 'undefined' && NoteClientiSupabase.scheduleAutoPush) {
+                NoteClientiSupabase.scheduleAutoPush(4000);
+            }
+        } catch (e) {}
     }
 
     // --- Consigli + controllo paesi: restano allineati a Prep/Note ---
@@ -11261,6 +11270,8 @@
         if (u) u.value = c.url || '';
         if (k) k.value = c.key || '';
         if (r) r.value = c.rowId || 'main';
+        var a = document.getElementById('sbAutoSync');
+        if (a) a.checked = !!c.auto;
         if (sql) sql.textContent = NoteClientiSupabase.setupSql || '';
         var m = document.getElementById('supabaseSyncModal');
         if (m) m.style.display = 'flex';
@@ -11274,9 +11285,10 @@
         NoteClientiSupabase.saveConfig({
             url: (document.getElementById('sbUrlInput') || {}).value || '',
             key: (document.getElementById('sbKeyInput') || {}).value || '',
-            rowId: (document.getElementById('sbRowInput') || {}).value || 'main'
+            rowId: (document.getElementById('sbRowInput') || {}).value || 'main',
+            auto: !!(document.getElementById('sbAutoSync') || {}).checked
         });
-        alert('Configurazione Supabase salvata su questo browser.');
+        alert('Configurazione Supabase salvata.\nAuto-sync: ' + ((document.getElementById('sbAutoSync') || {}).checked ? 'ATTIVO' : 'spento'));
     };
     window.clearSupabaseConfigDesktop = function() {
         if (typeof NoteClientiSupabase === 'undefined') return;
@@ -11379,6 +11391,45 @@
             alert('Errore download: ' + (err && err.message ? err.message : err));
         }
     };
+
+
+    (function initSupabaseAutoDesktop() {
+        function wire() {
+            if (typeof NoteClientiSupabase === 'undefined') return;
+            NoteClientiSupabase.setPayloadProvider(function() {
+                return typeof buildDesktopCloudPayload === 'function' ? buildDesktopCloudPayload() : null;
+            });
+            // all'avvio: se auto e cloud più nuovo, chiedi download
+            setTimeout(function() {
+                try {
+                    if (!NoteClientiSupabase.isAutoEnabled()) return;
+                    NoteClientiSupabase.autoPullIfNewer(function(data) {
+                        if (!data) return;
+                        if (data.clients) {
+                            clients = data.clients;
+                            localStorage.setItem('note_clienti_data', JSON.stringify(clients));
+                        }
+                        if (data.models || data.savedModels) {
+                            savedModels = data.models || data.savedModels;
+                            localStorage.setItem('note_clienti_modelli', JSON.stringify(savedModels));
+                        }
+                        if (data.spedizioni || data.savedSpedizioni) {
+                            savedSpedizioni = data.spedizioni || data.savedSpedizioni;
+                            localStorage.setItem('note_clienti_spedizioni', JSON.stringify(savedSpedizioni));
+                        }
+                        if (data.ordini) {
+                            try { ordini = data.ordini; } catch (e) {}
+                            localStorage.setItem('note_clienti_ordini', JSON.stringify(data.ordini));
+                        }
+                        try { if (typeof saveToLocalStorage === 'function') saveToLocalStorage(); } catch (e) {}
+                        location.reload();
+                    }, { silent: false });
+                } catch (e) {}
+            }, 1800);
+        }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire);
+        else wire();
+    })();
 
     window.exportBackup = function() {
         try {

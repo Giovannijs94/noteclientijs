@@ -59,6 +59,11 @@
     try { localStorage.setItem(KEYS.spedizioni, JSON.stringify(savedSpedizioni)); } catch (e) {}
     try { localStorage.setItem(KEYS.ordini, JSON.stringify(ordini)); } catch (e) {}
     try { localStorage.setItem('note_clienti_planning_dirty_at', String(Date.now())); } catch (e) {}
+    try {
+      if (typeof NoteClientiSupabase !== 'undefined' && NoteClientiSupabase.scheduleAutoPush) {
+        NoteClientiSupabase.scheduleAutoPush(4000);
+      }
+    } catch (e) {}
     emit();
   }
 

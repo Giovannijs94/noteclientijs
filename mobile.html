@@ -950,6 +950,10 @@
       <div class="field"><label>Project URL</label><input type="url" id="mSbUrl" placeholder="https://xxxx.supabase.co" autocomplete="off"></div>
       <div class="field"><label>Chiave anon / publishable</label><input type="password" id="mSbKey" placeholder="eyJ..." autocomplete="off"></div>
       <div class="field"><label>ID dataset</label><input type="text" id="mSbRow" value="main" placeholder="main"></div>
+      <label style="display:flex;align-items:flex-start;gap:10px;margin:8px 0 12px;font-size:0.84rem;line-height:1.35;">
+        <input type="checkbox" id="mSbAuto" style="width:18px;height:18px;margin-top:2px;">
+        <span><strong>Aggiornamento automatico</strong> — carica sul cloud dopo le modifiche; all’apertura propone il download se il cloud è più nuovo.</span>
+      </label>
       <div class="sheet-actions">
         <button type="button" class="primary" onclick="saveMobileSbConfig()">💾 Salva config</button>
         <button type="button" class="ghost" onclick="supabaseTestMobile()">🔌 Test connessione</button>
@@ -965,6 +969,29 @@
   <script src="js/supabase-sync.js"></script>
   <script>
     const E = window.AppEngine;
+    (function initSupabaseAutoMobile() {
+      function wire() {
+        if (typeof NoteClientiSupabase === 'undefined') return;
+        NoteClientiSupabase.setPayloadProvider(function () {
+          try { return E.exportBackup(); } catch (e) { return null; }
+        });
+        setTimeout(function () {
+          try {
+            if (!NoteClientiSupabase.isAutoEnabled()) return;
+            NoteClientiSupabase.autoPullIfNewer(function (data) {
+              try {
+                E.importFromBackup(data);
+                renderAll();
+                toast('Dati aggiornati dal cloud');
+              } catch (e) { console.warn(e); }
+            }, { silent: false });
+          } catch (e) {}
+        }, 1500);
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire);
+      else setTimeout(wire, 300);
+    })();
+
     let currentView = 'home';
     let noteFilter = 'all';
     let prepSort = 'scadenza';
@@ -1459,6 +1486,8 @@
       if (u) u.value = c.url || '';
       if (k) k.value = c.key || '';
       if (r) r.value = c.rowId || 'main';
+      var a = document.getElementById('mSbAuto');
+      if (a) a.checked = !!c.auto;
       var el = document.getElementById('supabaseSheet');
       if (el) el.classList.add('open');
     }
@@ -1471,7 +1500,8 @@
       NoteClientiSupabase.saveConfig({
         url: (document.getElementById('mSbUrl') || {}).value || '',
         key: (document.getElementById('mSbKey') || {}).value || '',
-        rowId: (document.getElementById('mSbRow') || {}).value || 'main'
+        rowId: (document.getElementById('mSbRow') || {}).value || 'main',
+        auto: !!(document.getElementById('mSbAuto') || {}).checked
       });
     }
     function saveMobileSbConfig() {
