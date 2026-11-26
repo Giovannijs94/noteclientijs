@@ -1465,19 +1465,40 @@
       const sb = E.isStandby(c);
       const addr = E.cleanAddress(c.localita || '');
       const sec = E.sectionOf(c);
-      return '<article class="client-card' + (sb ? ' standby' : '') + '" onclick="openClient(\'' + String(c.id).replace(/'/g, "\\'") + '\')">' +
+      const id = String(c.id).replace(/'/g, "\\'");
+      let actions = '';
+      if (sec === 'note') {
+        actions = '<div class="card-actions">' +
+          '<button type="button" class="btn-info" onclick="event.stopPropagation();openClient(\'' + id + '\')">📋 Info</button>' +
+          '<button type="button" class="btn-prep" onclick="event.stopPropagation();quickPrep(\'' + id + '\')">Prep</button>' +
+          '<button type="button" class="btn-sb" onclick="event.stopPropagation();quickStandby(\'' + id + '\')">Stand-by</button>' +
+          '</div>';
+      }
+      return '<article class="client-card' + (sb ? ' standby' : '') + '" onclick="openClient(\'' + id + '\')">' +
         '<div class="name">' + esc(c.nome || 'Senza nome') + (sb ? ' <span class="chip sb">Stand-by</span>' : '') + '</div>' +
         '<div class="meta">' +
           '📦 ' + esc(E.modelsLabel(c)) + '<br>' +
           (addr ? ('📍 ' + esc(addr) + '<br>') : '') +
-          (c.tappa ? ('🚩 ' + esc(c.tappa) + '<br>') : '') +
-          (c.spedizione ? ('📦 Sped. ' + esc(c.spedizione) + '<br>') : '') +
-          '📅 ' + esc(E.formatScadenza(c.scadenza)) +
-        '</div>' +
-        '<div class="chips">' + scadChip(c) +
-          '<span class="chip">' + sec + '</span>' +
-          (c.confOrdine ? '<span class="chip">CONF ' + esc(c.confOrdine) + '</span>' : '') +
-        '</div></article>';
+          (c.scadenza ? ('📅 Scad. ' + esc(E.formatScadenza(c.scadenza))) : '') +
+          (c.tappa ? (' · 🚩 ' + esc(c.tappa)) : '') +
+          (c.spedizione ? (' · 📦 ' + esc(c.spedizione)) : '') +
+        '</div>' + actions +
+      '</article>';
+    }
+
+    function quickPrep(id) {
+      if (!id) return;
+      if (!confirm('Spostare in Pre-pianificazione?')) return;
+      E.moveToPrep(id);
+      toast('In Pre-pianificazione');
+      renderAll();
+    }
+    function quickStandby(id) {
+      if (!id) return;
+      if (!confirm('Mettere in Stand-by?')) return;
+      E.markStandby(id);
+      toast('In Stand-by');
+      renderAll();
     }
 
     function renderCardList(list, emptyMsg) {
@@ -1506,6 +1527,36 @@
       });
       renderPrep();
     }
+
+    
+    // Swipe tra sezioni (mobile)
+    (function initSwipeNav() {
+      var order = ['home', 'note', 'prep', 'consigli'];
+      var startX = 0, startY = 0, tracking = false;
+      var root = document.body;
+      root.addEventListener('touchstart', function (e) {
+        if (!e.touches || e.touches.length !== 1) return;
+        // non interferire con sheet aperti
+        if (document.querySelector('.sheet.open')) return;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        tracking = true;
+      }, { passive: true });
+      root.addEventListener('touchend', function (e) {
+        if (!tracking) return;
+        tracking = false;
+        if (document.querySelector('.sheet.open')) return;
+        var tch = e.changedTouches && e.changedTouches[0];
+        if (!tch) return;
+        var dx = tch.clientX - startX;
+        var dy = tch.clientY - startY;
+        if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+        var idx = order.indexOf(currentView);
+        if (idx < 0) return;
+        if (dx < 0 && idx < order.length - 1) go(order[idx + 1]);
+        else if (dx > 0 && idx > 0) go(order[idx - 1]);
+      }, { passive: true });
+    })();
 
     function renderHome() {
       const st = E.stats();
@@ -1735,13 +1786,10 @@
       if (!c) return;
       activeClientId = id;
       document.getElementById('sheetName').textContent = c.nome || 'Cliente';
-      const parts = [
-        E.sectionOf(c),
-        E.modelsLabel(c),
-        E.cleanAddress(c.localita || ''),
-        c.scadenza ? ('Scad. ' + E.formatScadenza(c.scadenza)) : ''
-      ].filter(Boolean);
-      document.getElementById('sheetMeta').textContent = parts.join(' · ');
+      document.getElementById('sheetMeta').textContent = 'Scheda completa';
+
+      var panel = document.querySelector('#clientSheet .sheet-panel');
+      if (panel) panel.classList.add('sheet-tall');
 
       var detail = document.getElementById('sheetDetail');
       if (detail) {
@@ -1751,10 +1799,9 @@
 
       const sec = E.sectionOf(c);
       let html = '';
-      html += '<button type="button" class="primary" onclick="showClientInfo()">📋 Info cliente</button>';
       if (sec === 'note') {
-        html += '<button type="button" class="primary" onclick="doPrep()">📋 Pre-pianificazione</button>';
-        html += '<button type="button" class="warn" onclick="doStandby()">⏸️ Stand-by</button>';
+        html += '<button type="button" class="primary" onclick="doPrep()">📋 Porta in Pre-pianificazione</button>';
+        html += '<button type="button" class="warn" onclick="doStandby()">⏸️ Porta in Stand-by</button>';
       }
       if (sec === 'prep' || sec === 'standby') {
         html += '<button type="button" class="primary" onclick="openToNote()">→ Porta in Note</button>';
@@ -1786,6 +1833,7 @@
       var html = '';
       html += row('Sezione', secLabel);
       html += row('Modello', E.modelsLabel(c) || '—');
+      html += row('Quantità', (c.modelli && c.modelli[0] && c.modelli[0].qta) ? String(c.modelli[0].qta) : '');
       html += row('Indirizzo', E.cleanAddress(c.localita || '') || '—');
       html += row('Provincia', c.provincia || '');
       html += row('Regione', c.regione || '');
@@ -1801,18 +1849,12 @@
       if (String(nota).trim()) {
         html += '<div class="sd-block"><div class="sd-title">Note</div><div>' + esc(String(nota)) + '</div></div>';
       }
-      return html || '<div style="color:#94a3b8">Nessun dettaglio disponibile</div>';
+      if (!html) html = '<div style="color:#94a3b8">Nessun dettaglio disponibile</div>';
+      return html;
     }
 
     function showClientInfo() {
-      var c = E.findClient(activeClientId);
-      if (!c) return;
-      var detail = document.getElementById('sheetDetail');
-      if (!detail) return;
-      detail.innerHTML = buildClientDetailHtml(c);
-      detail.style.display = 'block';
-      try { detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
-      toast('Scheda cliente');
+      openClient(activeClientId);
     }
 
     function doPrep() {
