@@ -2161,82 +2161,166 @@
       var scrollEl = document.getElementById('clientSheetScroll');
       if (!sheet || !panel) return;
 
-      var startY = 0, currentY = 0, dragging = false, fromScroll = false;
+      var startY = 0;
+      var lastY = 0;
+      var lastT = 0;
+      var dy = 0;
+      var velocity = 0;
+      var active = false;
+      var maybe = false;
+      var mode = null; // 'drag' | 'scroll'
 
-      function onStart(y, fromScrollArea) {
-        startY = y;
-        currentY = 0;
-        dragging = true;
-        fromScroll = !!fromScrollArea;
-        panel.classList.add('dragging');
-        panel.style.transition = 'none';
-      }
-      function onMove(y) {
-        if (!dragging) return;
-        var dy = y - startY;
-        // solo verso il basso
-        if (dy < 0) dy = 0;
-        // se stiamo scrollando contenuto e non siamo in cima, non trascinare
-        if (fromScroll && scrollEl && scrollEl.scrollTop > 2) {
-          currentY = 0;
-          panel.style.transform = '';
-          return;
+      function resetVisual() {
+        panel.classList.remove('dragging');
+        panel.style.transition = '';
+        panel.style.transform = '';
+        var bg = sheet.querySelector('.sheet-bg');
+        if (bg) {
+          bg.style.opacity = '';
+          bg.style.transition = '';
         }
-        currentY = dy;
+      }
+
+      function setOffset(y) {
+        dy = Math.max(0, y);
         panel.style.transform = 'translateY(' + dy + 'px)';
         var bg = sheet.querySelector('.sheet-bg');
-        if (bg) bg.style.opacity = String(Math.max(0.15, 1 - dy / 320));
+        if (bg) {
+          var o = Math.max(0.12, 1 - dy / 420);
+          bg.style.opacity = String(o);
+        }
       }
-      function onEnd() {
-        if (!dragging) return;
-        dragging = false;
+
+      function closeThreshold() {
+        // chiude solo se portata bene verso il basso (~42% altezza o 220px)
+        var h = panel.offsetHeight || 480;
+        return Math.max(220, h * 0.42);
+      }
+
+      function finish() {
+        if (!active && !maybe) return;
+        active = false;
+        maybe = false;
+        var shouldClose = dy >= closeThreshold() || (velocity > 0.85 && dy > 90);
         panel.classList.remove('dragging');
-        var bg = sheet.querySelector('.sheet-bg');
-        if (currentY > 110) {
+        if (shouldClose) {
           closeSheet();
+          var bg = sheet.querySelector('.sheet-bg');
           if (bg) bg.style.opacity = '';
+          dy = 0;
+          velocity = 0;
+          mode = null;
           return;
         }
-        panel.style.transition = 'transform 0.25s cubic-bezier(.22,1,.36,1)';
+        // torna su
+        panel.style.transition = 'transform 0.3s cubic-bezier(.22,1,.36,1)';
         panel.style.transform = 'translateY(0)';
+        var bg = sheet.querySelector('.sheet-bg');
         if (bg) {
-          bg.style.transition = 'opacity 0.2s ease';
+          bg.style.transition = 'opacity 0.25s ease';
           bg.style.opacity = '';
-          setTimeout(function () { bg.style.transition = ''; }, 220);
         }
         setTimeout(function () {
           panel.style.transition = '';
-        }, 260);
+          panel.style.transform = '';
+          if (bg) bg.style.transition = '';
+        }, 320);
+        dy = 0;
+        velocity = 0;
+        mode = null;
       }
 
-      function bindTouch(el, isScroll) {
-        if (!el) return;
-        el.addEventListener('touchstart', function (e) {
-          if (!sheet.classList.contains('open')) return;
-          if (!e.touches || e.touches.length !== 1) return;
-          if (isScroll && scrollEl && scrollEl.scrollTop > 2) {
-            dragging = false;
+      function onTouchStart(e, origin) {
+        if (!sheet.classList.contains('open')) return;
+        if (!e.touches || e.touches.length !== 1) return;
+        startY = e.touches[0].clientY;
+        lastY = startY;
+        lastT = Date.now();
+        dy = 0;
+        velocity = 0;
+        maybe = true;
+        active = false;
+        mode = null;
+
+        // dalla zona handle/titolo: pronto al drag
+        if (origin === 'handle') {
+          mode = 'drag';
+          active = true;
+          panel.classList.add('dragging');
+          panel.style.transition = 'none';
+        } else {
+          // area scroll: drag solo se già in cima
+          if (scrollEl && scrollEl.scrollTop <= 1) {
+            mode = 'pending';
+          } else {
+            mode = 'scroll';
+            maybe = false;
+          }
+        }
+      }
+
+      function onTouchMove(e) {
+        if (!maybe && !active) return;
+        if (!e.touches || e.touches.length !== 1) return;
+        var y = e.touches[0].clientY;
+        var delta = y - startY;
+        var now = Date.now();
+        var dt = Math.max(1, now - lastT);
+        velocity = (y - lastY) / dt; // px/ms
+        lastY = y;
+        lastT = now;
+
+        if (mode === 'scroll') return;
+
+        if (mode === 'pending') {
+          // decidi: se scorre su e c'è contenuto → lascia scroll; se giù → drag
+          if (delta < -8) {
+            mode = 'scroll';
+            maybe = false;
             return;
           }
-          onStart(e.touches[0].clientY, isScroll);
-        }, { passive: true });
-        el.addEventListener('touchmove', function (e) {
-          if (!dragging) return;
-          if (fromScroll && scrollEl && scrollEl.scrollTop > 2) return;
-          var y = e.touches[0].clientY;
-          var dy = y - startY;
-          if (dy > 0) {
-            // blocca scroll della pagina mentre trasciniamo giù
-            if (e.cancelable) e.preventDefault();
-            onMove(y);
+          if (delta > 10 && scrollEl && scrollEl.scrollTop <= 1) {
+            mode = 'drag';
+            active = true;
+            panel.classList.add('dragging');
+            panel.style.transition = 'none';
+          } else {
+            return;
           }
-        }, { passive: false });
-        el.addEventListener('touchend', onEnd, { passive: true });
-        el.addEventListener('touchcancel', onEnd, { passive: true });
+        }
+
+        if (mode === 'drag' && active) {
+          if (delta > 0) {
+            if (e.cancelable) e.preventDefault();
+            setOffset(delta);
+          } else {
+            setOffset(0);
+          }
+        }
       }
 
-      bindTouch(dragZone, false);
-      bindTouch(scrollEl, true);
+      function onTouchEnd() {
+        finish();
+      }
+
+      if (dragZone) {
+        dragZone.addEventListener('touchstart', function (e) { onTouchStart(e, 'handle'); }, { passive: true });
+        dragZone.addEventListener('touchmove', onTouchMove, { passive: false });
+        dragZone.addEventListener('touchend', onTouchEnd, { passive: true });
+        dragZone.addEventListener('touchcancel', onTouchEnd, { passive: true });
+      }
+      if (scrollEl) {
+        scrollEl.addEventListener('touchstart', function (e) { onTouchStart(e, 'scroll'); }, { passive: true });
+        scrollEl.addEventListener('touchmove', onTouchMove, { passive: false });
+        scrollEl.addEventListener('touchend', onTouchEnd, { passive: true });
+        scrollEl.addEventListener('touchcancel', onTouchEnd, { passive: true });
+      }
+
+      // quando si apre, reset
+      var obs = new MutationObserver(function () {
+        if (sheet.classList.contains('open')) resetVisual();
+      });
+      try { obs.observe(sheet, { attributes: true, attributeFilter: ['class'] }); } catch (e) {}
     })();
 
 
