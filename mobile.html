@@ -12,6 +12,8 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-180.png">
   <link rel="icon" href="favicon.png">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <style>
     :root {
       --primary: #9d174d;
@@ -653,6 +655,68 @@
     
 
 
+
+    /* Percorso mobile */
+    .m-percorso-tools {
+      display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px;
+    }
+    .m-percorso-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+      padding: 12px; box-shadow: 0 1px 4px rgba(15,23,42,0.05);
+    }
+    .m-percorso-card h3 {
+      margin: 0 0 8px; font-size: 0.92rem; font-weight: 800; color: var(--primary);
+    }
+    .m-percorso-card .row {
+      display: flex; gap: 8px; margin-bottom: 8px;
+    }
+    .m-percorso-card input, .m-percorso-card select {
+      flex: 1; min-height: 42px; border: 1px solid var(--border); border-radius: 12px;
+      padding: 0 12px; font-size: 16px; background: var(--card); color: var(--text);
+    }
+    .m-percorso-card button {
+      min-height: 42px; border: none; border-radius: 12px; padding: 0 14px;
+      font-weight: 800; background: var(--primary); color: #fff; font-size: 0.85rem;
+    }
+    .m-percorso-card button.ghost {
+      background: var(--primary-soft); color: var(--primary);
+    }
+    .m-percorso-result {
+      font-size: 0.84rem; font-weight: 700; color: var(--text); margin-top: 6px;
+      line-height: 1.4;
+    }
+    .m-tappa-item {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 12px; margin-bottom: 10px;
+    }
+    .m-tappa-item .tt {
+      font-weight: 800; color: var(--primary); margin-bottom: 4px;
+    }
+    .m-tappa-item .ts { font-size: 0.78rem; color: var(--muted); margin-bottom: 8px; }
+    .m-tappa-item .tbns { display: flex; gap: 6px; flex-wrap: wrap; }
+    .m-tappa-item .tbns button {
+      flex: 1; min-height: 40px; border: none; border-radius: 10px;
+      font-weight: 800; font-size: 0.78rem; background: var(--primary-soft); color: var(--primary);
+    }
+    .m-map {
+      height: 280px; border-radius: 16px; overflow: hidden;
+      border: 1px solid var(--border); margin: 10px 0; background: #e2e8f0;
+    }
+    .m-stops { list-style: none; padding: 0; margin: 0 0 12px; }
+    .m-stops li {
+      display: flex; gap: 10px; align-items: flex-start;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+    }
+    .m-stops .num {
+      width: 26px; height: 26px; border-radius: 999px; background: var(--primary); color: #fff;
+      font-size: 0.72rem; font-weight: 800; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .m-stops .num.start { background: #16a34a; }
+    .m-stops .body { min-width: 0; }
+    .m-stops .body strong { display: block; font-size: 0.88rem; }
+    .m-stops .body span { font-size: 0.75rem; color: var(--muted); }
+
     /* ===== Intro mobile premium ===== */
     .m-intro {
       position: fixed; inset: 0; z-index: 9999;
@@ -1028,6 +1092,42 @@
     <div id="ordiniList"></div>
   </section>
 
+  <section id="view-percorso" class="view">
+    <div class="m-percorso-tools">
+      <div class="m-percorso-card">
+        <h3>🔍 Trova sulla mappa</h3>
+        <div class="row">
+          <input type="text" id="percFindInput" placeholder="Cliente, indirizzo o paese" autocomplete="off">
+          <button type="button" onclick="percorsoFind()">Cerca</button>
+        </div>
+        <div class="m-percorso-result" id="percFindResult"></div>
+      </div>
+      <div class="m-percorso-card">
+        <h3>📏 Distanza tra due punti</h3>
+        <div class="row"><input type="text" id="percDistA" list="percClientList" placeholder="Da (cliente o luogo)"></div>
+        <div class="row"><input type="text" id="percDistB" list="percClientList" placeholder="A (cliente o luogo)"></div>
+        <div class="row">
+          <button type="button" class="ghost" onclick="percorsoSetCasa()">🏠 Da Casamassima</button>
+          <button type="button" onclick="percorsoDistance()">Calcola</button>
+        </div>
+        <datalist id="percClientList"></datalist>
+        <div class="m-percorso-result" id="percDistResult"></div>
+      </div>
+    </div>
+    <div id="percorsoTappeList"></div>
+    <div id="percorsoDetail" hidden>
+      <div class="m-percorso-card" style="margin-bottom:10px;">
+        <div class="row" style="margin:0;align-items:center;">
+          <button type="button" class="ghost" onclick="percorsoBackList()" style="flex:0 0 auto;">← Tappe</button>
+          <strong id="percorsoDetailTitle" style="flex:1;text-align:center;font-size:0.95rem;"></strong>
+        </div>
+      </div>
+      <div id="percorsoMap" class="m-map"></div>
+      <div class="m-percorso-result" id="percorsoRouteMeta" style="margin-bottom:8px;"></div>
+      <ol class="m-stops" id="percorsoStops"></ol>
+    </div>
+  </section>
+
   <nav class="tabbar" aria-label="Navigazione">
     <button type="button" class="tab active" data-view="home" onclick="go('home')"><span class="ico">📊</span>Home</button>
     <button type="button" class="tab" data-view="note" onclick="go('note')"><span class="ico">📝</span>Note</button>
@@ -1095,6 +1195,7 @@
       <div class="sheet-handle"></div>
       <div class="sheet-title">Altre sezioni</div>
       <div class="more-grid">
+        <button type="button" class="more-item" onclick="goFromMore('percorso')"><span>🗺️</span><span>Percorso</span></button>
         <button type="button" class="more-item" onclick="goFromMore('standby')"><span>⏸️</span><span>Stand-by</span></button>
         <button type="button" class="more-item" onclick="goFromMore('installati')"><span>✅</span><span>Installati</span></button>
         <button type="button" class="more-item" onclick="goFromMore('ordini')"><span>📦</span><span>Ordini</span></button>
@@ -1560,6 +1661,74 @@
 
 
     (function initSupabaseAutoMobile() {
+      var _bgCloudPending = null;
+      var _bgCloudBusy = false;
+      var _lastBgToast = 0;
+
+      function isUiBusy() {
+        // non interrompere intro / schede aperte
+        if (document.getElementById('mobileIntro') && !document.getElementById('mobileIntro').classList.contains('is-out')) return true;
+        if (document.querySelector('.sheet.open')) return true;
+        return false;
+      }
+
+      function softToastCloud() {
+        var now = Date.now();
+        // al massimo 1 avviso discreto ogni 3 minuti
+        if (now - _lastBgToast < 180000) return;
+        _lastBgToast = now;
+        try { toast('Aggiornato in background'); } catch (e) {}
+      }
+
+      function applyCloudInBackground(data) {
+        if (!data) return;
+        if (_bgCloudBusy) {
+          _bgCloudPending = data;
+          return;
+        }
+        // se l'utente sta usando una scheda, accoda
+        if (isUiBusy()) {
+          _bgCloudPending = data;
+          return;
+        }
+        _bgCloudBusy = true;
+        var run = function () {
+          try {
+            E.importFromBackup(data);
+            // ridisegno leggero, senza bloccare
+            try { renderAll(); } catch (e) {}
+            softToastCloud();
+          } catch (e) {
+            console.warn('[cloud bg]', e);
+          } finally {
+            _bgCloudBusy = false;
+            if (_bgCloudPending) {
+              var next = _bgCloudPending;
+              _bgCloudPending = null;
+              // piccolo delay tra apply multipli
+              setTimeout(function () { applyCloudInBackground(next); }, 400);
+            }
+          }
+        };
+        // esegui quando il browser è idle
+        if (typeof requestIdleCallback === 'function') {
+          requestIdleCallback(function () { run(); }, { timeout: 2500 });
+        } else {
+          setTimeout(run, 0);
+        }
+      }
+
+      // quando si chiude una scheda, applica eventuale update in coda
+      document.addEventListener('click', function () {
+        setTimeout(function () {
+          if (_bgCloudPending && !isUiBusy()) {
+            var d = _bgCloudPending;
+            _bgCloudPending = null;
+            applyCloudInBackground(d);
+          }
+        }, 350);
+      }, true);
+
       function wire() {
         if (typeof NoteClientiSupabase === 'undefined') return;
         NoteClientiSupabase.setPayloadProvider(function () {
@@ -1569,21 +1738,13 @@
           try {
             if (!NoteClientiSupabase.isAutoEnabled()) return;
             NoteClientiSupabase.autoPullIfNewer(function (data) {
-              try {
-                E.importFromBackup(data);
-                renderAll();
-                toast('Cloud: aggiornato in automatico');
-              } catch (e) { console.warn(e); }
+              applyCloudInBackground(data);
             }, { silent: true });
           } catch (e) {}
-        }, 1500);
+        }, 1800);
         try {
           NoteClientiSupabase.startAutoSyncLoop(function (data) {
-            try {
-              E.importFromBackup(data);
-              renderAll();
-              toast('Cloud: aggiornato');
-            } catch (e) { console.warn(e); }
+            applyCloudInBackground(data);
           }, { intervalMs: 20000 });
         } catch (e) {}
       }
@@ -1612,6 +1773,7 @@
       const map = {
         home: 'view-home',
         note: 'view-note',
+      percorso: 'view-percorso',
         prep: 'view-prep',
         consigli: 'view-consigli',
         standby: 'view-standby',
@@ -1637,7 +1799,7 @@
       const titles = {
         home: 'Home', note: 'Note clienti', prep: 'Pre-pianificazione',
         consigli: 'Consigli', standby: 'Stand-by', installati: 'Installati', ordini: 'Ordini'
-      };
+      , percorso: 'Percorso'};
       document.getElementById('topTitle').innerHTML = (titles[view] || 'App') +
         ' <span class="brand-dot" aria-hidden="true"><i class="r"></i><i class="g"></i><i class="b"></i></span>';
       renderAll();
@@ -2041,6 +2203,7 @@
       if (currentView === 'standby') renderStandby();
       if (currentView === 'installati') renderInstallati();
       if (currentView === 'ordini') renderOrdini();
+      if (currentView === 'percorso') renderPercorso();
     }
 
     function openClient(id) {
@@ -2614,6 +2777,252 @@
         console.error(err);
         alert('Import fallito: ' + (err && err.message ? err.message : err));
       }
+    }
+
+
+    
+    // ===== Percorso mobile (OSM / Leaflet) =====
+    var PERC_CASA = { lat: 40.9569, lng: 16.9186, label: 'Casamassima (BA)' };
+    var _percMap = null;
+    var _percLayer = null;
+    var _geoCache = {};
+
+    function haversineKm(a, b) {
+      var R = 6371;
+      var dLat = (b.lat - a.lat) * Math.PI / 180;
+      var dLng = (b.lng - a.lng) * Math.PI / 180;
+      var la1 = a.lat * Math.PI / 180, la2 = b.lat * Math.PI / 180;
+      var x = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(la1) * Math.cos(la2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+      return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+    }
+
+    async function geocodeQuery(q) {
+      q = String(q || '').trim();
+      if (!q) return null;
+      var key = q.toLowerCase();
+      if (_geoCache[key]) return _geoCache[key];
+      try {
+        var url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=it&q=' + encodeURIComponent(q);
+        var res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        var arr = await res.json();
+        if (arr && arr[0]) {
+          var pt = { lat: parseFloat(arr[0].lat), lng: parseFloat(arr[0].lon), label: arr[0].display_name };
+          _geoCache[key] = pt;
+          return pt;
+        }
+      } catch (e) { console.warn(e); }
+      return null;
+    }
+
+    function resolveClientOrPlace(text) {
+      text = String(text || '').trim();
+      if (!text) return Promise.resolve(null);
+      var low = text.toLowerCase();
+      if (low.indexOf('casamassima') >= 0) return Promise.resolve(PERC_CASA);
+      var clients = (E.getState && E.getState().clients) || [];
+      var hit = clients.find(function (c) {
+        return String(c.nome || '').toLowerCase() === low ||
+          String(c.nome || '').toLowerCase().indexOf(low) >= 0;
+      });
+      if (hit) {
+        var addr = E.cleanAddress(hit.localita || '') || hit.localita || hit.nome;
+        var q = [addr, hit.provincia, hit.regione, 'Italia'].filter(Boolean).join(', ');
+        return geocodeQuery(q).then(function (pt) {
+          if (pt) return { lat: pt.lat, lng: pt.lng, label: hit.nome, client: hit };
+          return null;
+        });
+      }
+      return geocodeQuery(text);
+    }
+
+    function getNoteTappeGroups() {
+      var list = E.getBySection('note') || [];
+      var map = {};
+      list.forEach(function (c) {
+        var t = String(c.tappa || '').trim();
+        if (!t) return;
+        if (!map[t]) map[t] = [];
+        map[t].push(c);
+      });
+      return Object.keys(map).sort(function (a, b) { return a.localeCompare(b, 'it'); }).map(function (name) {
+        return { name: name, clients: map[name] };
+      });
+    }
+
+    function fillPercClientList() {
+      var dl = document.getElementById('percClientList');
+      if (!dl) return;
+      var clients = (E.getState && E.getState().clients) || [];
+      var opts = clients.slice().sort(function (a, b) {
+        return String(a.nome || '').localeCompare(String(b.nome || ''), 'it');
+      }).map(function (c) {
+        return '<option value="' + esc(c.nome || '') + '"></option>';
+      }).join('');
+      dl.innerHTML = '<option value="Casamassima (BA)"></option>' + opts;
+    }
+
+    function renderPercorso() {
+      fillPercClientList();
+      document.getElementById('percorsoDetail').hidden = true;
+      document.getElementById('percorsoTappeList').hidden = false;
+      var groups = getNoteTappeGroups();
+      var box = document.getElementById('percorsoTappeList');
+      if (!groups.length) {
+        box.innerHTML = '<div class="empty">Nessuna tappa attiva in Note.<br>Assegna una tappa ai clienti e torna qui.</div>';
+        return;
+      }
+      box.innerHTML = groups.map(function (g) {
+        return '<div class="m-tappa-item">' +
+          '<div class="tt">🚩 ' + esc(g.name) + '</div>' +
+          '<div class="ts">' + g.clients.length + ' clienti · partenza Casamassima</div>' +
+          '<div class="tbns">' +
+          '<button type="button" onclick="percorsoOpenTappa(\'' + String(g.name).replace(/'/g, "\\'") + '\')">🗺️ Apri percorso</button>' +
+          '</div></div>';
+      }).join('');
+    }
+
+    function percorsoBackList() {
+      destroyPercMap();
+      document.getElementById('percorsoDetail').hidden = true;
+      document.getElementById('percorsoTappeList').hidden = false;
+    }
+
+    function destroyPercMap() {
+      try {
+        if (_percMap) { _percMap.remove(); }
+      } catch (e) {}
+      _percMap = null;
+      _percLayer = null;
+    }
+
+    function nearestOrder(start, points) {
+      var left = points.slice();
+      var ordered = [];
+      var cur = start;
+      while (left.length) {
+        var best = 0, bestD = Infinity;
+        for (var i = 0; i < left.length; i++) {
+          var d = haversineKm(cur, left[i]);
+          if (d < bestD) { bestD = d; best = i; }
+        }
+        var next = left.splice(best, 1)[0];
+        ordered.push(next);
+        cur = next;
+      }
+      return ordered;
+    }
+
+    async function percorsoOpenTappa(name) {
+      var groups = getNoteTappeGroups();
+      var g = groups.find(function (x) { return x.name === name; });
+      if (!g) return;
+      document.getElementById('percorsoTappeList').hidden = true;
+      document.getElementById('percorsoDetail').hidden = false;
+      document.getElementById('percorsoDetailTitle').textContent = name;
+      document.getElementById('percorsoRouteMeta').textContent = 'Calcolo posizioni…';
+      document.getElementById('percorsoStops').innerHTML = '';
+      destroyPercMap();
+      toast('Calcolo percorso…');
+
+      var points = [];
+      for (var i = 0; i < g.clients.length; i++) {
+        var c = g.clients[i];
+        var addr = E.cleanAddress(c.localita || '') || c.localita || '';
+        var q = [addr, c.provincia, c.regione, 'Italia'].filter(Boolean).join(', ');
+        var pt = await geocodeQuery(q);
+        if (!pt) pt = { lat: PERC_CASA.lat + 0.02 * (i + 1), lng: PERC_CASA.lng + 0.02 * (i + 1), label: addr || c.nome, approx: true };
+        points.push({ lat: pt.lat, lng: pt.lng, client: c, label: c.nome, addr: addr });
+      }
+      var ordered = nearestOrder(PERC_CASA, points);
+      var total = 0;
+      var prev = PERC_CASA;
+      ordered.forEach(function (p) {
+        total += haversineKm(prev, p);
+        prev = p;
+      });
+
+      document.getElementById('percorsoRouteMeta').textContent =
+        ordered.length + ' fermate · ~' + total.toFixed(1) + ' km (ordine ottimizzato da Casamassima)';
+
+      var html = '<li><div class="num start">🏠</div><div class="body"><strong>Casamassima (BA)</strong><span>Partenza</span></div></li>';
+      ordered.forEach(function (p, idx) {
+        html += '<li><div class="num">' + (idx + 1) + '</div><div class="body"><strong>' +
+          esc(p.client.nome || '') + '</strong><span>' + esc(p.addr || '') +
+          (p.client.scadenza ? (' · Scad. ' + esc(E.formatScadenza(p.client.scadenza))) : '') +
+          '</span></div></li>';
+      });
+      document.getElementById('percorsoStops').innerHTML = html;
+
+      setTimeout(function () {
+        if (typeof L === 'undefined') {
+          document.getElementById('percorsoRouteMeta').textContent += ' · Mappa non disponibile';
+          return;
+        }
+        destroyPercMap();
+        _percMap = L.map('percorsoMap', { zoomControl: true }).setView([PERC_CASA.lat, PERC_CASA.lng], 9);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap'
+        }).addTo(_percMap);
+        var latlngs = [[PERC_CASA.lat, PERC_CASA.lng]];
+        L.marker([PERC_CASA.lat, PERC_CASA.lng]).addTo(_percMap).bindPopup('🏠 Casamassima');
+        ordered.forEach(function (p, idx) {
+          latlngs.push([p.lat, p.lng]);
+          L.marker([p.lat, p.lng]).addTo(_percMap).bindPopup((idx + 1) + '. ' + (p.client.nome || ''));
+        });
+        var line = L.polyline(latlngs, { color: '#9d174d', weight: 4, opacity: 0.85 }).addTo(_percMap);
+        _percMap.fitBounds(line.getBounds().pad(0.2));
+      }, 120);
+    }
+
+    async function percorsoFind() {
+      var q = (document.getElementById('percFindInput') || {}).value || '';
+      var out = document.getElementById('percFindResult');
+      if (!String(q).trim()) { out.textContent = 'Inserisci un nome o indirizzo'; return; }
+      out.textContent = 'Cerco…';
+      var pt = await resolveClientOrPlace(q);
+      if (!pt) { out.textContent = 'Nessun risultato'; return; }
+      out.textContent = pt.label || q;
+      document.getElementById('percorsoTappeList').hidden = true;
+      document.getElementById('percorsoDetail').hidden = false;
+      document.getElementById('percorsoDetailTitle').textContent = 'Ricerca';
+      document.getElementById('percorsoRouteMeta').textContent = pt.label || '';
+      document.getElementById('percorsoStops').innerHTML = '';
+      setTimeout(function () {
+        if (typeof L === 'undefined') return;
+        destroyPercMap();
+        _percMap = L.map('percorsoMap').setView([pt.lat, pt.lng], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap'
+        }).addTo(_percMap);
+        L.marker([pt.lat, pt.lng]).addTo(_percMap).bindPopup(pt.label || q).openPopup();
+      }, 100);
+    }
+
+    function percorsoSetCasa() {
+      var a = document.getElementById('percDistA');
+      if (a) a.value = 'Casamassima (BA)';
+    }
+
+    async function percorsoDistance() {
+      var a = (document.getElementById('percDistA') || {}).value || '';
+      var b = (document.getElementById('percDistB') || {}).value || '';
+      var out = document.getElementById('percDistResult');
+      if (!String(a).trim() || !String(b).trim()) {
+        out.textContent = 'Compila entrambi i campi';
+        return;
+      }
+      out.textContent = 'Calcolo…';
+      var pa = await resolveClientOrPlace(a);
+      var pb = await resolveClientOrPlace(b);
+      if (!pa || !pb) {
+        out.textContent = 'Impossibile geolocalizzare uno dei due punti';
+        return;
+      }
+      var km = haversineKm(pa, pb);
+      out.textContent = '~' + km.toFixed(1) + ' km  ·  ' + (pa.label || a) + ' → ' + (pb.label || b);
     }
 
 
