@@ -617,187 +617,85 @@
     }
     .desktop-link a { color: var(--primary); font-weight: 700; }
 
-    /* ===== Intro mobile dedicata ===== */
+    /* Gruppi tappe / spedizioni */
+    
+
+    /* ===== Intro mobile premium ===== */
     .m-intro {
-      position: fixed;
-      inset: 0;
-      z-index: 9999;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: radial-gradient(120% 80% at 50% 20%, #be185d 0%, #9d174d 42%, #4a044e 100%);
-      overflow: hidden;
-      transition: opacity 0.7s ease, visibility 0.7s ease;
+      position: fixed; inset: 0; z-index: 9999;
+      display: flex; align-items: center; justify-content: center; overflow: hidden;
+      background:
+        radial-gradient(120% 80% at 50% -10%, rgba(244,114,182,0.35) 0%, transparent 55%),
+        radial-gradient(90% 70% at 100% 100%, rgba(59,130,246,0.22) 0%, transparent 50%),
+        radial-gradient(80% 60% at 0% 80%, rgba(168,85,247,0.18) 0%, transparent 45%),
+        linear-gradient(165deg, #1a0520 0%, #2a0b2e 40%, #120818 100%);
+      transition: opacity 0.85s cubic-bezier(0.22,1,0.36,1), visibility 0.85s linear, transform 0.85s cubic-bezier(0.22,1,0.36,1);
     }
-    .m-intro.is-out {
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-    }
+    .m-intro.is-out { opacity: 0; visibility: hidden; transform: scale(1.03); pointer-events: none; }
     .m-intro-glow {
-      position: absolute;
-      width: 280px;
-      height: 280px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(255,255,255,0.22) 0%, transparent 70%);
-      top: 18%;
-      left: 50%;
-      transform: translateX(-50%);
-      animation: mGlow 3.2s ease-in-out infinite alternate;
-      pointer-events: none;
+      position: absolute; width: 280px; height: 280px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(253,164,175,0.45) 0%, rgba(157,23,77,0.15) 40%, transparent 70%);
+      filter: blur(8px); animation: mGlowPulse 4.5s ease-in-out infinite; z-index: 0;
     }
-    @keyframes mGlow {
-      from { opacity: 0.5; transform: translateX(-50%) scale(0.92); }
-      to { opacity: 1; transform: translateX(-50%) scale(1.08); }
-    }
-    .m-intro-orb {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(2px);
-      opacity: 0.35;
-      pointer-events: none;
-    }
-    .m-intro-orb.o1 {
-      width: 140px; height: 140px;
-      background: #f472b6;
-      top: -30px; right: -40px;
-      animation: mFloat 6s ease-in-out infinite;
-    }
-    .m-intro-orb.o2 {
-      width: 100px; height: 100px;
-      background: #c084fc;
-      bottom: 12%; left: -30px;
-      animation: mFloat 7.5s ease-in-out infinite reverse;
-    }
-    @keyframes mFloat {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(18px); }
-    }
-    .m-intro-inner {
-      position: relative;
-      z-index: 2;
-      text-align: center;
-      padding: 24px 28px calc(24px + env(safe-area-inset-bottom));
-      max-width: 340px;
-    }
+    .m-intro-orb { position: absolute; border-radius: 50%; filter: blur(40px); opacity: 0.55; z-index: 0; animation: mOrbFloat 9s ease-in-out infinite; }
+    .m-intro-orb.o1 { width: 180px; height: 180px; background: #e11d48; top: 12%; left: -40px; }
+    .m-intro-orb.o2 { width: 220px; height: 220px; background: #7c3aed; bottom: 8%; right: -50px; animation-delay: -3s; }
+    .m-intro-orb.o3 { width: 140px; height: 140px; background: #2563eb; top: 55%; left: 60%; animation-delay: -5s; opacity: 0.35; }
+    .m-intro-ring { position: absolute; border-radius: 50%; border: 1px solid rgba(255,255,255,0.12); z-index: 0; animation: mRing 6s ease-out infinite; }
+    .m-intro-ring.r1 { width: 200px; height: 200px; }
+    .m-intro-ring.r2 { width: 280px; height: 280px; animation-delay: 0.8s; opacity: 0.7; }
+    .m-intro-ring.r3 { width: 360px; height: 360px; animation-delay: 1.6s; opacity: 0.45; }
+    .m-intro-inner { position: relative; z-index: 2; text-align: center; padding: 28px 28px 20px; max-width: 340px; width: 100%; }
     .m-intro-mark {
-      width: 88px;
-      height: 88px;
-      margin: 0 auto 18px;
-      border-radius: 24px;
-      background: rgba(255,255,255,0.14);
+      width: 92px; height: 92px; margin: 0 auto 22px; border-radius: 28px;
+      background: linear-gradient(145deg, rgba(255,255,255,0.18), rgba(255,255,255,0.04));
       border: 1px solid rgba(255,255,255,0.22);
-      box-shadow: 0 12px 40px rgba(0,0,0,0.25);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      animation: mPop 0.8s cubic-bezier(0.22,1,0.36,1) both;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.25);
+      display: flex; align-items: center; justify-content: center;
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      animation: mMarkIn 1s cubic-bezier(0.22,1,0.36,1) both;
     }
-    @keyframes mPop {
-      from { opacity: 0; transform: scale(0.7) translateY(12px); }
-      to { opacity: 1; transform: scale(1) translateY(0); }
-    }
-    .m-intro-js {
-      font-size: 2.1rem;
-      font-weight: 900;
-      letter-spacing: -0.04em;
-      color: #fff;
-      line-height: 1;
-    }
+    .m-intro-js { font-size: 1.85rem; font-weight: 900; letter-spacing: -0.04em; line-height: 1; color: #fff; }
     .m-intro-js .s { color: #fda4af; }
-    .m-intro-rgb {
-      display: flex;
-      gap: 5px;
-      justify-content: center;
-      margin-top: 10px;
-    }
-    .m-intro-rgb i {
-      width: 9px; height: 9px; border-radius: 50%;
-      display: block;
-      animation: mBlink 1.6s ease-in-out infinite;
-    }
+    .m-intro-rgb { display: flex; gap: 5px; justify-content: center; margin-top: 8px; }
+    .m-intro-rgb i { width: 8px; height: 8px; border-radius: 50%; display: block; animation: mDot 1.4s ease-in-out infinite; }
     .m-intro-rgb i.r { background: #f87171; }
     .m-intro-rgb i.g { background: #4ade80; animation-delay: 0.2s; }
     .m-intro-rgb i.b { background: #60a5fa; animation-delay: 0.4s; }
-    @keyframes mBlink {
-      0%, 100% { opacity: 0.45; transform: scale(0.9); }
-      50% { opacity: 1; transform: scale(1.15); }
+    .m-intro-title { margin: 0 0 6px; font-size: 1.85rem; font-weight: 900; letter-spacing: -0.03em; color: #fff; animation: mFadeUp 0.9s 0.25s cubic-bezier(0.22,1,0.36,1) both; }
+    .m-intro-sub { margin: 0 0 14px; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(253,164,175,0.95); animation: mFadeUp 0.9s 0.4s cubic-bezier(0.22,1,0.36,1) both; }
+    .m-intro-desc { margin: 0 auto 18px; font-size: 0.95rem; line-height: 1.55; color: rgba(255,255,255,0.78); font-weight: 500; animation: mFadeUp 0.9s 0.55s cubic-bezier(0.22,1,0.36,1) both; }
+    .m-intro-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 0 0 22px; animation: mFadeUp 0.9s 0.7s cubic-bezier(0.22,1,0.36,1) both; }
+    .m-intro-chips span {
+      font-size: 0.72rem; font-weight: 800; color: rgba(255,255,255,0.9);
+      background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.14);
+      padding: 6px 10px; border-radius: 999px;
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
     }
-    .m-intro-title {
-      margin: 0 0 8px;
-      color: #fff;
-      font-size: 1.55rem;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      animation: mFadeUp 0.85s 0.15s both;
-    }
-    .m-intro-sub {
-      margin: 0 0 6px;
-      color: rgba(255,255,255,0.88);
-      font-size: 0.95rem;
-      font-weight: 600;
-      animation: mFadeUp 0.85s 0.28s both;
-    }
-    .m-intro-desc {
-      margin: 0 auto 22px;
-      color: rgba(255,255,255,0.7);
-      font-size: 0.82rem;
-      line-height: 1.45;
-      max-width: 280px;
-      animation: mFadeUp 0.85s 0.4s both;
-    }
-    @keyframes mFadeUp {
-      from { opacity: 0; transform: translateY(14px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .m-intro-bar {
-      width: 120px;
-      height: 3px;
-      margin: 0 auto 18px;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.2);
-      overflow: hidden;
-      animation: mFadeUp 0.85s 0.45s both;
-    }
-    .m-intro-bar span {
-      display: block;
-      height: 100%;
-      width: 0;
-      border-radius: 999px;
-      background: linear-gradient(90deg, #fda4af, #fff);
-      animation: mLoad 2.8s 0.5s ease forwards;
-    }
-    @keyframes mLoad {
-      to { width: 100%; }
-    }
+    .m-intro-bar { width: 140px; height: 4px; margin: 0 auto 18px; border-radius: 999px; background: rgba(255,255,255,0.12); overflow: hidden; animation: mFadeUp 0.9s 0.85s cubic-bezier(0.22,1,0.36,1) both; }
+    .m-intro-bar span { display: block; height: 100%; width: 0%; border-radius: 999px; background: linear-gradient(90deg, #fb7185, #f472b6, #c084fc); animation: mBarFill 2.8s 0.4s cubic-bezier(0.22,1,0.36,1) forwards; }
     .m-intro-skip {
-      border: 1px solid rgba(255,255,255,0.35);
-      background: rgba(255,255,255,0.1);
-      color: #fff;
-      font-weight: 700;
-      font-size: 0.85rem;
-      padding: 12px 22px;
-      border-radius: 999px;
-      min-height: 44px;
-      cursor: pointer;
-      animation: mFadeUp 0.85s 0.55s both;
+      border: 1px solid rgba(255,255,255,0.28); background: rgba(255,255,255,0.12); color: #fff;
+      font-weight: 800; font-size: 0.92rem; padding: 14px 22px; border-radius: 999px; min-height: 48px; cursor: pointer;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.25); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      animation: mFadeUp 0.9s 1s cubic-bezier(0.22,1,0.36,1) both; -webkit-tap-highlight-color: transparent;
+      transition: transform 0.15s ease, background 0.15s ease;
     }
-    .m-intro-skip:active {
-      background: rgba(255,255,255,0.22);
-    }
+    .m-intro-skip:active { transform: scale(0.96); background: rgba(255,255,255,0.22); }
     .m-intro-foot {
-      position: absolute;
-      bottom: calc(18px + env(safe-area-inset-bottom));
-      left: 0; right: 0;
-      text-align: center;
-      color: rgba(255,255,255,0.55);
-      font-size: 0.72rem;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      z-index: 2;
+      position: absolute; bottom: calc(18px + env(safe-area-inset-bottom)); left: 0; right: 0; text-align: center;
+      color: rgba(255,255,255,0.5); font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; z-index: 2;
+      animation: mFadeUp 1s 1.15s both;
     }
+    @keyframes mMarkIn { from { opacity: 0; transform: scale(0.7) translateY(16px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    @keyframes mFadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes mBarFill { from { width: 0%; } to { width: 100%; } }
+    @keyframes mGlowPulse { 0%, 100% { transform: scale(1); opacity: 0.85; } 50% { transform: scale(1.12); opacity: 1; } }
+    @keyframes mOrbFloat { 0%, 100% { transform: translate(0,0); } 50% { transform: translate(12px,-18px); } }
+    @keyframes mRing { 0% { transform: scale(0.7); opacity: 0; } 30% { opacity: 0.5; } 100% { transform: scale(1.15); opacity: 0; } }
+    @keyframes mDot { 0%, 100% { transform: scale(1); opacity: 0.7; } 50% { transform: scale(1.35); opacity: 1; } }
 
-    /* Gruppi tappe / spedizioni */
+
     .group-block {
       margin-bottom: 14px;
       border: 1px solid var(--border);
@@ -908,6 +806,10 @@
     <div class="m-intro-glow"></div>
     <div class="m-intro-orb o1"></div>
     <div class="m-intro-orb o2"></div>
+    <div class="m-intro-orb o3"></div>
+    <div class="m-intro-ring r1"></div>
+    <div class="m-intro-ring r2"></div>
+    <div class="m-intro-ring r3"></div>
     <div class="m-intro-inner">
       <div class="m-intro-mark">
         <div>
@@ -916,10 +818,16 @@
         </div>
       </div>
       <h2 class="m-intro-title">Note Clienti</h2>
-      <p class="m-intro-sub">Versione mobile</p>
-      <p class="m-intro-desc">Gestisci Prep, Note, spedizioni e consigli<br>ovunque ti trovi, con un tocco.</p>
+      <p class="m-intro-sub">Mobile</p>
+      <p class="m-intro-desc">Prep, Note, spedizioni e consigli<br>sempre a portata di mano.</p>
+      <div class="m-intro-chips">
+        <span>📋 Prep</span>
+        <span>📝 Note</span>
+        <span>💡 Consigli</span>
+        <span>☁️ Cloud</span>
+      </div>
       <div class="m-intro-bar"><span></span></div>
-      <button type="button" class="m-intro-skip" id="mobileIntroSkip" onclick="finishMobileIntro()">Entra nell'app ›</button>
+      <button type="button" class="m-intro-skip" id="mobileIntroSkip" onclick="finishMobileIntro()">Entra nell'app</button>
     </div>
     <div class="m-intro-foot">JS INSEGNE DIGITALI · JUMBOSCREEN®</div>
   </div>
@@ -2388,7 +2296,7 @@
       try { sessionStorage.setItem('note_clienti_mobile_intro_seen', '1'); } catch (e) {}
       setTimeout(function () {
         try { el.remove(); } catch (e) { el.style.display = 'none'; }
-      }, 750);
+      }, 900);
     }
 
     (function initMobileIntro() {
@@ -2399,7 +2307,8 @@
           return;
         }
       } catch (e) {}
-      setTimeout(function () { try { finishMobileIntro(); } catch (e) {} }, 4200);
+      // lascia finire barra + pausa soft, poi entra
+      setTimeout(function () { try { finishMobileIntro(); } catch (e) {} }, 3800);
     })();
 
     // init
