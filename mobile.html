@@ -298,6 +298,30 @@
       inset: 0;
       background: rgba(15,23,42,0.45);
     }
+    .sheet-detail {
+      margin: 0 0 12px;
+      padding: 12px;
+      border-radius: 14px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      font-size: 0.86rem;
+      line-height: 1.45;
+      color: #0f172a;
+      max-height: 42vh;
+      overflow: auto;
+    }
+    .sheet-detail .sd-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 6px 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .sheet-detail .sd-row:last-child { border-bottom: none; }
+    .sheet-detail .sd-k { color: #64748b; font-weight: 600; flex: 0 0 38%; }
+    .sheet-detail .sd-v { text-align: right; font-weight: 700; flex: 1; word-break: break-word; }
+    .sheet-detail .sd-block { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0; }
+    .sheet-detail .sd-title { font-size: 0.75rem; font-weight: 800; color: #9d174d; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.03em; }
     .sheet-panel {
       position: absolute;
       left: 0; right: 0; bottom: 0;
@@ -843,6 +867,7 @@
       <div class="sheet-handle"></div>
       <div class="sheet-title" id="sheetName">Cliente</div>
       <div class="sheet-sub" id="sheetMeta"></div>
+      <div id="sheetDetail" class="sheet-detail"></div>
       <div class="sheet-actions" id="sheetActions"></div>
     </div>
   </div>
@@ -1718,9 +1743,19 @@
       ].filter(Boolean);
       document.getElementById('sheetMeta').textContent = parts.join(' · ');
 
+      var detail = document.getElementById('sheetDetail');
+      if (detail) {
+        detail.innerHTML = buildClientDetailHtml(c);
+        detail.style.display = 'block';
+      }
+
       const sec = E.sectionOf(c);
       let html = '';
-      html += '<button type="button" class="primary" onclick="toast(\'Scheda completa: usa Desktop per modifica avanzata\')">📋 Info cliente</button>';
+      html += '<button type="button" class="primary" onclick="showClientInfo()">📋 Info cliente</button>';
+      if (sec === 'note') {
+        html += '<button type="button" class="primary" onclick="doPrep()">📋 Pre-pianificazione</button>';
+        html += '<button type="button" class="warn" onclick="doStandby()">⏸️ Stand-by</button>';
+      }
       if (sec === 'prep' || sec === 'standby') {
         html += '<button type="button" class="primary" onclick="openToNote()">→ Porta in Note</button>';
       }
@@ -1729,6 +1764,7 @@
       }
       if (sec === 'standby') {
         html += '<button type="button" class="warn" onclick="doUnstandby()">↩️ Togli Stand-by</button>';
+        html += '<button type="button" class="primary" onclick="doPrep()">📋 Pre-pianificazione</button>';
       }
       if (sec !== 'installati') {
         html += '<button type="button" class="ok" onclick="doInstallato()">✅ Installato</button>';
@@ -1737,6 +1773,55 @@
       html += '<button type="button" class="ghost" onclick="closeSheet()">Chiudi</button>';
       document.getElementById('sheetActions').innerHTML = html;
       document.getElementById('clientSheet').classList.add('open');
+    }
+
+    function buildClientDetailHtml(c) {
+      if (!c) return '';
+      function row(k, v) {
+        if (v == null || String(v).trim() === '') return '';
+        return '<div class="sd-row"><span class="sd-k">' + esc(k) + '</span><span class="sd-v">' + esc(String(v)) + '</span></div>';
+      }
+      var sec = E.sectionOf(c);
+      var secLabel = { note: 'Note clienti', prep: 'Pre-pianificazione', standby: 'Stand-by', installati: 'Installati' }[sec] || sec;
+      var html = '';
+      html += row('Sezione', secLabel);
+      html += row('Modello', E.modelsLabel(c) || '—');
+      html += row('Indirizzo', E.cleanAddress(c.localita || '') || '—');
+      html += row('Provincia', c.provincia || '');
+      html += row('Regione', c.regione || '');
+      html += row('Scadenza', c.scadenza ? E.formatScadenza(c.scadenza) : '');
+      html += row('Data installazione', c.data ? E.formatScadenza(c.data) : '');
+      html += row('N° ordine', c.confOrdine || c.numeroOrdine || '');
+      html += row('Montaggio', c.montaggio || '');
+      html += row('Tappa', c.tappa || '');
+      html += row('Spedizione', c.spedizione || '');
+      if ((c.spedizioneGruppo || '').trim()) html += row('Gruppo sped.', c.spedizioneGruppo);
+      if ((c.tracking || c.brtTracking || '').trim()) html += row('Tracking BRT', c.tracking || c.brtTracking);
+      var nota = c.notaDisponibilita || c.notaPrep || c.nota || '';
+      if (String(nota).trim()) {
+        html += '<div class="sd-block"><div class="sd-title">Note</div><div>' + esc(String(nota)) + '</div></div>';
+      }
+      return html || '<div style="color:#94a3b8">Nessun dettaglio disponibile</div>';
+    }
+
+    function showClientInfo() {
+      var c = E.findClient(activeClientId);
+      if (!c) return;
+      var detail = document.getElementById('sheetDetail');
+      if (!detail) return;
+      detail.innerHTML = buildClientDetailHtml(c);
+      detail.style.display = 'block';
+      try { detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
+      toast('Scheda cliente');
+    }
+
+    function doPrep() {
+      if (!activeClientId) return;
+      if (!confirm('Spostare questo cliente in Pre-pianificazione?')) return;
+      E.moveToPrep(activeClientId);
+      closeSheet();
+      toast('In Pre-pianificazione');
+      renderAll();
     }
 
     function closeSheet() {
