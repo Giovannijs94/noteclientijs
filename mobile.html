@@ -460,21 +460,53 @@
     .sheet-panel {
       position: absolute;
       left: 0; right: 0; bottom: 0;
-      background: #fff;
-      border-radius: 20px 20px 0 0;
-      padding: 10px 16px calc(16px + var(--safe-b));
-      max-height: 82vh;
-      overflow: auto;
+      background: var(--sheet-bg, #fff);
+      border-radius: 22px 22px 0 0;
+      padding: 8px 16px 0;
+      max-height: 92vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
       animation: up .28s cubic-bezier(.22,1,.36,1);
+      will-change: transform;
+      box-shadow: 0 -12px 40px rgba(15,23,42,0.18);
+    }
+    .sheet-panel.dragging {
+      animation: none;
+      transition: none;
+    }
+    .sheet-panel.closing {
+      transition: transform 0.28s cubic-bezier(.22,1,.36,1);
+      transform: translateY(110%) !important;
     }
     @keyframes up {
       from { transform: translateY(100%); }
       to { transform: translateY(0); }
     }
     .sheet-handle {
-      width: 40px; height: 4px; border-radius: 999px;
-      background: #cbd5e1; margin: 4px auto 12px;
+      width: 44px; height: 5px; border-radius: 999px;
+      background: #cbd5e1; margin: 6px auto 10px;
+      flex-shrink: 0;
+      cursor: grab;
+      touch-action: none;
     }
+    .sheet-handle:active { cursor: grabbing; }
+    .sheet-drag-zone {
+      flex-shrink: 0;
+      touch-action: none;
+      padding-bottom: 4px;
+    }
+    .sheet-scroll {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      padding: 0 0 calc(16px + var(--safe-b));
+    }
+    .sheet-title { flex-shrink: 0; }
+    .sheet-sub { flex-shrink: 0; }
+
     .sheet-title {
       font-weight: 800;
       font-size: 1.05rem;
@@ -1007,12 +1039,16 @@
   <!-- Client action sheet -->
   <div class="sheet" id="clientSheet">
     <div class="sheet-bg" onclick="closeSheet()"></div>
-    <div class="sheet-panel">
-      <div class="sheet-handle"></div>
-      <div class="sheet-title" id="sheetName">Cliente</div>
-      <div class="sheet-sub" id="sheetMeta"></div>
-      <div id="sheetDetail" class="sheet-detail"></div>
-      <div class="sheet-actions" id="sheetActions"></div>
+    <div class="sheet-panel" id="clientSheetPanel">
+      <div class="sheet-drag-zone" id="clientSheetDrag">
+        <div class="sheet-handle"></div>
+        <div class="sheet-title" id="sheetName">Cliente</div>
+        <div class="sheet-sub" id="sheetMeta"></div>
+      </div>
+      <div class="sheet-scroll" id="clientSheetScroll">
+        <div id="sheetDetail" class="sheet-detail"></div>
+        <div class="sheet-actions" id="sheetActions"></div>
+      </div>
     </div>
   </div>
 
@@ -2014,8 +2050,15 @@
       document.getElementById('sheetName').textContent = c.nome || 'Cliente';
       document.getElementById('sheetMeta').textContent = 'Scheda completa';
 
-      var panel = document.querySelector('#clientSheet .sheet-panel');
-      if (panel) panel.classList.add('sheet-tall');
+      var panel = document.getElementById('clientSheetPanel') || document.querySelector('#clientSheet .sheet-panel');
+      if (panel) {
+        panel.classList.add('sheet-tall');
+        panel.classList.remove('closing', 'dragging');
+        panel.style.transform = '';
+        panel.style.transition = '';
+      }
+      var sc = document.getElementById('clientSheetScroll');
+      if (sc) sc.scrollTop = 0;
 
       var detail = document.getElementById('sheetDetail');
       if (detail) {
@@ -2093,8 +2136,109 @@
     }
 
     function closeSheet() {
-      document.getElementById('clientSheet').classList.remove('open');
+      var sheet = document.getElementById('clientSheet');
+      var panel = document.getElementById('clientSheetPanel');
+      if (!sheet) return;
+      if (panel) {
+        panel.classList.add('closing');
+        panel.style.transform = 'translateY(110%)';
+        setTimeout(function () {
+          sheet.classList.remove('open');
+          panel.classList.remove('closing', 'dragging');
+          panel.style.transform = '';
+          panel.style.transition = '';
+        }, 280);
+      } else {
+        sheet.classList.remove('open');
+      }
     }
+
+    // Bottom sheet: scroll interno + swipe down per chiudere
+    (function initClientSheetDrag() {
+      var sheet = document.getElementById('clientSheet');
+      var panel = document.getElementById('clientSheetPanel');
+      var dragZone = document.getElementById('clientSheetDrag');
+      var scrollEl = document.getElementById('clientSheetScroll');
+      if (!sheet || !panel) return;
+
+      var startY = 0, currentY = 0, dragging = false, fromScroll = false;
+
+      function onStart(y, fromScrollArea) {
+        startY = y;
+        currentY = 0;
+        dragging = true;
+        fromScroll = !!fromScrollArea;
+        panel.classList.add('dragging');
+        panel.style.transition = 'none';
+      }
+      function onMove(y) {
+        if (!dragging) return;
+        var dy = y - startY;
+        // solo verso il basso
+        if (dy < 0) dy = 0;
+        // se stiamo scrollando contenuto e non siamo in cima, non trascinare
+        if (fromScroll && scrollEl && scrollEl.scrollTop > 2) {
+          currentY = 0;
+          panel.style.transform = '';
+          return;
+        }
+        currentY = dy;
+        panel.style.transform = 'translateY(' + dy + 'px)';
+        var bg = sheet.querySelector('.sheet-bg');
+        if (bg) bg.style.opacity = String(Math.max(0.15, 1 - dy / 320));
+      }
+      function onEnd() {
+        if (!dragging) return;
+        dragging = false;
+        panel.classList.remove('dragging');
+        var bg = sheet.querySelector('.sheet-bg');
+        if (currentY > 110) {
+          closeSheet();
+          if (bg) bg.style.opacity = '';
+          return;
+        }
+        panel.style.transition = 'transform 0.25s cubic-bezier(.22,1,.36,1)';
+        panel.style.transform = 'translateY(0)';
+        if (bg) {
+          bg.style.transition = 'opacity 0.2s ease';
+          bg.style.opacity = '';
+          setTimeout(function () { bg.style.transition = ''; }, 220);
+        }
+        setTimeout(function () {
+          panel.style.transition = '';
+        }, 260);
+      }
+
+      function bindTouch(el, isScroll) {
+        if (!el) return;
+        el.addEventListener('touchstart', function (e) {
+          if (!sheet.classList.contains('open')) return;
+          if (!e.touches || e.touches.length !== 1) return;
+          if (isScroll && scrollEl && scrollEl.scrollTop > 2) {
+            dragging = false;
+            return;
+          }
+          onStart(e.touches[0].clientY, isScroll);
+        }, { passive: true });
+        el.addEventListener('touchmove', function (e) {
+          if (!dragging) return;
+          if (fromScroll && scrollEl && scrollEl.scrollTop > 2) return;
+          var y = e.touches[0].clientY;
+          var dy = y - startY;
+          if (dy > 0) {
+            // blocca scroll della pagina mentre trasciniamo giù
+            if (e.cancelable) e.preventDefault();
+            onMove(y);
+          }
+        }, { passive: false });
+        el.addEventListener('touchend', onEnd, { passive: true });
+        el.addEventListener('touchcancel', onEnd, { passive: true });
+      }
+
+      bindTouch(dragZone, false);
+      bindTouch(scrollEl, true);
+    })();
+
 
     function openToNote() {
       closeSheet();
