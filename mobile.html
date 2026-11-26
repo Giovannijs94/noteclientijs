@@ -894,20 +894,71 @@
         <button type="button" class="more-item" onclick="goFromMore('installati')"><span>✅</span><span>Installati</span></button>
         <button type="button" class="more-item" onclick="goFromMore('ordini')"><span>📦</span><span>Ordini</span></button>
         <button type="button" class="more-item" onclick="exportBackupMobile()"><span>💾</span><span>Esporta JSON</span></button>
-        <button type="button" class="more-item" onclick="document.getElementById('importFileMobile').click()"><span>📂</span><span>Importa JSON</span></button>
+        <button type="button" class="more-item" onclick="openImportSheet()"><span>📂</span><span>Importa JSON</span></button>
+        <button type="button" class="more-item" onclick="openSupabaseSheet()"><span>☁️</span><span>Cloud Supabase</span></button>
         <button type="button" class="more-item" onclick="location.href='index.html?desktop=1'"><span>🖥️</span><span>Desktop</span></button>
       </div>
-      <input type="file" id="importFileMobile" accept=".json,application/json,text/plain,*/*" style="display:none" onchange="importBackupMobile(event)">
-      <p style="font-size:0.72rem;color:#94a3b8;text-align:center;margin:0 0 10px;">Importa il backup scaricato dal PC. Sostituisce i dati presenti su questo iPhone.</p>
+      <p style="font-size:0.72rem;color:#94a3b8;text-align:center;margin:0 0 10px;">Backup dal PC → Importa JSON. Su Android usa «File» o «Incolla testo».</p>
       <div class="sheet-actions">
         <button type="button" class="ghost" onclick="closeMore()">Chiudi</button>
       </div>
     </div>
   </div>
 
+
+  <!-- Import backup (Android-friendly) -->
+  <div class="sheet" id="importSheet">
+    <div class="sheet-bg" onclick="closeImportSheet()"></div>
+    <div class="sheet-panel">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">Importa backup JSON</div>
+      <p class="sheet-sub" style="text-align:left;line-height:1.45;">
+        Su Xiaomi/Android a volte il file non si apre dal menu nascosto.
+        Usa uno di questi metodi:
+      </p>
+      <div class="sheet-actions" style="margin-bottom:12px;">
+        <label class="primary" style="display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:12px;background:var(--primary);color:#fff;font-weight:700;cursor:pointer;">
+          📂 Scegli file dal telefono
+          <input type="file" id="importFileMobile" accept="*/*" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;" onchange="importBackupMobile(event)">
+        </label>
+      </div>
+      <div class="field">
+        <label>Oppure incolla qui il contenuto del file .json</label>
+        <textarea id="importPasteArea" class="input-control" rows="6" placeholder='{"clients":[...]} oppure tutto il testo del backup' style="min-height:120px;font-size:14px;resize:vertical;"></textarea>
+      </div>
+      <div class="sheet-actions">
+        <button type="button" class="primary" onclick="importBackupFromPaste()">📥 Importa testo incollato</button>
+        <button type="button" class="ghost" onclick="closeImportSheet()">Annulla</button>
+      </div>
+      <p style="font-size:0.72rem;color:#94a3b8;margin:10px 0 0;line-height:1.4;">
+        Suggerimento Xiaomi: apri il file con «Gestione file» / «Documenti», oppure inviatelo via WhatsApp/Telegram a te stesso, aprilo e copia tutto il testo.
+        L’import <strong>sostituisce</strong> i clienti già presenti su questo telefono.
+      </p>
+    </div>
+  </div>
+
+
+  <div class="sheet" id="supabaseSheet">
+    <div class="sheet-bg" onclick="closeSupabaseSheet()"></div>
+    <div class="sheet-panel">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">☁️ Cloud Supabase</div>
+      <p class="sheet-sub" style="text-align:left;line-height:1.4;">Stesse credenziali del PC. Prima configura, poi Carica/Scarica.</p>
+      <div class="field"><label>Project URL</label><input type="url" id="mSbUrl" placeholder="https://xxxx.supabase.co"></div>
+      <div class="field"><label>Chiave anon</label><input type="password" id="mSbKey" placeholder="eyJ..." autocomplete="off"></div>
+      <div class="field"><label>ID dataset</label><input type="text" id="mSbRow" value="main" placeholder="main"></div>
+      <div class="sheet-actions">
+        <button type="button" class="primary" onclick="saveMobileSbConfig()">💾 Salva config</button>
+        <button type="button" class="primary" onclick="supabasePushMobile()">⬆️ Carica su cloud</button>
+        <button type="button" class="primary" onclick="supabasePullMobile()">⬇️ Scarica da cloud</button>
+        <button type="button" class="ghost" onclick="closeSupabaseSheet()">Chiudi</button>
+      </div>
+    </div>
+  </div>
   <div class="toast" id="toast"></div>
 
   <script src="js/engine.js"></script>
+  <script src="js/supabase-sync.js"></script>
   <script>
     const E = window.AppEngine;
     let currentView = 'home';
@@ -1411,46 +1462,93 @@
       }
     }
 
+    function openImportSheet() {
+      try { closeMore(); } catch (e) {}
+      const el = document.getElementById('importSheet');
+      if (el) el.classList.add('open');
+      const ta = document.getElementById('importPasteArea');
+      if (ta) ta.value = '';
+    }
+    function closeImportSheet() {
+      const el = document.getElementById('importSheet');
+      if (el) el.classList.remove('open');
+    }
+
+    function parseBackupText(text) {
+      text = String(text || '');
+      if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+      text = text.trim();
+      if (!text) throw new Error('Testo / file vuoto');
+      try {
+        return JSON.parse(text);
+      } catch (e1) {
+        const start = text.indexOf('{');
+        const startArr = text.indexOf('[');
+        let s = -1;
+        if (start >= 0 && (startArr < 0 || start < startArr)) s = start;
+        else s = startArr;
+        if (s < 0) throw e1;
+        let end = text.lastIndexOf('}');
+        const endArr = text.lastIndexOf(']');
+        if (startArr >= 0 && (start < 0 || startArr < start)) end = endArr;
+        if (end > s) {
+          try { return JSON.parse(text.slice(s, end + 1)); } catch (e2) {}
+        }
+        return JSON.parse(text.slice(s));
+      }
+    }
+
+    function applyImportedBackup(data) {
+      if (!data) throw new Error('Dati non validi');
+      if (!confirm('Importare questo backup?\n\nI clienti ora presenti su questo telefono verranno sostituiti.')) {
+        return false;
+      }
+      const res = E.importFromBackup(data);
+      try { closeImportSheet(); } catch (e) {}
+      try { closeMore(); } catch (e) {}
+      renderAll();
+      toast('Import ok: ' + (res && res.clients != null ? res.clients : '?') + ' clienti');
+      alert('Import completato.\nClienti: ' + (res.clients || 0) + '\nModelli: ' + (res.models || 0) + '\nOrdini: ' + (res.ordini || 0));
+      return true;
+    }
+
     function importBackupMobile(event) {
       const file = event && event.target && event.target.files && event.target.files[0];
-      if (!file) return;
+      if (!file) {
+        alert('Nessun file selezionato. Su Xiaomi: scegli «File» / «Gestione file», non «Fotocamera».');
+        return;
+      }
       const reader = new FileReader();
       reader.onload = function () {
         try {
-          let text = String(reader.result || '');
-          // rimuovi eventuali BOM
-          if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
-          let data;
-          try {
-            data = JSON.parse(text);
-          } catch (e1) {
-            // a volte c'è testo extra: prova a isolare il JSON
-            const start = text.indexOf('{');
-            const startArr = text.indexOf('[');
-            let s = -1;
-            if (start >= 0 && (startArr < 0 || start < startArr)) s = start;
-            else s = startArr;
-            if (s < 0) throw e1;
-            data = JSON.parse(text.slice(s));
-          }
-          if (!confirm('Importare questo backup?\n\nI clienti ora presenti su questo telefono verranno sostituiti.')) {
-            event.target.value = '';
-            return;
-          }
-          const res = E.importFromBackup(data);
-          closeMore();
-          renderAll();
-          toast('Import ok: ' + res.clients + ' clienti');
+          const data = parseBackupText(reader.result);
+          applyImportedBackup(data);
         } catch (err) {
           console.error(err);
-          alert('Import fallito: ' + (err && err.message ? err.message : err));
+          alert('Import fallito: ' + (err && err.message ? err.message : err) +
+            '\n\nProva il metodo «Incolla testo»: apri il .json, copia tutto e usa Importa testo incollato.');
         }
         try { event.target.value = ''; } catch (e) {}
       };
       reader.onerror = function () {
-        alert('Impossibile leggere il file');
+        alert('Impossibile leggere il file (permesso o file non accessibile). Usa «Incolla testo».');
       };
-      reader.readAsText(file);
+      try {
+        reader.readAsText(file, 'UTF-8');
+      } catch (e) {
+        alert('Lettura file non supportata. Usa «Incolla testo».');
+      }
+    }
+
+    function importBackupFromPaste() {
+      try {
+        const ta = document.getElementById('importPasteArea');
+        const data = parseBackupText(ta && ta.value);
+        applyImportedBackup(data);
+      } catch (err) {
+        console.error(err);
+        alert('Import fallito: ' + (err && err.message ? err.message : err));
+      }
     }
 
 

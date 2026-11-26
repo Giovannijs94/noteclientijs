@@ -7129,6 +7129,15 @@
                     <button type="button" class="settings-menu-item" onclick="exportBackup(); closeSettingsMenu();">
                         <span class="icon">💾</span> Scarica Backup
                     </button>
+                    <button type="button" class="settings-menu-item" onclick="openSupabaseSyncModal(); closeSettingsMenu();">
+                        <span class="icon">☁️</span> Cloud Supabase
+                    </button>
+                    <button type="button" class="settings-menu-item" onclick="supabasePushDesktop(); closeSettingsMenu();">
+                        <span class="icon">⬆️</span> Carica su cloud
+                    </button>
+                    <button type="button" class="settings-menu-item" onclick="supabasePullDesktop(); closeSettingsMenu();">
+                        <span class="icon">⬇️</span> Scarica da cloud
+                    </button>
                     <button type="button" class="settings-menu-item" onclick="scegliCartellaBackup(); closeSettingsMenu();">
                         <span class="icon">📁</span> Cartella backup auto
                     </button>
@@ -8072,6 +8081,86 @@
     </div>
 </div>
 
+
+
+        <p style="margin:0 0 10px;font-size:0.82rem;color:#64748b;line-height:1.45;">
+            Per ogni cliente incolla il <strong>link di invito</strong> del gruppo WhatsApp con lo stesso nome.
+            Poi dalla scheda, il pulsante <strong>💬 WhatsApp</strong> apre il gruppo sull'app del PC.
+        </p>
+        <div id="waLinksManagerList" style="flex:1;overflow:auto;min-height:200px;max-height:55vh;border:1px solid #e2e8f0;border-radius:12px;padding:8px;"></div>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+            <button type="button" class="btn btn-primary" onclick="saveWaLinksManager()">💾 Salva collegamenti</button>
+            <button type="button" class="btn" onclick="closeWaLinksManager()">Chiudi</button>
+        </div>
+    </div>
+</div>
+
+
+
+
+<div id="supabaseSyncModal" class="modal-overlay" style="z-index:12000;">
+    <div class="modal" style="max-width:560px;max-height:92vh;overflow:auto;">
+        <div class="modal-header">
+            <h3>☁️ Cloud privato Supabase</h3>
+            <button type="button" class="modal-close" onclick="closeSupabaseSyncModal()">✕</button>
+        </div>
+        <p style="margin:0 0 10px;font-size:0.84rem;color:#64748b;line-height:1.45;">
+            Sincronizza PC e telefono senza passare il file JSON a mano.
+            Crea un progetto gratis su <strong>supabase.com</strong>, esegui l’SQL sotto, poi incolla URL e chiave <strong>anon</strong>.
+        </p>
+        <div class="form-group" style="margin-bottom:8px;">
+            <label>Project URL</label>
+            <input type="url" id="sbUrlInput" class="input-control" placeholder="https://xxxxxxxx.supabase.co">
+        </div>
+        <div class="form-group" style="margin-bottom:8px;">
+            <label>Chiave anon (public)</label>
+            <input type="password" id="sbKeyInput" class="input-control" placeholder="eyJhbGciOi..." autocomplete="off">
+        </div>
+        <div class="form-group" style="margin-bottom:8px;">
+            <label>ID dataset (lascia main)</label>
+            <input type="text" id="sbRowInput" class="input-control" placeholder="main" value="main">
+        </div>
+        <details style="margin:10px 0;font-size:0.78rem;color:#64748b;">
+            <summary style="cursor:pointer;font-weight:700;color:#334155;">SQL da eseguire nel progetto</summary>
+            <pre id="sbSqlBox" style="white-space:pre-wrap;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-top:8px;font-size:0.72rem;"></pre>
+            <button type="button" class="btn" style="margin-top:6px;" onclick="navigator.clipboard.writeText(document.getElementById('sbSqlBox').textContent);alert('SQL copiato');">Copia SQL</button>
+        </details>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">
+            <button type="button" class="btn btn-primary" onclick="saveSupabaseConfigDesktop()">💾 Salva config</button>
+            <button type="button" class="btn" style="background:#0f172a;color:#fff;border:none;" onclick="supabasePushDesktop()">⬆️ Carica su cloud</button>
+            <button type="button" class="btn" style="background:#2563eb;color:#fff;border:none;" onclick="supabasePullDesktop()">⬇️ Scarica da cloud</button>
+            <button type="button" class="btn" onclick="clearSupabaseConfigDesktop()">Rimuovi config</button>
+            <button type="button" class="btn" onclick="closeSupabaseSyncModal()">Chiudi</button>
+        </div>
+    </div>
+</div>
+
+<div id="chatSummaryModal" class="modal-overlay" style="z-index:12000;">
+    <div class="modal" style="max-width:640px;max-height:92vh;display:flex;flex-direction:column;">
+        <div class="modal-header">
+            <h3>🧠 Riepilogo chat · <span id="chatSummaryClientName">Cliente</span></h3>
+            <button type="button" class="modal-close" onclick="closeChatSummaryModal()">✕</button>
+        </div>
+        <p style="margin:0 0 10px;font-size:0.82rem;color:#64748b;line-height:1.45;">
+            WhatsApp <strong>non permette</strong> alla web app di leggere da sola le chat.
+            Esporta o copia i messaggi dal gruppo del cliente, incollali qui e genera un riepilogo.
+        </p>
+        <p style="margin:0 0 10px;font-size:0.78rem;color:#64748b;">
+            Su WhatsApp Desktop: apri il gruppo → ⋮ → <strong>Esporta chat</strong> (senza media) oppure seleziona e copia i messaggi.
+        </p>
+        <label style="font-size:0.78rem;font-weight:700;color:#64748b;margin-bottom:4px;">Testo chat</label>
+        <textarea id="chatSummaryInput" class="input-control" rows="10" placeholder="Incolla qui la chat esportata..." style="resize:vertical;min-height:160px;font-size:0.85rem;line-height:1.4;"></textarea>
+        <div style="display:flex;gap:8px;margin:10px 0;flex-wrap:wrap;">
+            <button type="button" class="btn btn-primary" id="chatSummaryGenBtn" onclick="generateChatSummary()">🧠 Genera riepilogo</button>
+            <button type="button" class="btn" onclick="document.getElementById('chatSummaryInput').value=''; document.getElementById('chatSummaryResult').innerHTML='';">Pulisci</button>
+            <button type="button" class="btn" onclick="saveChatSummaryToNote()" id="chatSummarySaveBtn" style="display:none;">💾 Salva in note cliente</button>
+        </div>
+        <div id="chatSummaryResult" style="flex:1;overflow:auto;min-height:80px;border:1px solid #e2e8f0;border-radius:12px;padding:12px;background:#f8fafc;font-size:0.86rem;line-height:1.5;color:#0f172a;"></div>
+        <div style="margin-top:10px;">
+            <button type="button" class="btn" onclick="closeChatSummaryModal()" style="width:100%;">Chiudi</button>
+        </div>
+    </div>
+</div>
 
 <div id="editClientModal" class="modal-overlay confirm-modal">
     <div class="modal confirm-box" style="max-width:520px;text-align:left;">
@@ -10504,6 +10593,185 @@
 
     let pendingDeleteId = null;
 
+
+
+    // ===== Riepilogo chat (incolla testo WhatsApp) =====
+    let _chatSummaryClientId = null;
+    let _lastChatSummaryText = '';
+
+    window.openChatSummaryModal = function(id) {
+        const client = (clients || []).find(function(c) { return String(c.id) === String(id); });
+        if (!client) return;
+        _chatSummaryClientId = String(id);
+        _lastChatSummaryText = '';
+        const nameEl = document.getElementById('chatSummaryClientName');
+        if (nameEl) nameEl.textContent = client.nome || 'Cliente';
+        const inp = document.getElementById('chatSummaryInput');
+        if (inp) inp.value = client.chatExportDraft || '';
+        const res = document.getElementById('chatSummaryResult');
+        if (res) {
+            res.innerHTML = client.chatSummary
+                ? ('<div style="margin-bottom:8px;font-size:0.75rem;color:#64748b;">Ultimo riepilogo salvato:</div>' + client.chatSummary)
+                : '<span style="color:#94a3b8;">Incolla la chat e premi «Genera riepilogo».</span>';
+        }
+        const saveBtn = document.getElementById('chatSummarySaveBtn');
+        if (saveBtn) saveBtn.style.display = client.chatSummary ? '' : 'none';
+        const modal = document.getElementById('chatSummaryModal');
+        if (modal) modal.style.display = 'flex';
+        setTimeout(function() { try { if (inp) inp.focus(); } catch (e) {} }, 40);
+    };
+
+    window.closeChatSummaryModal = function() {
+        const modal = document.getElementById('chatSummaryModal');
+        if (modal) modal.style.display = 'none';
+        try {
+            const client = (clients || []).find(function(c) { return String(c.id) === String(_chatSummaryClientId); });
+            const inp = document.getElementById('chatSummaryInput');
+            if (client && inp) {
+                client.chatExportDraft = inp.value || '';
+                saveToLocalStorage();
+            }
+        } catch (e) {}
+        _chatSummaryClientId = null;
+    };
+
+    function parseWhatsAppLines(raw) {
+        const text = String(raw || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        const lines = text.split('\n');
+        const re = /^\[?(\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4})[, ]+\s*(\d{1,2}:\d{2}(?::\d{2})?)\]?\s*(?:\- )?([^:]{1,60}):\s*(.*)$/;
+        const msgs = [];
+        let cur = null;
+        lines.forEach(function(line) {
+            const m = line.match(re);
+            if (m) {
+                if (cur) msgs.push(cur);
+                cur = { date: m[1], time: m[2], author: m[3].trim(), text: (m[4] || '').trim() };
+            } else if (cur && line.trim()) {
+                cur.text += (cur.text ? ' ' : '') + line.trim();
+            }
+        });
+        if (cur) msgs.push(cur);
+        return msgs;
+    }
+
+    function summarizeChatText(raw, clientName) {
+        const msgs = parseWhatsAppLines(raw);
+        const plain = String(raw || '').trim();
+        if (!plain) return { html: '<span style="color:#b91c1c;">Incolla prima il testo della chat.</span>', text: '' };
+
+        const keywords = [
+            { re: /appuntament|installaz|montagg|intervento|sopralluogo/i, label: 'Appuntamenti / installazione' },
+            { re: /conferm/i, label: 'Conferme' },
+            { re: /annull|rinv|spost|rimand/i, label: 'Rinvii / annullamenti' },
+            { re: /pagament|acconto|saldo|fattur|bonific/i, label: 'Pagamenti' },
+            { re: /spediz|brt|corriere|tracking|pacco/i, label: 'Spedizioni' },
+            { re: /problema|guast|difett|non funz|reclamo/i, label: 'Problemi / reclami' },
+            { re: /indirizz|via |citt[aà]|civico/i, label: 'Indirizzo' },
+            { re: /orario|alle \d|ore \d|mattina|pomerig|sera/i, label: 'Orari' }
+        ];
+        const hits = {};
+        keywords.forEach(function(k) { hits[k.label] = []; });
+        const authors = {};
+        const dateSet = {};
+
+        function consider(msg) {
+            const t = msg.text || '';
+            if (!t || /^<Media\s+omessi?>/i.test(t) || /^image omitted/i.test(t)) return;
+            authors[msg.author || '—'] = (authors[msg.author || '—'] || 0) + 1;
+            if (msg.date) dateSet[msg.date] = true;
+            keywords.forEach(function(k) {
+                if (k.re.test(t)) hits[k.label].push(msg);
+            });
+        }
+
+        if (msgs.length) msgs.forEach(consider);
+        else plain.split('\n').forEach(function(line) { consider({ date: '', time: '', author: '', text: line.trim() }); });
+
+        const lastMsgs = msgs.slice(-8);
+        const dates = Object.keys(dateSet);
+        let html = '';
+        html += '<div style="font-weight:800;margin-bottom:8px;color:#9d174d;">Riepilogo per ' + String(clientName || '').replace(/</g, '&lt;') + '</div>';
+        html += '<ul style="margin:0 0 10px 18px;padding:0;">';
+        html += '<li><strong>Messaggi riconosciuti:</strong> ' + (msgs.length || 'n/d (testo libero)') + '</li>';
+        if (dates.length) html += '<li><strong>Date presenti:</strong> ' + dates.slice(0, 12).join(', ') + (dates.length > 12 ? '…' : '') + '</li>';
+        const authList = Object.keys(authors).sort(function(a, b) { return authors[b] - authors[a]; });
+        if (authList.length) html += '<li><strong>Partecipanti:</strong> ' + authList.slice(0, 8).map(function(a) { return a + ' (' + authors[a] + ')'; }).join(', ') + '</li>';
+        html += '</ul>';
+
+        const themes = keywords.map(function(k) { return k.label; }).filter(function(l) { return hits[l].length; });
+        if (themes.length) {
+            html += '<div style="font-weight:700;margin:8px 0 4px;">Temi emersi</div><ul style="margin:0 0 10px 18px;padding:0;">';
+            themes.forEach(function(l) {
+                const sample = hits[l].slice(-2).map(function(m) {
+                    const who = m.author ? (m.author + ': ') : '';
+                    const when = (m.date || '') + (m.time ? (' ' + m.time) : '');
+                    return (when ? '[' + when + '] ' : '') + who + (m.text || '').slice(0, 140);
+                }).join(' · ');
+                html += '<li><strong>' + l + '</strong> (' + hits[l].length + ') — <span style="color:#475569;">' + String(sample).replace(/</g, '&lt;') + '</span></li>';
+            });
+            html += '</ul>';
+        } else {
+            html += '<p style="color:#64748b;">Nessun tema forte rilevato. Controlla gli ultimi messaggi.</p>';
+        }
+
+        if (lastMsgs.length) {
+            html += '<div style="font-weight:700;margin:8px 0 4px;">Ultimi messaggi</div>';
+            html += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px 10px;">';
+            lastMsgs.forEach(function(m) {
+                html += '<div style="margin-bottom:6px;"><span style="color:#94a3b8;font-size:0.75rem;">' +
+                    String(m.date || '') + ' ' + String(m.time || '') + '</span> <strong>' +
+                    String(m.author || '').replace(/</g, '&lt;') + '</strong>: ' +
+                    String(m.text || '').replace(/</g, '&lt;').slice(0, 220) + '</div>';
+            });
+            html += '</div>';
+        }
+        html += '<p style="margin-top:10px;font-size:0.75rem;color:#94a3b8;">Riepilogo automatico locale: la web app non legge WhatsApp da sola.</p>';
+
+        let textOut = 'Riepilogo chat ' + (clientName || '') + '\n';
+        textOut += 'Messaggi: ' + (msgs.length || 'n/d') + '\n';
+        if (themes.length) textOut += 'Temi: ' + themes.join(', ') + '\n';
+        if (lastMsgs.length) {
+            textOut += 'Ultimi:\n';
+            lastMsgs.forEach(function(m) {
+                textOut += '- ' + (m.date || '') + ' ' + (m.author || '') + ': ' + (m.text || '').slice(0, 120) + '\n';
+            });
+        }
+        return { html: html, text: textOut };
+    }
+
+    window.generateChatSummary = function() {
+        const client = (clients || []).find(function(c) { return String(c.id) === String(_chatSummaryClientId); });
+        const inp = document.getElementById('chatSummaryInput');
+        const res = document.getElementById('chatSummaryResult');
+        const raw = (inp && inp.value) || '';
+        const out = summarizeChatText(raw, client ? client.nome : '');
+        _lastChatSummaryText = out.text;
+        if (res) res.innerHTML = out.html;
+        const saveBtn = document.getElementById('chatSummarySaveBtn');
+        if (saveBtn) saveBtn.style.display = out.text ? '' : 'none';
+        if (client) {
+            client.chatExportDraft = raw;
+            try { saveToLocalStorage(); } catch (e) {}
+        }
+    };
+
+    window.saveChatSummaryToNote = function() {
+        const client = (clients || []).find(function(c) { return String(c.id) === String(_chatSummaryClientId); });
+        if (!client || !_lastChatSummaryText) {
+            alert('Genera prima un riepilogo.');
+            return;
+        }
+        client.chatSummary = document.getElementById('chatSummaryResult').innerHTML;
+        const stamp = new Date().toLocaleString('it-IT');
+        const prev = client.notaDisponibilita || client.notaPrep || '';
+        const add = '[Riepilogo chat ' + stamp + '] ' + _lastChatSummaryText.replace(/\n/g, ' · ').slice(0, 500);
+        if (client.inPrep) client.notaPrep = (prev ? (prev + ' | ') : '') + add;
+        else client.notaDisponibilita = (prev ? (prev + ' | ') : '') + add;
+        try { saveToLocalStorage(); } catch (e) {}
+        try { render(); } catch (e) {}
+        alert('Riepilogo salvato nelle note del cliente.');
+    };
+
     window.editClient = function(id) {
         const client = clients.find(c => String(c.id) === String(id));
         if (!client) return;
@@ -10976,6 +11244,123 @@
             render();
         }
     }
+
+
+    // ===== Supabase cloud sync =====
+    window.openSupabaseSyncModal = function() {
+        if (typeof NoteClientiSupabase === 'undefined') {
+            alert('Modulo cloud non caricato. Aggiorna la pagina (Ctrl+F5).');
+            return;
+        }
+        var c = NoteClientiSupabase.loadConfig();
+        var u = document.getElementById('sbUrlInput');
+        var k = document.getElementById('sbKeyInput');
+        var r = document.getElementById('sbRowInput');
+        var sql = document.getElementById('sbSqlBox');
+        if (u) u.value = c.url || '';
+        if (k) k.value = c.key || '';
+        if (r) r.value = c.rowId || 'main';
+        if (sql) sql.textContent = NoteClientiSupabase.setupSql || '';
+        var m = document.getElementById('supabaseSyncModal');
+        if (m) m.style.display = 'flex';
+    };
+    window.closeSupabaseSyncModal = function() {
+        var m = document.getElementById('supabaseSyncModal');
+        if (m) m.style.display = 'none';
+    };
+    window.saveSupabaseConfigDesktop = function() {
+        if (typeof NoteClientiSupabase === 'undefined') return;
+        NoteClientiSupabase.saveConfig({
+            url: (document.getElementById('sbUrlInput') || {}).value || '',
+            key: (document.getElementById('sbKeyInput') || {}).value || '',
+            rowId: (document.getElementById('sbRowInput') || {}).value || 'main'
+        });
+        alert('Configurazione Supabase salvata su questo browser.');
+    };
+    window.clearSupabaseConfigDesktop = function() {
+        if (typeof NoteClientiSupabase === 'undefined') return;
+        NoteClientiSupabase.clearConfig();
+        var u = document.getElementById('sbUrlInput');
+        var k = document.getElementById('sbKeyInput');
+        if (u) u.value = '';
+        if (k) k.value = '';
+        alert('Configurazione rimossa.');
+    };
+    window.buildDesktopCloudPayload = function() {
+        var payload = {
+            version: 3,
+            exportedAt: new Date().toISOString(),
+            source: 'desktop',
+            clients: (typeof clients !== 'undefined' && clients) ? clients : [],
+            models: (typeof savedModels !== 'undefined' && savedModels) ? savedModels : [],
+            savedModels: (typeof savedModels !== 'undefined' && savedModels) ? savedModels : [],
+            spedizioni: (typeof savedSpedizioni !== 'undefined' && savedSpedizioni) ? savedSpedizioni : [],
+            savedSpedizioni: (typeof savedSpedizioni !== 'undefined' && savedSpedizioni) ? savedSpedizioni : [],
+            ordini: (typeof ordini !== 'undefined' && ordini) ? ordini : []
+        };
+        try {
+            if (!payload.ordini.length) {
+                payload.ordini = JSON.parse(localStorage.getItem('note_clienti_ordini') || '[]') || [];
+            }
+        } catch (e) {}
+        return payload;
+    };
+    window.supabasePushDesktop = async function() {
+        if (typeof NoteClientiSupabase === 'undefined') {
+            alert('Modulo cloud non caricato.');
+            return;
+        }
+        if (!NoteClientiSupabase.isConfigured()) {
+            openSupabaseSyncModal();
+            alert('Configura prima URL e chiave Supabase.');
+            return;
+        }
+        try {
+            await NoteClientiSupabase.pushPayload(buildDesktopCloudPayload());
+            alert('Dati caricati sul cloud Supabase.\nOra puoi scaricarli dal telefono.');
+        } catch (err) {
+            console.error(err);
+            alert('Errore upload: ' + (err && err.message ? err.message : err));
+        }
+    };
+    window.supabasePullDesktop = async function() {
+        if (typeof NoteClientiSupabase === 'undefined') {
+            alert('Modulo cloud non caricato.');
+            return;
+        }
+        if (!NoteClientiSupabase.isConfigured()) {
+            openSupabaseSyncModal();
+            alert('Configura prima URL e chiave Supabase.');
+            return;
+        }
+        if (!confirm('Scaricare i dati dal cloud?\nI dati locali di QUESTO PC verranno sostituiti.')) return;
+        try {
+            var row = await NoteClientiSupabase.pullPayload();
+            var data = row.data || {};
+            if (data.clients) {
+                clients = data.clients;
+                localStorage.setItem('note_clienti_data', JSON.stringify(clients));
+            }
+            if (data.models || data.savedModels) {
+                savedModels = data.models || data.savedModels;
+                localStorage.setItem('note_clienti_modelli', JSON.stringify(savedModels));
+            }
+            if (data.spedizioni || data.savedSpedizioni) {
+                savedSpedizioni = data.spedizioni || data.savedSpedizioni;
+                localStorage.setItem('note_clienti_spedizioni', JSON.stringify(savedSpedizioni));
+            }
+            if (data.ordini) {
+                try { ordini = data.ordini; } catch (e) {}
+                localStorage.setItem('note_clienti_ordini', JSON.stringify(data.ordini));
+            }
+            try { if (typeof saveToLocalStorage === 'function') saveToLocalStorage(); } catch (e) {}
+            alert('Dati scaricati dal cloud.\nAggiornato: ' + (row.updated_at || '—'));
+            location.reload();
+        } catch (err) {
+            console.error(err);
+            alert('Errore download: ' + (err && err.message ? err.message : err));
+        }
+    };
 
     window.exportBackup = function() {
         try {
@@ -11834,6 +12219,7 @@
                 (isSpedizione
                     ? ('<button type="button" class="btn" style="background:#9d174d;color:#fff;border:none;" onclick="openMoveClientSpedGruppo(\'' + client.id + '\')">📁 Gruppo</button>')
                     : '') +
+                '<button type="button" class="btn" style="background:#0f172a;color:#fff;border:none;" onclick="openChatSummaryModal(\'' + client.id + '\')" title="Riepilogo chat WhatsApp">🧠 Riepilogo chat</button>' +
                 '<button type="button" class="btn" style="background:#2563eb;color:#fff;border:none;" onclick="moveToPrep(\'' + client.id + '\')">📋 Pre-pianif.</button>' +
                 '<button type="button" class="btn" style="background:#16a34a;color:#fff;border:none;" onclick="markInstallato(\'' + client.id + '\')">✅ Installato</button>' +
                 '<button type="button" class="btn" style="background:#d97706;color:#fff;border:none;" onclick="markStandby(\'' + client.id + '\')">⏸️ Stand-by</button>' +
@@ -15004,6 +15390,7 @@
                     </div>
                     <div class="info-card-actions">
                         <button type="button" class="btn btn-restore" onclick="unmarkStandby('${client.id}')">↩ Ripristina</button>
+                        <button type="button" class="btn" style="background:#0f172a;color:#fff;border:none;" onclick="openChatSummaryModal('${client.id}')" title="Riepilogo chat">🧠 Riepilogo chat</button>
                         <button type="button" class="btn-icon" onclick="editClient('${client.id}')" title="Modifica scheda">✏️</button>
                         <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
                     </div>
@@ -22563,6 +22950,7 @@
                         </div>
                         <div class="info-card-actions">
                             <button type="button" class="btn btn-restore" onclick="unmarkInstallato('${client.id}')">↩ Ripristina</button>
+                            <button type="button" class="btn" style="background:#0f172a;color:#fff;border:none;" onclick="openChatSummaryModal('${client.id}')" title="Riepilogo chat">🧠 Riepilogo chat</button>
                             <button type="button" class="btn-icon" onclick="editClient('${client.id}')" title="Modifica scheda">✏️</button>
                         <button type="button" class="btn-icon danger" onclick="deleteClient('${client.id}')" title="Elimina">🗑️</button>
                         </div>
@@ -22739,5 +23127,6 @@
 
 <button type="button" id="backToTopBtn" class="btn-back-to-top" onclick="scrollToTop()" title="Torna in alto">↑</button>
 
+  <script src="js/supabase-sync.js"></script>
 </body>
 </html>

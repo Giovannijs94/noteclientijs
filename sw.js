@@ -1,10 +1,11 @@
 /* Service Worker – Gestione Note Clienti PWA */
-const CACHE_NAME = 'note-clienti-v132-mobile-intro';
+const CACHE_NAME = 'note-clienti-v141-supabase';
 const ASSETS = [
   './',
   './index.html',
   './mobile.html',
   './js/engine.js',
+  './js/supabase-sync.js',
   './manifest.json',
   './logo-js.jpg',
   './icon-192.png',
