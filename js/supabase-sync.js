@@ -1,6 +1,5 @@
 /**
- * Sync Note Clienti ↔ Supabase + auto-sync
- * Tabella: public.note_clienti_sync (id text PK, data jsonb, updated_at timestamptz)
+ * Sync Note Clienti <-> Supabase + auto-sync
  */
 (function (global) {
   'use strict';
@@ -17,6 +16,10 @@
   var _pushTimer = null;
   var _pushing = false;
   var _payloadProvider = null;
+  var _liveTimer = null;
+  var _liveApplyFn = null;
+  var _liveRunning = false;
+  var _liveOnApplied = null;
 
   function normalizeUrl(raw) {
     var u = String(raw || '').trim();
@@ -92,18 +95,12 @@
 
   function friendlyHttpError(status, body, action, requestUrl) {
     var msg = String(body || '');
-    var base =
-      action + ' fallito (' + status + ')\n' +
-      'URL usato: ' + (requestUrl || '—') + '\n\n';
+    var base = action + ' fallito (' + status + ')\nURL: ' + (requestUrl || '-') + '\n\n';
     if (status === 404 || /PGRST125|Invalid path/i.test(msg)) {
-      return base +
-        'La API non trova la tabella.\n' +
-        '• Project URL deve essere https://xxxxx.supabase.co\n' +
-        '• Esegui lo script SQL completo\n' +
-        'Dettaglio: ' + msg.slice(0, 180);
+      return base + 'Tabella non trovata o URL progetto errato. Controlla Project URL e SQL.';
     }
     if (status === 401 || status === 403) {
-      return base + 'Permesso negato. Verifica chiave anon e GRANT/RLS.\n' + msg.slice(0, 180);
+      return base + 'Permesso negato. Verifica chiave anon e policy/GRANT.';
     }
     return base + msg.slice(0, 280);
   }
@@ -112,7 +109,7 @@
     var cfg = loadConfig();
     if (!cfg.url || !cfg.key) throw new Error('Configura prima URL e chiave, poi Salva.');
     var url = tableUrl(cfg) + '?select=id&limit=1';
-    var res = await fetch(url, { method: 'GET', headers: headers(cfg) });
+    var res = await fetch(url, { method: 'GET', headers: headers(cfg), cache: 'no-store' });
     var t = '';
     try { t = await res.text(); } catch (e) {}
     if (!res.ok) throw new Error(friendlyHttpError(res.status, t, 'Test', url));
@@ -123,20 +120,18 @@
       url: url,
       projectUrl: cfg.url,
       rows: Array.isArray(rows) ? rows.length : 0,
-      message: 'Connessione OK. Tabella raggiungibile (righe: ' + (Array.isArray(rows) ? rows.length : 0) + '). Auto-sync: ' + (cfg.auto ? 'ON' : 'OFF')
+      message: 'Connessione OK. Righe: ' + (Array.isArray(rows) ? rows.length : 0) + '. Auto-sync: ' + (cfg.auto ? 'ON' : 'OFF')
     };
   }
 
   async function pushPayload(payload) {
     var cfg = loadConfig();
     if (!cfg.url || !cfg.key) throw new Error('Supabase non configurato (URL e chiave anon)');
-
     var body = {
       id: cfg.rowId || 'main',
       data: payload,
       updated_at: new Date().toISOString()
     };
-
     var urlUpsert = tableUrl(cfg) + '?on_conflict=id';
     var res = await fetch(urlUpsert, {
       method: 'POST',
@@ -144,7 +139,10 @@
       body: JSON.stringify(body)
     });
     if (res.ok) {
-      try { localStorage.setItem(KEYS.lastPush, body.updated_at); localStorage.setItem(KEYS.lastPull, body.updated_at); } catch (e) {}
+      try {
+        localStorage.setItem(KEYS.lastPush, body.updated_at);
+        localStorage.setItem(KEYS.lastPull, body.updated_at);
+      } catch (e) {}
       var rows = [];
       try { rows = await res.json(); } catch (e) {}
       return (rows && rows[0]) || body;
@@ -152,14 +150,16 @@
     var errText = '';
     try { errText = await res.text(); } catch (e) {}
 
-    var urlInsert = tableUrl(cfg);
-    var res2 = await fetch(urlInsert, {
+    var res2 = await fetch(tableUrl(cfg), {
       method: 'POST',
       headers: headers(cfg, 'return=representation'),
       body: JSON.stringify(body)
     });
     if (res2.ok) {
-      try { localStorage.setItem(KEYS.lastPush, body.updated_at); localStorage.setItem(KEYS.lastPull, body.updated_at); } catch (e) {}
+      try {
+        localStorage.setItem(KEYS.lastPush, body.updated_at);
+        localStorage.setItem(KEYS.lastPull, body.updated_at);
+      } catch (e) {}
       var rows2 = [];
       try { rows2 = await res2.json(); } catch (e) {}
       return (rows2 && rows2[0]) || body;
@@ -172,7 +172,10 @@
       body: JSON.stringify({ data: payload, updated_at: body.updated_at })
     });
     if (res3.ok) {
-      try { localStorage.setItem(KEYS.lastPush, body.updated_at); localStorage.setItem(KEYS.lastPull, body.updated_at); } catch (e) {}
+      try {
+        localStorage.setItem(KEYS.lastPush, body.updated_at);
+        localStorage.setItem(KEYS.lastPull, body.updated_at);
+      } catch (e) {}
       var rows3 = [];
       try { rows3 = await res3.json(); } catch (e) {}
       return (rows3 && rows3[0]) || body;
@@ -186,7 +189,7 @@
     var cfg = loadConfig();
     if (!cfg.url || !cfg.key) throw new Error('Supabase non configurato (URL e chiave anon)');
     var q = tableUrl(cfg) + '?id=eq.' + encodeURIComponent(cfg.rowId || 'main') + '&select=id,data,updated_at';
-    var res = await fetch(q, { method: 'GET', headers: headers(cfg) });
+    var res = await fetch(q, { method: 'GET', headers: headers(cfg), cache: 'no-store' });
     if (!res.ok) {
       var t = '';
       try { t = await res.text(); } catch (e) {}
@@ -197,22 +200,15 @@
     return rows[0];
   }
 
-  /** Registra una funzione che restituisce il payload backup corrente */
   function setPayloadProvider(fn) {
     _payloadProvider = typeof fn === 'function' ? fn : null;
   }
 
-  /**
-   * Dopo ogni salvataggio locale: se auto-sync ON, carica sul cloud dopo debounce.
-   * delayMs default 4000
-   */
   function scheduleAutoPush(delayMs) {
     if (!isConfigured() || !isAutoEnabled()) return;
     if (typeof _payloadProvider !== 'function') return;
     if (_pushTimer) clearTimeout(_pushTimer);
-    _pushTimer = setTimeout(function () {
-      runAutoPush();
-    }, typeof delayMs === 'number' ? delayMs : 2000);
+    _pushTimer = setTimeout(function () { runAutoPush(); }, typeof delayMs === 'number' ? delayMs : 2000);
   }
 
   async function runAutoPush() {
@@ -224,11 +220,6 @@
       var payload = _payloadProvider();
       if (!payload) return;
       await pushPayload(payload);
-      try {
-        if (typeof global.dispatchEvent === 'function') {
-          global.dispatchEvent(new CustomEvent('note-clienti-cloud-pushed', { detail: { at: new Date().toISOString() } }));
-        }
-      } catch (e) {}
     } catch (err) {
       console.warn('[auto-sync push]', err);
     } finally {
@@ -236,60 +227,30 @@
     }
   }
 
-  /**
-   * All'apertura app: se cloud più recente dell'ultimo pull/push locale, scarica.
-   * applyFn(data) deve applicare i dati in locale.
-   * silent: se true non chiede conferma (default false → chiede)
-   */
-
-  async function fetchCloudRow() {
-    var cfg = loadConfig();
-    if (!cfg.url || !cfg.key) throw new Error('Supabase non configurato');
-    var q = tableUrl(cfg) + '?id=eq.' + encodeURIComponent(cfg.rowId || 'main') + '&select=id,data,updated_at';
-    var res = await fetch(q, { method: 'GET', headers: headers(cfg), cache: 'no-store' });
-    if (!res.ok) {
-      var t = '';
-      try { t = await res.text(); } catch (e) {}
-      throw new Error(friendlyHttpError(res.status, t, 'Download', q));
-    }
-    var rows = await res.json();
-    if (!rows || !rows.length) return null;
-    return rows[0];
-  }
-
   async function autoPullIfNewer(applyFn, opts) {
     opts = opts || {};
     if (!isConfigured() || !isAutoEnabled()) return { skipped: true, reason: 'auto off' };
     if (typeof applyFn !== 'function') return { skipped: true, reason: 'no apply' };
     try {
-      var row = await fetchCloudRow();
+      var row = await pullPayload();
       if (!row) return { skipped: true, reason: 'cloud vuoto' };
 
       var cloudStamp = String(row.updated_at || '');
       var lastSeen = '';
       try { lastSeen = localStorage.getItem(KEYS.lastPull) || ''; } catch (e) {}
 
-      // se abbiamo già applicato esattamente questo aggiornamento cloud, salta
       if (cloudStamp && lastSeen && cloudStamp === lastSeen) {
-        return { skipped: true, reason: 'già applicato' };
+        return { skipped: true, reason: 'gia applicato' };
       }
-
-      // se lastSeen è più recente del cloud (clock skew minimo), salta
       var cloudAt = cloudStamp ? Date.parse(cloudStamp) : 0;
       var seenAt = lastSeen ? Date.parse(lastSeen) : 0;
       if (cloudAt && seenAt && cloudAt <= seenAt) {
-        return { skipped: true, reason: 'locale uguale/più nuovo' };
+        return { skipped: true, reason: 'locale aggiornato' };
       }
 
       if (!opts.silent) {
-        var ok = confirm(
-          'Cloud più aggiornato trovato.
-Aggiornato: ' + (row.updated_at || '—') +
-          '
-
-Scaricare ora i dati sul dispositivo?'
-        );
-        if (!ok) return { skipped: true, reason: 'rifiutato' };
+        var msg = 'Cloud piu aggiornato trovato.\nAggiornato: ' + (row.updated_at || '-') + '\n\nScaricare ora i dati sul dispositivo?';
+        if (!confirm(msg)) return { skipped: true, reason: 'rifiutato' };
       }
 
       applyFn(row.data);
@@ -301,15 +262,6 @@ Scaricare ora i dati sul dispositivo?'
     }
   }
 
-  var _liveTimer = null;
-  var _liveApplyFn = null;
-  var _liveRunning = false;
-  var _liveOnApplied = null;
-
-  /**
-   * Durante l'uso: controlla spesso il cloud + quando l'app torna visibile.
-   * Default: ogni 20 secondi.
-   */
   function startAutoSyncLoop(applyFn, opts) {
     opts = opts || {};
     _liveApplyFn = typeof applyFn === 'function' ? applyFn : null;
@@ -346,7 +298,6 @@ Scaricare ora i dati sul dispositivo?'
     document.addEventListener('visibilitychange', onVis);
     window.addEventListener('focus', onFocus);
     window.addEventListener('online', onOnline);
-    // controlli rapidi all'avvio
     setTimeout(function () { tick('t3s'); }, 3000);
     setTimeout(function () { tick('t8s'); }, 8000);
 
@@ -357,7 +308,6 @@ Scaricare ora i dati sul dispositivo?'
   }
 
   global.NoteClientiSupabase = {
-
     loadConfig: loadConfig,
     saveConfig: saveConfig,
     clearConfig: clearConfig,
@@ -373,18 +323,17 @@ Scaricare ora i dati sul dispositivo?'
     autoPullIfNewer: autoPullIfNewer,
     startAutoSyncLoop: startAutoSyncLoop,
     setupSql:
-      '-- SQL Editor → Run\n' +
       'create table if not exists public.note_clienti_sync (\n' +
       '  id text primary key,\n' +
       '  data jsonb not null,\n' +
       '  updated_at timestamptz default now()\n' +
-      ');\n\n' +
-      'alter table public.note_clienti_sync enable row level security;\n\n' +
-      'drop policy if exists \"note_clienti_sync_all\" on public.note_clienti_sync;\n' +
-      'create policy \"note_clienti_sync_all\" on public.note_clienti_sync\n' +
-      '  for all to anon, authenticated using (true) with check (true);\n\n' +
+      ');\n' +
+      'alter table public.note_clienti_sync enable row level security;\n' +
+      'drop policy if exists "note_clienti_sync_all" on public.note_clienti_sync;\n' +
+      'create policy "note_clienti_sync_all" on public.note_clienti_sync\n' +
+      '  for all to anon, authenticated using (true) with check (true);\n' +
       'grant usage on schema public to anon, authenticated;\n' +
-      'grant select, insert, update, delete on table public.note_clienti_sync to anon, authenticated;\n\n' +
-      'notify pgrst, \'reload schema\';\n'
+      'grant select, insert, update, delete on table public.note_clienti_sync to anon, authenticated;\n' +
+      "notify pgrst, 'reload schema';\n"
   };
 })(typeof window !== 'undefined' ? window : this);
