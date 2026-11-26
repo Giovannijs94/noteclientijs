@@ -11732,7 +11732,12 @@
             }
             try { if (typeof saveToLocalStorage === 'function') saveToLocalStorage(); } catch (e) {}
             alert('Dati scaricati dal cloud.\nAggiornato: ' + (row.updated_at || '—'));
-            location.reload();
+            try { if (typeof render === 'function') render(); } catch (e) {}
+            try { if (typeof renderPrepPage === 'function') renderPrepPage(); } catch (e) {}
+            try { if (typeof renderStandbyPage === 'function') renderStandbyPage(); } catch (e) {}
+            try { if (typeof renderInstallatiPage === 'function') renderInstallatiPage(); } catch (e) {}
+            try { if (typeof renderConsigliPage === 'function') renderConsigliPage(); } catch (e) {}
+            try { if (typeof renderOrdiniPage === 'function') renderOrdiniPage(); } catch (e) {}
         } catch (err) {
             console.error(err);
             alert('Errore download: ' + (err && err.message ? err.message : err));
@@ -11746,7 +11751,15 @@
             NoteClientiSupabase.setPayloadProvider(function() {
                 return typeof buildDesktopCloudPayload === 'function' ? buildDesktopCloudPayload() : null;
             });
-            // all'avvio: se auto e cloud più nuovo, chiedi download
+            function refreshDesktopUiAfterCloud() {
+                try { if (typeof render === 'function') render(); } catch (e) {}
+                try { if (typeof renderPrepPage === 'function') renderPrepPage(); } catch (e) {}
+                try { if (typeof renderStandbyPage === 'function') renderStandbyPage(); } catch (e) {}
+                try { if (typeof renderInstallatiPage === 'function') renderInstallatiPage(); } catch (e) {}
+                try { if (typeof renderConsigliPage === 'function') renderConsigliPage(); } catch (e) {}
+                try { if (typeof renderOrdiniPage === 'function') renderOrdiniPage(); } catch (e) {}
+                try { if (typeof renderDashboard === 'function') renderDashboard(); } catch (e) {}
+            }
             function applyCloudDataDesktop(data) {
                 if (!data) return;
                 if (data.clients) {
@@ -11765,7 +11778,8 @@
                     try { ordini = data.ordini; } catch (e) {}
                     localStorage.setItem('note_clienti_ordini', JSON.stringify(data.ordini));
                 }
-                try { if (typeof saveToLocalStorage === 'function') saveToLocalStorage(); } catch (e) {}
+                // Niente location.reload: aggiorna solo i dati e ridisegna le sezioni
+                refreshDesktopUiAfterCloud();
             }
             setTimeout(function() {
                 try {
@@ -11775,19 +11789,15 @@
                         try {
                             if (typeof showToast === 'function') showToast('Cloud: dati aggiornati automaticamente');
                         } catch (e) {}
-                        location.reload();
                     }, { silent: true });
                 } catch (e) {}
             }, 1800);
-            // durante l'uso: focus + ogni 2 minuti
             try {
                 NoteClientiSupabase.startAutoSyncLoop(function(data) {
                     applyCloudDataDesktop(data);
                     try {
-                        if (typeof showToast === 'function') showToast('Cloud: aggiornato durante l\'uso');
-                        else alert('Cloud: dati aggiornati');
+                        if (typeof showToast === 'function') showToast('Cloud: aggiornato');
                     } catch (e) {}
-                    location.reload();
                 }, { intervalMs: 20000 });
             } catch (e) {}
         }
