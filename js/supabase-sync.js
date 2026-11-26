@@ -144,7 +144,7 @@
       body: JSON.stringify(body)
     });
     if (res.ok) {
-      try { localStorage.setItem(KEYS.lastPush, body.updated_at); } catch (e) {}
+      try { localStorage.setItem(KEYS.lastPush, body.updated_at); localStorage.setItem(KEYS.lastPull, body.updated_at); } catch (e) {}
       var rows = [];
       try { rows = await res.json(); } catch (e) {}
       return (rows && rows[0]) || body;
@@ -159,7 +159,7 @@
       body: JSON.stringify(body)
     });
     if (res2.ok) {
-      try { localStorage.setItem(KEYS.lastPush, body.updated_at); } catch (e) {}
+      try { localStorage.setItem(KEYS.lastPush, body.updated_at); localStorage.setItem(KEYS.lastPull, body.updated_at); } catch (e) {}
       var rows2 = [];
       try { rows2 = await res2.json(); } catch (e) {}
       return (rows2 && rows2[0]) || body;
@@ -172,7 +172,7 @@
       body: JSON.stringify({ data: payload, updated_at: body.updated_at })
     });
     if (res3.ok) {
-      try { localStorage.setItem(KEYS.lastPush, body.updated_at); } catch (e) {}
+      try { localStorage.setItem(KEYS.lastPush, body.updated_at); localStorage.setItem(KEYS.lastPull, body.updated_at); } catch (e) {}
       var rows3 = [];
       try { rows3 = await res3.json(); } catch (e) {}
       return (rows3 && rows3[0]) || body;
@@ -194,7 +194,6 @@
     }
     var rows = await res.json();
     if (!rows || !rows.length) throw new Error('Nessun dato sul cloud (carica prima da un dispositivo).');
-    try { localStorage.setItem(KEYS.lastPull, rows[0].updated_at || new Date().toISOString()); } catch (e) {}
     return rows[0];
   }
 
@@ -213,7 +212,7 @@
     if (_pushTimer) clearTimeout(_pushTimer);
     _pushTimer = setTimeout(function () {
       runAutoPush();
-    }, typeof delayMs === 'number' ? delayMs : 4000);
+    }, typeof delayMs === 'number' ? delayMs : 2000);
   }
 
   async function runAutoPush() {
@@ -242,48 +241,59 @@
    * applyFn(data) deve applicare i dati in locale.
    * silent: se true non chiede conferma (default false → chiede)
    */
+
+  async function fetchCloudRow() {
+    var cfg = loadConfig();
+    if (!cfg.url || !cfg.key) throw new Error('Supabase non configurato');
+    var q = tableUrl(cfg) + '?id=eq.' + encodeURIComponent(cfg.rowId || 'main') + '&select=id,data,updated_at';
+    var res = await fetch(q, { method: 'GET', headers: headers(cfg), cache: 'no-store' });
+    if (!res.ok) {
+      var t = '';
+      try { t = await res.text(); } catch (e) {}
+      throw new Error(friendlyHttpError(res.status, t, 'Download', q));
+    }
+    var rows = await res.json();
+    if (!rows || !rows.length) return null;
+    return rows[0];
+  }
+
   async function autoPullIfNewer(applyFn, opts) {
     opts = opts || {};
-    if (!isConfigured() || !isAutoEnabled()) return { skipped: true };
-    if (typeof applyFn !== 'function') return { skipped: true };
+    if (!isConfigured() || !isAutoEnabled()) return { skipped: true, reason: 'auto off' };
+    if (typeof applyFn !== 'function') return { skipped: true, reason: 'no apply' };
     try {
-      // confronta timestamp LOCALI prima del pull
-      var lastLocal = 0;
-      try {
-        lastLocal = Math.max(
-          Date.parse(localStorage.getItem(KEYS.lastPull) || '') || 0,
-          Date.parse(localStorage.getItem(KEYS.lastPush) || '') || 0
-        );
-      } catch (e) {}
+      var row = await fetchCloudRow();
+      if (!row) return { skipped: true, reason: 'cloud vuoto' };
 
-      var cfg = loadConfig();
-      var q = tableUrl(cfg) + '?id=eq.' + encodeURIComponent(cfg.rowId || 'main') + '&select=id,data,updated_at';
-      var res = await fetch(q, { method: 'GET', headers: headers(cfg) });
-      if (!res.ok) {
-        var t = '';
-        try { t = await res.text(); } catch (e) {}
-        throw new Error(friendlyHttpError(res.status, t, 'Download', q));
+      var cloudStamp = String(row.updated_at || '');
+      var lastSeen = '';
+      try { lastSeen = localStorage.getItem(KEYS.lastPull) || ''; } catch (e) {}
+
+      // se abbiamo già applicato esattamente questo aggiornamento cloud, salta
+      if (cloudStamp && lastSeen && cloudStamp === lastSeen) {
+        return { skipped: true, reason: 'già applicato' };
       }
-      var rows = await res.json();
-      if (!rows || !rows.length) return { skipped: true, reason: 'cloud vuoto' };
-      var row = rows[0];
-      var cloudAt = row.updated_at ? Date.parse(row.updated_at) : 0;
 
-      // se locale è già allineato o più recente, non scaricare
-      if (cloudAt && lastLocal && cloudAt <= lastLocal + 2000) {
-        return { skipped: true, reason: 'locale aggiornato' };
+      // se lastSeen è più recente del cloud (clock skew minimo), salta
+      var cloudAt = cloudStamp ? Date.parse(cloudStamp) : 0;
+      var seenAt = lastSeen ? Date.parse(lastSeen) : 0;
+      if (cloudAt && seenAt && cloudAt <= seenAt) {
+        return { skipped: true, reason: 'locale uguale/più nuovo' };
       }
 
       if (!opts.silent) {
         var ok = confirm(
-          'Cloud più aggiornato trovato.\nAggiornato: ' + (row.updated_at || '—') +
-          '\n\nScaricare ora i dati sul dispositivo?'
+          'Cloud più aggiornato trovato.
+Aggiornato: ' + (row.updated_at || '—') +
+          '
+
+Scaricare ora i dati sul dispositivo?'
         );
-        if (!ok) return { skipped: true, reason: 'utente ha rifiutato' };
+        if (!ok) return { skipped: true, reason: 'rifiutato' };
       }
 
       applyFn(row.data);
-      try { localStorage.setItem(KEYS.lastPull, row.updated_at || new Date().toISOString()); } catch (e) {}
+      try { localStorage.setItem(KEYS.lastPull, cloudStamp || new Date().toISOString()); } catch (e) {}
       return { ok: true, updated_at: row.updated_at };
     } catch (err) {
       console.warn('[auto-sync pull]', err);
@@ -291,29 +301,31 @@
     }
   }
 
-
   var _liveTimer = null;
   var _liveApplyFn = null;
   var _liveRunning = false;
+  var _liveOnApplied = null;
 
   /**
-   * Durante l'uso: controlla il cloud a intervalli e quando la finestra torna in primo piano.
-   * applyFn(data) applica i dati; onApplied() callback opzionale dopo apply.
+   * Durante l'uso: controlla spesso il cloud + quando l'app torna visibile.
+   * Default: ogni 20 secondi.
    */
   function startAutoSyncLoop(applyFn, opts) {
     opts = opts || {};
     _liveApplyFn = typeof applyFn === 'function' ? applyFn : null;
-    var intervalMs = typeof opts.intervalMs === 'number' ? opts.intervalMs : 120000; // 2 min
+    _liveOnApplied = typeof opts.onApplied === 'function' ? opts.onApplied : null;
+    var intervalMs = typeof opts.intervalMs === 'number' ? opts.intervalMs : 20000;
 
     function tick(reason) {
       if (!isConfigured() || !isAutoEnabled()) return;
       if (!_liveApplyFn) return;
       if (_liveRunning) return;
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
       _liveRunning = true;
       autoPullIfNewer(function (data) {
         try {
           _liveApplyFn(data);
-          if (typeof opts.onApplied === 'function') opts.onApplied(data);
+          if (_liveOnApplied) _liveOnApplied(data);
         } catch (e) { console.warn(e); }
       }, { silent: true }).then(function (r) {
         if (r && r.ok) console.log('[auto-sync live]', reason || 'tick', r.updated_at);
@@ -329,16 +341,14 @@
       if (document.visibilityState === 'visible') tick('visible');
     }
     function onFocus() { tick('focus'); }
+    function onOnline() { tick('online'); }
 
-    try {
-      document.removeEventListener('visibilitychange', onVis);
-      window.removeEventListener('focus', onFocus);
-    } catch (e) {}
     document.addEventListener('visibilitychange', onVis);
     window.addEventListener('focus', onFocus);
-
-    // primo controllo dopo pochi secondi (oltre a quello all'avvio)
-    setTimeout(function () { tick('startup'); }, 8000);
+    window.addEventListener('online', onOnline);
+    // controlli rapidi all'avvio
+    setTimeout(function () { tick('t3s'); }, 3000);
+    setTimeout(function () { tick('t8s'); }, 8000);
 
     return function stop() {
       if (_liveTimer) clearInterval(_liveTimer);
@@ -347,6 +357,7 @@
   }
 
   global.NoteClientiSupabase = {
+
     loadConfig: loadConfig,
     saveConfig: saveConfig,
     clearConfig: clearConfig,

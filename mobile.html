@@ -952,7 +952,7 @@
       <div class="field"><label>ID dataset</label><input type="text" id="mSbRow" value="main" placeholder="main"></div>
       <label style="display:flex;align-items:flex-start;gap:10px;margin:8px 0 12px;font-size:0.84rem;line-height:1.35;">
         <input type="checkbox" id="mSbAuto" style="width:18px;height:18px;margin-top:2px;">
-        <span><strong>Aggiornamento automatico</strong> — carica dopo le modifiche; scarica all’apertura, quando torni sull’app e ogni ~2 min se il cloud è più nuovo.</span>
+        <span><strong>Aggiornamento automatico</strong> — carica dopo le modifiche; scarica all’apertura, quando torni sull’app e ogni ~20 sec se il cloud è più nuovo.</span>
       </label>
       <div class="sheet-actions">
         <button type="button" class="primary" onclick="saveMobileSbConfig()">💾 Salva config</button>
@@ -994,7 +994,7 @@
               renderAll();
               toast('Cloud: aggiornato');
             } catch (e) { console.warn(e); }
-          }, { intervalMs: 120000 });
+          }, { intervalMs: 20000 });
         } catch (e) {}
       }
       if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire);

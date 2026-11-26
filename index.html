@@ -8122,7 +8122,7 @@
         </div>
         <label style="display:flex;align-items:center;gap:10px;margin:10px 0;font-size:0.9rem;cursor:pointer;">
             <input type="checkbox" id="sbAutoSync" style="width:18px;height:18px;">
-            <span><strong>Aggiornamento automatico</strong> — carica dopo ogni modifica (~4 sec); scarica all’apertura, quando torni sull’app e ogni ~2 minuti se il cloud è più recente.</span>
+            <span><strong>Aggiornamento automatico</strong> — carica dopo ogni modifica (~4 sec); scarica all’apertura, quando torni sull’app e ogni ~20 secondi se il cloud è più recente.</span>
         </label>
         <details style="margin:10px 0;font-size:0.78rem;color:#64748b;">
             <summary style="cursor:pointer;font-weight:700;color:#334155;">SQL da eseguire nel progetto</summary>
@@ -8683,7 +8683,7 @@
         try { notifyPlanningDataChanged(); } catch (e) {}
         try {
             if (typeof NoteClientiSupabase !== 'undefined' && NoteClientiSupabase.scheduleAutoPush) {
-                NoteClientiSupabase.scheduleAutoPush(4000);
+                NoteClientiSupabase.scheduleAutoPush(2000);
             }
         } catch (e) {}
     }
@@ -11441,7 +11441,7 @@
                         else alert('Cloud: dati aggiornati');
                     } catch (e) {}
                     location.reload();
-                }, { intervalMs: 120000 });
+                }, { intervalMs: 20000 });
             } catch (e) {}
         }
         if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire);
