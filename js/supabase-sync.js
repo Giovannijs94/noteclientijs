@@ -247,8 +247,7 @@
     if (!isConfigured() || !isAutoEnabled()) return { skipped: true };
     if (typeof applyFn !== 'function') return { skipped: true };
     try {
-      var row = await pullPayload();
-      var cloudAt = row.updated_at ? Date.parse(row.updated_at) : 0;
+      // confronta timestamp LOCALI prima del pull
       var lastLocal = 0;
       try {
         lastLocal = Math.max(
@@ -256,10 +255,25 @@
           Date.parse(localStorage.getItem(KEYS.lastPush) || '') || 0
         );
       } catch (e) {}
-      // se non abbiamo mai sync locale, proponi comunque
+
+      var cfg = loadConfig();
+      var q = tableUrl(cfg) + '?id=eq.' + encodeURIComponent(cfg.rowId || 'main') + '&select=id,data,updated_at';
+      var res = await fetch(q, { method: 'GET', headers: headers(cfg) });
+      if (!res.ok) {
+        var t = '';
+        try { t = await res.text(); } catch (e) {}
+        throw new Error(friendlyHttpError(res.status, t, 'Download', q));
+      }
+      var rows = await res.json();
+      if (!rows || !rows.length) return { skipped: true, reason: 'cloud vuoto' };
+      var row = rows[0];
+      var cloudAt = row.updated_at ? Date.parse(row.updated_at) : 0;
+
+      // se locale è già allineato o più recente, non scaricare
       if (cloudAt && lastLocal && cloudAt <= lastLocal + 2000) {
         return { skipped: true, reason: 'locale aggiornato' };
       }
+
       if (!opts.silent) {
         var ok = confirm(
           'Cloud più aggiornato trovato.\nAggiornato: ' + (row.updated_at || '—') +
@@ -267,6 +281,7 @@
         );
         if (!ok) return { skipped: true, reason: 'utente ha rifiutato' };
       }
+
       applyFn(row.data);
       try { localStorage.setItem(KEYS.lastPull, row.updated_at || new Date().toISOString()); } catch (e) {}
       return { ok: true, updated_at: row.updated_at };

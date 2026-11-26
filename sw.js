@@ -1,5 +1,5 @@
 /* Service Worker – Gestione Note Clienti PWA */
-const CACHE_NAME = 'note-clienti-v145-auto-sync';
+const CACHE_NAME = 'note-clienti-v146-auto-pull';
 const ASSETS = [
   './',
   './index.html',

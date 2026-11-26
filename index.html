@@ -8122,7 +8122,7 @@
         </div>
         <label style="display:flex;align-items:center;gap:10px;margin:10px 0;font-size:0.9rem;cursor:pointer;">
             <input type="checkbox" id="sbAutoSync" style="width:18px;height:18px;">
-            <span><strong>Aggiornamento automatico</strong> — dopo ogni modifica carica sul cloud (attendi ~4 sec). All’apertura propone il download se il cloud è più recente.</span>
+            <span><strong>Aggiornamento automatico</strong> — carica sul cloud dopo ogni modifica (~4 sec) e <strong>scarica in automatico</strong> all’apertura se il cloud è più recente.</span>
         </label>
         <details style="margin:10px 0;font-size:0.78rem;color:#64748b;">
             <summary style="cursor:pointer;font-weight:700;color:#334155;">SQL da eseguire nel progetto</summary>
@@ -11422,8 +11422,12 @@
                             localStorage.setItem('note_clienti_ordini', JSON.stringify(data.ordini));
                         }
                         try { if (typeof saveToLocalStorage === 'function') saveToLocalStorage(); } catch (e) {}
+                        try {
+                            if (typeof showToast === 'function') showToast('Cloud: dati aggiornati automaticamente');
+                            else console.log('Cloud: dati aggiornati automaticamente');
+                        } catch (e) {}
                         location.reload();
-                    }, { silent: false });
+                    }, { silent: true });
                 } catch (e) {}
             }, 1800);
         }
