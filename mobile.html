@@ -943,12 +943,16 @@
     <div class="sheet-panel">
       <div class="sheet-handle"></div>
       <div class="sheet-title">☁️ Cloud Supabase</div>
-      <p class="sheet-sub" style="text-align:left;line-height:1.4;">Stesse credenziali del PC. Prima configura, poi Carica/Scarica.</p>
-      <div class="field"><label>Project URL</label><input type="url" id="mSbUrl" placeholder="https://xxxx.supabase.co"></div>
-      <div class="field"><label>Chiave anon</label><input type="password" id="mSbKey" placeholder="eyJ..." autocomplete="off"></div>
+      <p class="sheet-sub" style="text-align:left;line-height:1.45;">
+        Usa le <strong>stesse</strong> credenziali del PC.<br>
+        1) Salva config · 2) Carica o Scarica
+      </p>
+      <div class="field"><label>Project URL</label><input type="url" id="mSbUrl" placeholder="https://xxxx.supabase.co" autocomplete="off"></div>
+      <div class="field"><label>Chiave anon / publishable</label><input type="password" id="mSbKey" placeholder="eyJ..." autocomplete="off"></div>
       <div class="field"><label>ID dataset</label><input type="text" id="mSbRow" value="main" placeholder="main"></div>
       <div class="sheet-actions">
         <button type="button" class="primary" onclick="saveMobileSbConfig()">💾 Salva config</button>
+        <button type="button" class="ghost" onclick="supabaseTestMobile()">🔌 Test connessione</button>
         <button type="button" class="primary" onclick="supabasePushMobile()">⬆️ Carica su cloud</button>
         <button type="button" class="primary" onclick="supabasePullMobile()">⬇️ Scarica da cloud</button>
         <button type="button" class="ghost" onclick="closeSupabaseSheet()">Chiudi</button>
@@ -1438,6 +1442,100 @@
       closeSheet();
       toast('Eliminato');
       renderAll();
+    }
+
+    
+    // ===== Supabase cloud (mobile) =====
+    function openSupabaseSheet() {
+      try { closeMore(); } catch (e) {}
+      if (typeof NoteClientiSupabase === 'undefined') {
+        alert('Modulo cloud non caricato. Aggiorna la pagina (tira giù per refresh).');
+        return;
+      }
+      var c = NoteClientiSupabase.loadConfig();
+      var u = document.getElementById('mSbUrl');
+      var k = document.getElementById('mSbKey');
+      var r = document.getElementById('mSbRow');
+      if (u) u.value = c.url || '';
+      if (k) k.value = c.key || '';
+      if (r) r.value = c.rowId || 'main';
+      var el = document.getElementById('supabaseSheet');
+      if (el) el.classList.add('open');
+    }
+    function closeSupabaseSheet() {
+      var el = document.getElementById('supabaseSheet');
+      if (el) el.classList.remove('open');
+    }
+    function saveMobileSbConfigFromFields() {
+      if (typeof NoteClientiSupabase === 'undefined') throw new Error('Modulo cloud assente');
+      NoteClientiSupabase.saveConfig({
+        url: (document.getElementById('mSbUrl') || {}).value || '',
+        key: (document.getElementById('mSbKey') || {}).value || '',
+        rowId: (document.getElementById('mSbRow') || {}).value || 'main'
+      });
+    }
+    function saveMobileSbConfig() {
+      try {
+        saveMobileSbConfigFromFields();
+        toast('Config cloud salvata');
+        alert('Configurazione Supabase salvata su questo telefono.');
+      } catch (err) {
+        alert('Errore: ' + (err && err.message ? err.message : err));
+      }
+    }
+    async function supabaseTestMobile() {
+      try {
+        saveMobileSbConfigFromFields();
+        var r = await NoteClientiSupabase.testConnection();
+        alert(r.message + '\n\nProject: ' + r.projectUrl);
+      } catch (err) {
+        alert(err && err.message ? err.message : String(err));
+      }
+    }
+    async function supabasePushMobile() {
+      if (typeof NoteClientiSupabase === 'undefined') {
+        alert('Modulo cloud non caricato.');
+        return;
+      }
+      try {
+        saveMobileSbConfigFromFields();
+        if (!NoteClientiSupabase.isConfigured()) {
+          alert('Inserisci URL e chiave, poi Salva config.');
+          return;
+        }
+        if (!confirm('Caricare i dati di QUESTO telefono sul cloud?\n(Sovrascrive il backup cloud precedente)')) return;
+        toast('Upload...');
+        await NoteClientiSupabase.pushPayload(E.exportBackup());
+        toast('Caricato sul cloud');
+        alert('Dati caricati su Supabase.');
+      } catch (err) {
+        console.error(err);
+        alert('Errore upload: ' + (err && err.message ? err.message : err));
+      }
+    }
+    async function supabasePullMobile() {
+      if (typeof NoteClientiSupabase === 'undefined') {
+        alert('Modulo cloud non caricato.');
+        return;
+      }
+      try {
+        saveMobileSbConfigFromFields();
+        if (!NoteClientiSupabase.isConfigured()) {
+          alert('Inserisci URL e chiave, poi Salva config.');
+          return;
+        }
+        if (!confirm('Scaricare dal cloud?\nI dati su QUESTO telefono verranno sostituiti.')) return;
+        toast('Download...');
+        var row = await NoteClientiSupabase.pullPayload();
+        var res = E.importFromBackup(row.data);
+        closeSupabaseSheet();
+        renderAll();
+        toast('Scaricato: ' + res.clients + ' clienti');
+        alert('Download completato.\nClienti: ' + (res.clients || 0) + '\nAggiornato: ' + (row.updated_at || '—'));
+      } catch (err) {
+        console.error(err);
+        alert('Errore download: ' + (err && err.message ? err.message : err));
+      }
     }
 
     function exportBackupMobile() {
