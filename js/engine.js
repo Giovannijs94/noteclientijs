@@ -141,6 +141,67 @@
     });
   }
 
+  function upsertPrepFromFields(fields) {
+    fields = fields || {};
+    const nome = toUpper(fields.nome || '');
+    if (!nome) return null;
+    const conf = String(fields.confOrdine || '').trim();
+    let target = null;
+    if (conf) {
+      target = clients.find(function (c) {
+        return String(c.confOrdine || '').trim() === conf && isInPrep(c);
+      }) || null;
+    }
+    if (!target) {
+      target = clients.find(function (c) {
+        return toUpper(c.nome || '') === nome && isInPrep(c) &&
+          (!conf || String(c.confOrdine || '').trim() === conf);
+      }) || null;
+    }
+    if (!target) {
+      target = {
+        id: 'c_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7),
+        nome: nome,
+        inPrep: true,
+        installato: false,
+        standby: false,
+        modelli: [],
+        localita: '',
+        provincia: '',
+        regione: '',
+        scadenza: '',
+        montaggio: '',
+        confOrdine: '',
+        tappa: '',
+        spedizione: '',
+        data: ''
+      };
+      clients.push(target);
+    }
+    target.nome = nome;
+    target.inPrep = true;
+    target.installato = false;
+    target.standby = false;
+    if (fields.localita != null) target.localita = toUpper(cleanAddress(fields.localita));
+    if (fields.provincia != null) target.provincia = toUpper(fields.provincia);
+    if (fields.regione != null) target.regione = toUpper(fields.regione);
+    if (fields.scadenza != null) target.scadenza = String(fields.scadenza || '').trim();
+    if (fields.montaggio != null) target.montaggio = toUpper(fields.montaggio);
+    if (conf) target.confOrdine = conf;
+    if (fields.modello) {
+      const mn = toUpper(fields.modello);
+      if (!target.modelli || !target.modelli.length) {
+        target.modelli = [{ nome: mn, qta: fields.qta || 1 }];
+      } else {
+        target.modelli[0] = target.modelli[0] || {};
+        target.modelli[0].nome = mn;
+        if (fields.qta) target.modelli[0].qta = fields.qta;
+      }
+    }
+    save();
+    return target;
+  }
+
   function updateClient(id, patch) {
     const c = findClient(id);
     if (!c) return null;
@@ -365,6 +426,7 @@
     getBySection: getBySection,
     searchClients: searchClients,
     updateClient: updateClient,
+    upsertPrepFromFields: upsertPrepFromFields,
     deleteClient: deleteClient,
     moveToNote: moveToNote,
     moveToPrep: moveToPrep,

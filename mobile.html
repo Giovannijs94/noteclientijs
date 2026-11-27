@@ -656,6 +656,64 @@
 
 
 
+    /* Prep wizard step-by-step */
+    .prep-wiz {
+      display: none;
+      position: fixed; inset: 0; z-index: 4800;
+      background: var(--bg);
+      flex-direction: column;
+      padding: calc(12px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
+    }
+    .prep-wiz.open { display: flex; }
+    .prep-wiz-top {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      margin-bottom: 12px;
+    }
+    .prep-wiz-top button {
+      border: none; background: var(--card); border: 1px solid var(--border);
+      border-radius: 999px; min-height: 40px; padding: 0 14px; font-weight: 800; color: var(--text);
+    }
+    .prep-wiz-stepnum {
+      font-size: 0.78rem; font-weight: 800; color: var(--muted); letter-spacing: 0.04em;
+    }
+    .prep-wiz-progress {
+      height: 6px; background: var(--border); border-radius: 999px; overflow: hidden; margin-bottom: 16px;
+    }
+    .prep-wiz-progress span {
+      display: block; height: 100%; width: 0%;
+      background: linear-gradient(90deg, #9d174d, #f472b6);
+      transition: width .25s ease;
+    }
+    .prep-wiz-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 18px;
+      padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 12px;
+      box-shadow: 0 4px 20px rgba(15,23,42,0.06);
+    }
+    .prep-wiz-card h2 {
+      margin: 0; font-size: 1.25rem; font-weight: 900; color: var(--primary);
+    }
+    .prep-wiz-card p {
+      margin: 0; font-size: 0.88rem; color: var(--muted); line-height: 1.4;
+    }
+    .prep-wiz-card input, .prep-wiz-card textarea {
+      width: 100%; min-height: 48px; border: 1px solid var(--border); border-radius: 14px;
+      padding: 12px 14px; font-size: 17px; background: var(--detail-bg, #f8fafc); color: var(--text);
+    }
+    .prep-wiz-card textarea { min-height: 88px; resize: vertical; }
+    .prep-wiz-actions {
+      display: flex; gap: 8px; margin-top: auto;
+    }
+    .prep-wiz-actions button {
+      flex: 1; min-height: 48px; border: none; border-radius: 14px; font-weight: 800; font-size: 0.92rem;
+    }
+    .prep-wiz-actions .primary { background: var(--primary); color: #fff; }
+    .prep-wiz-actions .ghost { background: var(--primary-soft); color: var(--primary); }
+    .prep-wiz-summary {
+      font-size: 0.82rem; color: var(--muted); line-height: 1.45;
+      background: var(--primary-soft); border-radius: 12px; padding: 10px 12px;
+    }
+    .prep-wiz-summary strong { color: var(--text); }
+
     /* Live camera scanner */
     .prep-live-scan {
       display: none;
@@ -1212,11 +1270,21 @@
   <!-- PREP -->
   <section id="view-prep" class="view">
     <div class="prep-scan">
-      <h3>📷 Nuovi clienti da LED Manager</h3>
-      <p>Apri lo scanner: inquadra la scheda LED Manager nel riquadro. Quando la riconosce, acquisisce da sola i dati (nome, conf. ordine, indirizzo, modello, scadenza, montaggio).</p>
+      <h3>➕ Nuovo cliente in Prep</h3>
+      <p style="margin-bottom:10px;">Il modo più veloce sul telefono: inserisci i dati essenziali e salva.</p>
       <div class="scan-actions">
-        <button type="button" onclick="prepScanCamera()">📷 Scanner automatico</button>
-        <button type="button" class="ghost" onclick="prepScanGallery()">🖼️ Dalla galleria</button>
+        <button type="button" onclick="openPrepQuickForm()" style="flex:1.4;">➕ Nuovo cliente</button>
+      </div>
+      <div class="scan-actions" style="margin-top:8px;">
+        <button type="button" class="ghost" onclick="prepQuickClipboard()">⚡ Da appunti PC</button>
+        <button type="button" class="ghost" onclick="prepScanGallery()">🖼️ Screenshot</button>
+      </div>
+      <div id="prepPasteBox" hidden style="margin-top:10px;">
+        <textarea id="prepPasteArea" rows="4" placeholder="Incolla testo scheda LED Manager" style="width:100%;border:1px solid var(--border);border-radius:12px;padding:10px;font-size:15px;background:var(--card);color:var(--text);resize:vertical;"></textarea>
+        <div class="scan-actions" style="margin-top:8px;">
+          <button type="button" onclick="prepImportPaste()">Importa</button>
+          <button type="button" class="ghost" onclick="prepPasteToggle()">Chiudi</button>
+        </div>
       </div>
       <input type="file" id="prepScanInput" accept="image/*" capture="environment" hidden>
       <input type="file" id="prepScanGallery" accept="image/*" hidden>
@@ -1292,6 +1360,35 @@
     <button type="button" class="tab" data-view="consigli" onclick="go('consigli')"><span class="ico">💡</span>Consigli</button>
     <button type="button" class="tab" data-view="more" onclick="openMore()"><span class="ico">☰</span>Altro</button>
   </nav>
+
+
+  <!-- Quick add cliente Prep -->
+  <div class="sheet" id="prepQuickSheet">
+    <div class="sheet-bg" onclick="closePrepQuickForm()"></div>
+    <div class="sheet-panel" style="max-height:92vh;">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">Nuovo cliente</div>
+      <div class="sheet-sub">Compila i campi principali e salva in Prep</div>
+      <div class="sheet-scroll" style="padding-bottom:calc(16px + env(safe-area-inset-bottom));">
+        <div class="field"><label>Nome cliente *</label><input type="text" id="pqNome" autocomplete="off" placeholder="Es. HU YUNGAN"></div>
+        <div class="field"><label>Conf. ordine</label><input type="text" id="pqConf" inputmode="numeric" placeholder="Es. 23660884"></div>
+        <div class="field"><label>Indirizzo completo</label><input type="text" id="pqAddr" placeholder="Via/Piazza, città (provincia)"></div>
+        <div class="field"><label>Modello</label><input type="text" id="pqModello" placeholder="Es. FC150/3.91 SMD INDOOR 100x150"></div>
+        <div class="field"><label>Scadenza</label><input type="date" id="pqScad"></div>
+        <div class="field"><label>Montaggio</label><input type="text" id="pqMont" placeholder="Es. Piantana" list="pqMontList"></div>
+        <datalist id="pqMontList">
+          <option value="Piantana"></option>
+          <option value="A parete"></option>
+          <option value="Su struttura"></option>
+          <option value="A soffitto"></option>
+        </datalist>
+        <div class="sheet-actions">
+          <button type="button" class="primary" onclick="savePrepQuickForm()">💾 Salva in Prep</button>
+          <button type="button" class="ghost" onclick="closePrepQuickForm()">Annulla</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Client action sheet -->
   <div class="sheet" id="clientSheet">
@@ -2573,6 +2670,309 @@
       if (el) el.textContent = msg || '';
     }
 
+    
+    
+    
+    function openPrepQuickForm() {
+      ['pqNome','pqConf','pqAddr','pqModello','pqScad','pqMont'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      var sh = document.getElementById('prepQuickSheet');
+      if (sh) sh.classList.add('open');
+      setTimeout(function () {
+        var n = document.getElementById('pqNome');
+        if (n) n.focus();
+      }, 200);
+    }
+    function closePrepQuickForm() {
+      var sh = document.getElementById('prepQuickSheet');
+      if (sh) sh.classList.remove('open');
+    }
+    function savePrepQuickForm() {
+      var nome = (document.getElementById('pqNome') || {}).value || '';
+      nome = String(nome).trim();
+      if (!nome) {
+        toast('Inserisci il nome');
+        return;
+      }
+      var conf = String((document.getElementById('pqConf') || {}).value || '').trim();
+      var addr = String((document.getElementById('pqAddr') || {}).value || '').trim();
+      var modello = String((document.getElementById('pqModello') || {}).value || '').trim();
+      var scad = String((document.getElementById('pqScad') || {}).value || '').trim();
+      var mont = String((document.getElementById('pqMont') || {}).value || '').trim();
+      var c = E.upsertPrepFromFields({
+        nome: nome,
+        confOrdine: conf,
+        localita: addr,
+        modello: modello,
+        scadenza: scad,
+        montaggio: mont
+      });
+      if (!c) {
+        toast('Salvataggio non riuscito');
+        return;
+      }
+      closePrepQuickForm();
+      setPrepScanStatus('Salvato: ' + nome, 'ok');
+      toast('Cliente in Prep');
+      renderAll();
+    }
+
+    
+    // ===== Wizard guidato Prep (campo per campo da LED Manager) =====
+    var _prepWizStep = 0;
+    var _prepWizData = {};
+    var PREP_WIZ_STEPS = [
+      {
+        key: 'nome',
+        title: 'Nome cliente',
+        hint: 'In LED Manager: in alto a sinistra, il nome (es. HU YUNGAN). Non serve il numero tra parentesi.',
+        type: 'text',
+        placeholder: 'Es. HU YUNGAN'
+      },
+      {
+        key: 'modello',
+        title: 'Modello',
+        hint: 'Riga del modello LED, es. FC150/3.91 SMD INDOOR. Puoi aggiungere anche misura/passo se li vedi.',
+        type: 'text',
+        placeholder: 'Es. FC150/3.91 SMD INDOOR 100x150'
+      },
+      {
+        key: 'localita',
+        title: 'Indirizzo',
+        hint: 'Campo Indirizzo della scheda, completo (via, civico, paese, provincia).',
+        type: 'textarea',
+        placeholder: 'Es. Piazza Elvio Pertinace, 8 - ALBA (Cuneo)'
+      },
+      {
+        key: 'confOrdine',
+        title: 'Conf. ordine',
+        hint: 'In alto a destra: CONF. ORDINE (solo numeri, es. 23660884).',
+        type: 'text',
+        placeholder: 'Es. 23660884',
+        inputmode: 'numeric'
+      },
+      {
+        key: 'scadenza',
+        title: 'Scadenza',
+        hint: 'Campo SCADENZA in alto a destra (giorno/mese/anno).',
+        type: 'text',
+        placeholder: 'Es. 14/01/2027',
+        inputmode: 'text'
+      },
+      {
+        key: 'montaggio',
+        title: 'Montaggio',
+        hint: 'Campo Montaggio (es. Piantana, A muro…).',
+        type: 'text',
+        placeholder: 'Es. Piantana'
+      }
+    ];
+
+    function prepWizardStart() {
+      _prepWizStep = 0;
+      _prepWizData = {};
+      var el = document.getElementById('prepWizard');
+      if (el) el.classList.add('open');
+      prepWizardRender();
+    }
+    function prepWizardClose() {
+      var el = document.getElementById('prepWizard');
+      if (el) el.classList.remove('open');
+    }
+    function prepWizardSkip() {
+      // salta campo corrente
+      var step = PREP_WIZ_STEPS[_prepWizStep];
+      if (step) _prepWizData[step.key] = _prepWizData[step.key] || '';
+      if (_prepWizStep >= PREP_WIZ_STEPS.length - 1) prepWizardFinish();
+      else { _prepWizStep++; prepWizardRender(); }
+    }
+    function prepWizardBack() {
+      if (_prepWizStep <= 0) { prepWizardClose(); return; }
+      _prepWizStep--;
+      prepWizardRender();
+    }
+    function prepWizardReadInput() {
+      var step = PREP_WIZ_STEPS[_prepWizStep];
+      if (!step) return '';
+      var inp = document.getElementById('prepWizField');
+      return inp ? String(inp.value || '').trim() : '';
+    }
+    function prepWizardNext() {
+      var step = PREP_WIZ_STEPS[_prepWizStep];
+      if (!step) return;
+      var val = prepWizardReadInput();
+      // nome consigliato ma non obbligatorio se ha conf ordine dopo
+      if (step.key === 'nome' && !val) {
+        toast('Inserisci almeno il nome');
+        return;
+      }
+      if (step.key === 'scadenza' && val) {
+        var iso = parseItalianDateToISOMobile(val);
+        _prepWizData.scadenza = iso || val;
+      } else {
+        _prepWizData[step.key] = val;
+      }
+      if (_prepWizStep >= PREP_WIZ_STEPS.length - 1) {
+        prepWizardFinish();
+        return;
+      }
+      _prepWizStep++;
+      prepWizardRender();
+    }
+    function prepWizardFinish() {
+      var d = _prepWizData;
+      if (!(d.nome || d.confOrdine)) {
+        setPrepScanStatus('Servono almeno nome o conf. ordine.', 'err');
+        prepWizardClose();
+        return;
+      }
+      var c = E.upsertPrepFromFields({
+        nome: d.nome || ('CLIENTE ' + (d.confOrdine || '')),
+        modello: d.modello || '',
+        localita: d.localita || '',
+        confOrdine: d.confOrdine || '',
+        scadenza: d.scadenza || '',
+        montaggio: d.montaggio || ''
+      });
+      prepWizardClose();
+      if (c) {
+        setPrepScanStatus('Cliente inserito in Prep: ' + (c.nome || ''), 'ok');
+        toast('Cliente in Prep');
+        renderAll();
+      } else {
+        setPrepScanStatus('Impossibile salvare il cliente.', 'err');
+      }
+    }
+    function prepWizardRender() {
+      var step = PREP_WIZ_STEPS[_prepWizStep];
+      if (!step) return;
+      var total = PREP_WIZ_STEPS.length;
+      var n = _prepWizStep + 1;
+      var lab = document.getElementById('prepWizStepLabel');
+      if (lab) lab.textContent = 'Passo ' + n + '/' + total;
+      var bar = document.getElementById('prepWizBar');
+      if (bar) bar.style.width = Math.round((n / total) * 100) + '%';
+      var title = document.getElementById('prepWizTitle');
+      if (title) title.textContent = step.title;
+      var hint = document.getElementById('prepWizHint');
+      if (hint) hint.textContent = step.hint;
+      var wrap = document.getElementById('prepWizInputWrap');
+      var cur = _prepWizData[step.key] || '';
+      if (step.key === 'scadenza' && cur && /^\d{4}-\d{2}-\d{2}$/.test(cur)) {
+        var p = cur.split('-');
+        cur = p[2] + '/' + p[1] + '/' + p[0];
+      }
+      if (wrap) {
+        if (step.type === 'textarea') {
+          wrap.innerHTML = '<textarea id="prepWizField" placeholder="' + esc(step.placeholder || '') + '">' + esc(cur) + '</textarea>';
+        } else {
+          wrap.innerHTML = '<input id="prepWizField" type="text" ' +
+            (step.inputmode ? ('inputmode="' + step.inputmode + '" ') : '') +
+            'placeholder="' + esc(step.placeholder || '') + '" value="' + esc(cur) + '">';
+        }
+        setTimeout(function () {
+          var inp = document.getElementById('prepWizField');
+          if (inp) { inp.focus(); inp.select && inp.select(); }
+        }, 80);
+      }
+      var sum = document.getElementById('prepWizSummary');
+      if (sum) {
+        var parts = [];
+        if (_prepWizData.nome) parts.push('<strong>Nome:</strong> ' + esc(_prepWizData.nome));
+        if (_prepWizData.modello) parts.push('<strong>Modello:</strong> ' + esc(_prepWizData.modello));
+        if (_prepWizData.localita) parts.push('<strong>Indirizzo:</strong> ' + esc(_prepWizData.localita));
+        if (_prepWizData.confOrdine) parts.push('<strong>Conf.:</strong> ' + esc(_prepWizData.confOrdine));
+        if (_prepWizData.scadenza) parts.push('<strong>Scad.:</strong> ' + esc(_prepWizData.scadenza));
+        if (_prepWizData.montaggio) parts.push('<strong>Mont.:</strong> ' + esc(_prepWizData.montaggio));
+        sum.innerHTML = parts.length ? parts.join('<br>') : 'Compila un campo alla volta guardando LED Manager.';
+      }
+      var nextBtn = document.getElementById('prepWizNext');
+      if (nextBtn) nextBtn.textContent = (_prepWizStep >= total - 1) ? 'Salva in Prep' : 'Avanti';
+      var backBtn = document.getElementById('prepWizBack');
+      if (backBtn) backBtn.textContent = _prepWizStep <= 0 ? 'Chiudi' : 'Indietro';
+    }
+
+
+    async function prepQuickClipboard() {
+      setPrepScanStatus('Leggo gli appunti…', 'work');
+      var raw = '';
+      try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          raw = String(await navigator.clipboard.readText() || '').trim();
+        }
+      } catch (e) {
+        // iOS/Android spesso bloccano lettura automatica
+        raw = '';
+      }
+      if (!raw) {
+        // fallback: apri box e chiedi incolla manuale (1 gesto)
+        setPrepScanStatus('Tieni premuto nel riquadro → Incolla, poi Importa', 'work');
+        var box = document.getElementById('prepPasteBox');
+        if (box) box.hidden = false;
+        var ta = document.getElementById('prepPasteArea');
+        if (ta) {
+          ta.value = '';
+          ta.focus();
+          // su alcuni browser l'incolla utente arriva subito
+          ta.addEventListener('paste', function onP(ev) {
+            ta.removeEventListener('paste', onP);
+            setTimeout(function () {
+              if (String(ta.value || '').trim()) prepImportPaste();
+            }, 30);
+          });
+        }
+        return;
+      }
+      var list = extractAllPrepFromTextMobile(raw);
+      if (!list.length) {
+        var one = extractPrepFieldsMobile(raw);
+        if (one.nome || one.confOrdine || one.localita) list = [one];
+      }
+      if (!list.length) {
+        setPrepScanStatus('Appunti non riconosciuti come scheda LED Manager. Copia di nuovo la scheda.', 'err');
+        return;
+      }
+      applyPrepScanList(list);
+    }
+
+    function prepPasteToggle() {
+      var box = document.getElementById('prepPasteBox');
+      if (!box) return;
+      box.hidden = !box.hidden;
+      if (!box.hidden) {
+        var ta = document.getElementById('prepPasteArea');
+        if (ta) {
+          ta.focus();
+          // prova a leggere clipboard
+          try {
+            if (navigator.clipboard && navigator.clipboard.readText) {
+              navigator.clipboard.readText().then(function (txt) {
+                if (txt && !ta.value) ta.value = txt;
+              }).catch(function () {});
+            }
+          } catch (e) {}
+        }
+      }
+    }
+    function prepImportPaste() {
+      var ta = document.getElementById('prepPasteArea');
+      var raw = ta ? String(ta.value || '').trim() : '';
+      if (!raw) {
+        setPrepScanStatus('Incolla prima il testo della scheda LED Manager.', 'err');
+        return;
+      }
+      setPrepScanStatus('Importazione da testo…', 'work');
+      var list = extractAllPrepFromTextMobile(raw);
+      if (!list.length) {
+        var one = extractPrepFieldsMobile(raw);
+        if (one.nome || one.confOrdine || one.localita) list = [one];
+      }
+      applyPrepScanList(list);
+      if (ta) ta.value = '';
+    }
+
     function prepScanGallery() {
       var input = document.getElementById('prepScanGallery');
       if (!input) return;
@@ -2585,46 +2985,120 @@
     }
 
     async function prepScanCamera() {
-      // apre scanner live con rilevamento automatico
       await prepLiveOpen();
+    }
+
+    // Scanner guidato campo-per-campo (più preciso e veloce)
+    var _prepStream = null;
+    var _prepScanBusy = false;
+    var _prepStepIndex = 0;
+    var _prepDraft = {};
+    var _prepLastRead = '';
+    var PREP_STEPS = [
+      { key: 'nome', label: 'NOME cliente', hint: 'Inquadra solo il NOME (es. HU YUNGAN)', tall: false,
+        parse: function (text) {
+          var raw = String(text || '');
+          var m = raw.match(/([A-ZÀ-Ù][A-ZÀ-Ùa-zà-ù0-9'’\s.\-&\/]{1,60}?)\s*\(\s*\d{3,}\s*\)/);
+          if (m) return m[1].trim();
+          m = raw.match(/\b([A-ZÀ-Ù]{2,}(?:\s+[A-ZÀ-Ùa-zà-ù]{2,}){0,4})\b/);
+          return m ? m[1].trim() : raw.replace(/\s+/g, ' ').trim().slice(0, 60);
+        }
+      },
+      { key: 'modello', label: 'MODELLO', hint: 'Inquadra la riga del MODELLO (es. FC150/3.91…)', tall: true,
+        parse: function (text) {
+          var raw = String(text || '');
+          var m = raw.match(/\b([A-Z]{1,6}\d{2,4}\s*\/\s*[\d.,]+[^\n]{0,50})/);
+          if (m) return m[1].replace(/\s+/g, ' ').trim();
+          m = raw.match(/(SMD|INDOOR|OUTDOOR|LCD|TOTEM|CABINET)[^\n]{0,40}/i);
+          if (m) return m[0].replace(/\s+/g, ' ').trim();
+          return raw.replace(/\s+/g, ' ').trim().slice(0, 80);
+        }
+      },
+      { key: 'localita', label: 'INDIRIZZO', hint: 'Inquadra la riga INDIRIZZO', tall: true,
+        parse: function (text) {
+          var raw = String(text || '');
+          var m = raw.match(/Indirizzo\s*[:\-–]?\s*([^\n]+)/i);
+          if (m) return cleanLedAddrMobile(m[1]);
+          m = raw.match(/\b(via|viale|piazza|corso|vicolo|strada)\b[^\n]{5,120}/i);
+          if (m) return cleanLedAddrMobile(m[0]);
+          return cleanLedAddrMobile(raw.replace(/\s+/g, ' ').trim().slice(0, 120));
+        }
+      },
+      { key: 'confOrdine', label: 'CONF. ORDINE', hint: 'Inquadra CONF. ORDINE (solo il numero)', tall: false,
+        parse: function (text) {
+          var raw = String(text || '');
+          var m = raw.match(/CONF\.?\s*ORDINE\s*[:\-–]?\s*(\d{5,})/i);
+          if (m) return m[1];
+          m = raw.match(/\b(\d{6,})\b/);
+          return m ? m[1] : '';
+        }
+      },
+      { key: 'scadenza', label: 'SCADENZA', hint: 'Inquadra la SCADENZA (gg/mm/aaaa)', tall: false,
+        parse: function (text) {
+          var raw = String(text || '');
+          var m = raw.match(/SCADENZA\s*[:\-–]?\s*([0-3]?\d[\/.\-][0-1]?\d[\/.\-]\d{2,4})/i);
+          if (m) return parseItalianDateToISOMobile(m[1]);
+          m = raw.match(/\b([0-3]?\d[\/.\-][0-1]?\d[\/.\-]\d{2,4})\b/);
+          return m ? parseItalianDateToISOMobile(m[1]) : '';
+        }
+      },
+      { key: 'montaggio', label: 'MONTAGGIO', hint: 'Inquadra MONTAGGIO (es. Piantana)', tall: false,
+        parse: function (text) {
+          var raw = String(text || '');
+          var m = raw.match(/Montaggio\s*[:\-–]?\s*([A-Za-zÀ-ù0-9\/\-\s]{2,40})/i);
+          if (m) return m[1].trim().split(/\s{2,}/)[0];
+          m = raw.match(/\b(Piantana|A\s*parete|Sospeso|Staffa|Telaio|Totem)\b/i);
+          return m ? m[1].trim() : raw.replace(/\s+/g, ' ').trim().slice(0, 40);
+        }
+      }
+    ];
+
+    function prepStepUi() {
+      var step = PREP_STEPS[_prepStepIndex];
+      if (!step) return;
+      var lab = document.getElementById('prepLiveStepLabel');
+      var hint = document.getElementById('prepLiveHint');
+      var val = document.getElementById('prepLiveValue');
+      var frame = document.getElementById('prepLiveFrame');
+      if (lab) lab.textContent = 'Passo ' + (_prepStepIndex + 1) + '/' + PREP_STEPS.length + ' · ' + step.label;
+      if (hint) hint.textContent = step.hint;
+      if (val) val.textContent = _prepLastRead ? ('Letto: ' + _prepLastRead) : '';
+      if (frame) {
+        frame.classList.add('field');
+        frame.classList.toggle('tall', !!step.tall);
+        frame.classList.remove('locked');
+      }
+      prepLiveStatus('Inquadra e premi il pulsante rosa, oppure attendi…');
     }
 
     async function prepLiveOpen() {
       var overlay = document.getElementById('prepLiveScan');
       var video = document.getElementById('prepLiveVideo');
       if (!overlay || !video) {
-        // fallback file input
         var input = document.getElementById('prepScanInput');
         if (input) { input.value = ''; input.onchange = function () { var f = input.files && input.files[0]; if (f) prepRunOcrFromFile(f); }; input.click(); }
         return;
       }
       try {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          throw new Error('Fotocamera non disponibile');
-        }
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('Fotocamera non disponibile');
         _prepStream = await navigator.mediaDevices.getUserMedia({
           audio: false,
-          video: {
-            facingMode: { ideal: 'environment' },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 }
-          }
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
         });
         video.srcObject = _prepStream;
         await video.play();
         overlay.classList.add('open');
-        _prepHitCount = 0;
-        prepLiveStatus('Inquadra la scheda nel riquadro…');
-        var frame = document.getElementById('prepLiveFrame');
-        if (frame) frame.classList.remove('locked');
-        // avvia rilevamento periodico
-        if (_prepScanTimer) clearInterval(_prepScanTimer);
-        _prepScanTimer = setInterval(function () { prepLiveTick(); }, 1600);
-        // primo tick dopo stabilizzazione
-        setTimeout(function () { prepLiveTick(); }, 900);
+        _prepStepIndex = 0;
+        _prepDraft = {};
+        _prepLastRead = '';
+        _prepScanBusy = false;
+        prepStepUi();
+        if (window._prepScanTimer) clearInterval(window._prepScanTimer);
+        window._prepScanTimer = setInterval(function () { prepStepAutoTick(); }, 1200);
+        setTimeout(function () { prepStepAutoTick(); }, 600);
       } catch (err) {
         console.warn(err);
-        setPrepScanStatus('Fotocamera non avviata: ' + (err.message || err) + '. Uso selezione file.', 'err');
+        setPrepScanStatus('Fotocamera non avviata: ' + (err.message || err), 'err');
         var input = document.getElementById('prepScanInput');
         if (input) {
           input.value = '';
@@ -2635,21 +3109,16 @@
     }
 
     function prepLiveClose() {
-      if (_prepScanTimer) { clearInterval(_prepScanTimer); _prepScanTimer = null; }
+      if (window._prepScanTimer) { clearInterval(window._prepScanTimer); window._prepScanTimer = null; }
       _prepScanBusy = false;
-      _prepHitCount = 0;
       try {
-        if (_prepStream) {
-          _prepStream.getTracks().forEach(function (tr) { tr.stop(); });
-        }
+        if (_prepStream) _prepStream.getTracks().forEach(function (tr) { tr.stop(); });
       } catch (e) {}
       _prepStream = null;
       var video = document.getElementById('prepLiveVideo');
       if (video) video.srcObject = null;
       var overlay = document.getElementById('prepLiveScan');
       if (overlay) overlay.classList.remove('open');
-      var frame = document.getElementById('prepLiveFrame');
-      if (frame) frame.classList.remove('locked');
     }
 
     async function prepLiveToggleTorch() {
@@ -2667,18 +3136,23 @@
       }
     }
 
-    function prepLiveGrabFrameCanvas() {
+    function prepLiveStatus(msg) {
+      var el = document.getElementById('prepLiveStatus');
+      if (el) el.textContent = msg || '';
+    }
+
+    function prepLiveGrabFieldCanvas() {
       var video = document.getElementById('prepLiveVideo');
       var canvas = document.getElementById('prepLiveCanvas');
-      var frame = document.getElementById('prepLiveFrame');
       if (!video || !canvas || !video.videoWidth) return null;
+      var step = PREP_STEPS[_prepStepIndex] || {};
       var vw = video.videoWidth, vh = video.videoHeight;
-      // crop centrale corrispondente al riquadro guida (~92% x 52%)
-      var cropW = Math.round(vw * 0.92);
-      var cropH = Math.round(vh * 0.48);
+      var cropW = Math.round(vw * 0.9);
+      var cropH = Math.round(vh * (step.tall ? 0.28 : 0.18));
       var sx = Math.round((vw - cropW) / 2);
       var sy = Math.round((vh - cropH) / 2);
-      canvas.width = Math.min(cropW, 1600);
+      var maxW = 1000;
+      canvas.width = Math.min(cropW, maxW);
       canvas.height = Math.round(canvas.width * (cropH / cropW));
       var ctx = canvas.getContext('2d');
       ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
@@ -2686,111 +3160,104 @@
       return canvas;
     }
 
-    function looksLikeLedCard(text) {
-      var t = String(text || '');
-      var score = 0;
-      if (/CONF\.?\s*ORDINE/i.test(t)) score += 3;
-      if (/SCADENZA/i.test(t)) score += 2;
-      if (/Indirizzo/i.test(t)) score += 2;
-      if (/Montaggio/i.test(t)) score += 1;
-      if (/Installatore/i.test(t)) score += 1;
-      if (/\(\s*\d{3,}\s*\)/.test(t)) score += 1;
-      if (/\b\d{5,}\b/.test(t)) score += 1;
-      return score >= 4;
+    async function prepStepOcrOnce() {
+      var canvas = prepLiveGrabFieldCanvas();
+      if (!canvas) return '';
+      var Tesseract = await loadTesseractMobile();
+      var result = await Tesseract.recognize(canvas, 'ita+eng', { logger: function () {} });
+      return (result && result.data && result.data.text) ? result.data.text : '';
     }
 
-    async function prepLiveTick() {
+    async function prepStepAutoTick() {
       if (_prepScanBusy) return;
       if (!document.getElementById('prepLiveScan') || !document.getElementById('prepLiveScan').classList.contains('open')) return;
-      var canvas = prepLiveGrabFrameCanvas();
-      if (!canvas) return;
       _prepScanBusy = true;
       try {
-        prepLiveStatus('Analisi riquadro…');
-        var Tesseract = await loadTesseractMobile();
-        // OCR leggero: solo per capire se c'è una scheda
-        var result = await Tesseract.recognize(canvas, 'ita+eng', {
-          logger: function () {}
-        });
-        var text = (result && result.data && result.data.text) ? result.data.text : '';
-        if (looksLikeLedCard(text)) {
-          _prepHitCount++;
+        prepLiveStatus('Lettura…');
+        var text = await prepStepOcrOnce();
+        var step = PREP_STEPS[_prepStepIndex];
+        if (!step) return;
+        var parsed = step.parse(text);
+        if (parsed && String(parsed).trim().length >= 2) {
+          _prepLastRead = String(parsed).trim();
+          var val = document.getElementById('prepLiveValue');
+          if (val) val.textContent = 'Letto: ' + _prepLastRead;
           var frame = document.getElementById('prepLiveFrame');
           if (frame) frame.classList.add('locked');
-          prepLiveStatus('Scheda rilevata (' + _prepHitCount + '/2)…');
-          if (_prepHitCount >= 2) {
-            // conferma su 2 frame consecutivi
-            if (_prepScanTimer) { clearInterval(_prepScanTimer); _prepScanTimer = null; }
-            prepLiveStatus('Scheda acquisita, estraggo i dati…');
-            await prepLiveProcessText(text, canvas);
-            return;
-          }
+          prepLiveStatus('Valore trovato. Premi Conferma o riscatta.');
         } else {
-          _prepHitCount = 0;
-          var frame2 = document.getElementById('prepLiveFrame');
-          if (frame2) frame2.classList.remove('locked');
-          prepLiveStatus('Inquadra la scheda nel riquadro…');
+          prepLiveStatus('Non chiaro: avvicina il campo nel riquadro');
         }
       } catch (e) {
-        console.warn(e);
-        prepLiveStatus('Ricerca scheda…');
+        prepLiveStatus('Inquadra il campo…');
       } finally {
         _prepScanBusy = false;
       }
     }
 
-    async function prepLiveManualCapture() {
+    async function prepStepCapture() {
       if (_prepScanBusy) return;
-      var canvas = prepLiveGrabFrameCanvas();
-      if (!canvas) return;
-      if (_prepScanTimer) { clearInterval(_prepScanTimer); _prepScanTimer = null; }
       _prepScanBusy = true;
-      prepLiveStatus('Scatto manuale, lettura…');
+      prepLiveStatus('Scatto…');
       try {
-        var Tesseract = await loadTesseractMobile();
-        var result = await Tesseract.recognize(canvas, 'ita+eng', {
-          logger: function (m) {
-            if (!m || m.status !== 'recognizing text') return;
-            prepLiveStatus('Lettura… ' + Math.round((m.progress || 0) * 100) + '%');
-          }
-        });
-        var text = (result && result.data && result.data.text) ? result.data.text : '';
-        await prepLiveProcessText(text, canvas);
+        var text = await prepStepOcrOnce();
+        var step = PREP_STEPS[_prepStepIndex];
+        var parsed = step ? step.parse(text) : '';
+        _prepLastRead = String(parsed || '').trim();
+        var val = document.getElementById('prepLiveValue');
+        if (val) val.textContent = _prepLastRead ? ('Letto: ' + _prepLastRead) : 'Nessun testo';
+        var frame = document.getElementById('prepLiveFrame');
+        if (frame) frame.classList.toggle('locked', !!_prepLastRead);
+        prepLiveStatus(_prepLastRead ? 'Ok. Premi Conferma' : 'Riprova più vicino e a fuoco');
       } catch (e) {
-        prepLiveStatus('Errore: ' + (e.message || e));
-        _prepScanTimer = setInterval(function () { prepLiveTick(); }, 1600);
+        prepLiveStatus('Errore lettura');
       } finally {
         _prepScanBusy = false;
       }
     }
 
-    async function prepLiveProcessText(text, canvas) {
-      var prev = document.getElementById('prepScanPreview');
-      if (prev && canvas) {
-        try {
-          prev.src = canvas.toDataURL('image/jpeg', 0.85);
-          prev.classList.add('show');
-        } catch (e) {}
-      }
-      if (!String(text || '').trim()) {
-        prepLiveStatus('Nessun testo. Riprova.');
-        setPrepScanStatus('Nessun testo letto dalla scheda.', 'err');
-        _prepScanTimer = setInterval(function () { prepLiveTick(); }, 1600);
-        return;
-      }
-      var list = extractAllPrepFromTextMobile(text);
-      // se il testo intero non è spezzato, prova come unica scheda
-      if (!list.length) {
-        var one = extractPrepFieldsMobile(text);
-        if (one.nome || one.confOrdine || one.localita) list = [one];
-      }
-      prepLiveClose();
-      if (!list.length) {
-        setPrepScanStatus('Scheda non riconosciuta. Riprova con più luce e testo a fuoco.', 'err');
-        return;
-      }
-      applyPrepScanList(list);
+    function prepStepSkip() {
+      _prepLastRead = '';
+      prepStepAdvance();
     }
+
+    function prepStepConfirm() {
+      var step = PREP_STEPS[_prepStepIndex];
+      if (!step) return;
+      if (_prepLastRead) _prepDraft[step.key] = _prepLastRead;
+      prepStepAdvance();
+    }
+
+    function prepStepAdvance() {
+      _prepLastRead = '';
+      _prepStepIndex++;
+      if (_prepStepIndex >= PREP_STEPS.length) {
+        var f = {
+          nome: _prepDraft.nome || '',
+          modello: _prepDraft.modello || '',
+          localita: _prepDraft.localita || '',
+          confOrdine: _prepDraft.confOrdine || '',
+          scadenza: _prepDraft.scadenza || '',
+          montaggio: _prepDraft.montaggio || ''
+        };
+        prepLiveClose();
+        if (!(f.nome || f.confOrdine)) {
+          setPrepScanStatus('Dati insufficienti. Ripeti partendo dal nome.', 'err');
+          return;
+        }
+        var c = E.upsertPrepFromFields(f);
+        if (c) {
+          setPrepScanStatus('Cliente in Prep: ' + (f.nome || f.confOrdine), 'ok');
+          toast('Cliente in Prep');
+          renderAll();
+        } else {
+          setPrepScanStatus('Impossibile salvare', 'err');
+        }
+        return;
+      }
+      prepStepUi();
+    }
+
 
 
     function renderPrep() {
@@ -3899,6 +4366,26 @@
       }
     } catch (e) {}
   </script>
+
+  <!-- Wizard inserimento guidato -->
+  <div class="prep-wiz" id="prepWizard">
+    <div class="prep-wiz-top">
+      <button type="button" onclick="prepWizardClose()">✕</button>
+      <span class="prep-wiz-stepnum" id="prepWizStepLabel">Passo 1/6</span>
+      <button type="button" onclick="prepWizardSkip()">Salta</button>
+    </div>
+    <div class="prep-wiz-progress"><span id="prepWizBar"></span></div>
+    <div class="prep-wiz-card">
+      <h2 id="prepWizTitle">Nome cliente</h2>
+      <p id="prepWizHint">In LED Manager guarda in alto a sinistra il nome (es. HU YUNGAN).</p>
+      <div id="prepWizInputWrap"></div>
+      <div class="prep-wiz-summary" id="prepWizSummary"></div>
+      <div class="prep-wiz-actions">
+        <button type="button" class="ghost" id="prepWizBack" onclick="prepWizardBack()">Indietro</button>
+        <button type="button" class="primary" id="prepWizNext" onclick="prepWizardNext()">Avanti</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Scanner live LED Manager -->
   <div class="prep-live-scan" id="prepLiveScan">
