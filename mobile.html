@@ -1270,14 +1270,17 @@
   <!-- PREP -->
   <section id="view-prep" class="view">
     <div class="prep-scan">
-      <h3>➕ Nuovo cliente in Prep</h3>
-      <p style="margin-bottom:10px;">Il modo più veloce sul telefono: inserisci i dati essenziali e salva.</p>
+      <h3>⚡ Importa da LED Manager</h3>
+      <p style="margin-bottom:10px;">Scegli un metodo. Lo <strong>scanner guidato</strong> chiede nome, modello, indirizzo, conf. ordine, scadenza e montaggio uno alla volta.</p>
       <div class="scan-actions">
-        <button type="button" onclick="openPrepQuickForm()" style="flex:1.4;">➕ Nuovo cliente</button>
+        <button type="button" onclick="prepScanCamera()" style="flex:1.4;">📷 Scanner guidato</button>
       </div>
       <div class="scan-actions" style="margin-top:8px;">
-        <button type="button" class="ghost" onclick="prepQuickClipboard()">⚡ Da appunti PC</button>
+        <button type="button" class="ghost" onclick="prepQuickClipboard()">⚡ Incolla e importa</button>
         <button type="button" class="ghost" onclick="prepScanGallery()">🖼️ Screenshot</button>
+      </div>
+      <div class="scan-actions" style="margin-top:8px;">
+        <button type="button" class="ghost" onclick="openPrepQuickForm()" style="flex:1;">✏️ Inserimento manuale</button>
       </div>
       <div id="prepPasteBox" hidden style="margin-top:10px;">
         <textarea id="prepPasteArea" rows="4" placeholder="Incolla testo scheda LED Manager" style="width:100%;border:1px solid var(--border);border-radius:12px;padding:10px;font-size:15px;background:var(--card);color:var(--text);resize:vertical;"></textarea>
@@ -1288,7 +1291,7 @@
       </div>
       <input type="file" id="prepScanInput" accept="image/*" capture="environment" hidden>
       <input type="file" id="prepScanGallery" accept="image/*" hidden>
-      <div class="prep-scan-status" id="prepScanStatus"></div>
+      <div class="prep-scan-status" id="prepScanStatus">In alto: scanner guidato · oppure incolla dal PC</div>
       <img id="prepScanPreview" class="prep-scan-preview" alt="Anteprima scansione">
     </div>
     <div class="filters">

@@ -1,5 +1,5 @@
 /* Service Worker – Gestione Note Clienti PWA */
-const CACHE_NAME = 'note-clienti-v168-step-scan';
+const CACHE_NAME = 'note-clienti-v169-prep-visible';
 const ASSETS = [
   './',
   './index.html',
