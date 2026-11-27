@@ -656,6 +656,151 @@
 
 
 
+    /* Live camera scanner */
+    .prep-live-scan {
+      display: none;
+      position: fixed; inset: 0; z-index: 5000;
+      background: #000;
+      flex-direction: column;
+    }
+    .prep-live-scan.open { display: flex; }
+    .prep-live-scan video {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+    .prep-live-scan .scan-ui {
+      position: relative; z-index: 2;
+      display: flex; flex-direction: column;
+      height: 100%;
+      padding: calc(12px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
+      pointer-events: none;
+    }
+    .prep-live-scan .scan-top {
+      display: flex; justify-content: space-between; align-items: center;
+      pointer-events: auto;
+    }
+    .prep-live-scan .scan-top button {
+      border: none; background: rgba(0,0,0,0.45); color: #fff;
+      font-weight: 800; border-radius: 999px; min-height: 40px; padding: 0 14px;
+    }
+    .prep-live-scan .scan-hint {
+      color: #fff; text-align: center; font-size: 0.85rem; font-weight: 700;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+      margin-top: 10px;
+    }
+    .prep-live-scan .scan-frame-wrap {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+    }
+    .prep-live-scan .scan-frame {
+      width: min(92vw, 420px);
+      height: min(52vh, 280px);
+      border-radius: 18px;
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.45);
+      border: 3px solid rgba(244,114,182,0.95);
+      position: relative;
+    }
+    .prep-live-scan .scan-frame::before,
+    .prep-live-scan .scan-frame::after {
+      content: '';
+      position: absolute; width: 22px; height: 22px;
+      border-color: #f9a8d4; border-style: solid;
+    }
+    .prep-live-scan .scan-frame::before {
+      top: -3px; left: -3px; border-width: 4px 0 0 4px; border-radius: 8px 0 0 0;
+    }
+    .prep-live-scan .scan-frame::after {
+      top: -3px; right: -3px; border-width: 4px 4px 0 0; border-radius: 0 8px 0 0;
+    }
+    .prep-live-scan .scan-frame .cbl,
+    .prep-live-scan .scan-frame .cbr {
+      position: absolute; width: 22px; height: 22px;
+      border-color: #f9a8d4; border-style: solid;
+    }
+    .prep-live-scan .scan-frame .cbl {
+      bottom: -3px; left: -3px; border-width: 0 0 4px 4px; border-radius: 0 0 0 8px;
+    }
+    .prep-live-scan .scan-frame .cbr {
+      bottom: -3px; right: -3px; border-width: 0 4px 4px 0; border-radius: 0 0 8px 0;
+    }
+    .prep-live-scan .scan-frame.locked {
+      border-color: #4ade80;
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), 0 0 24px rgba(74,222,128,0.45);
+    }
+    .prep-live-scan .scan-bottom {
+      pointer-events: auto;
+      display: flex; flex-direction: column; gap: 10px; align-items: center;
+    }
+    .prep-live-scan .scan-status {
+      color: #fff; font-size: 0.84rem; font-weight: 700; text-align: center;
+      min-height: 1.3em; text-shadow: 0 1px 4px #000;
+    }
+    .prep-live-scan .scan-capture {
+      width: 72px; height: 72px; border-radius: 50%;
+      border: 4px solid #fff; background: rgba(244,114,182,0.9);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    }
+    .prep-live-scan .scan-capture:active { transform: scale(0.94); }
+
+    /* Prep scan LED Manager */
+    .prep-scan {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .prep-scan h3 {
+      margin: 0 0 6px;
+      font-size: 0.92rem;
+      font-weight: 800;
+      color: var(--primary);
+    }
+    .prep-scan p {
+      margin: 0 0 10px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    .prep-scan .scan-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .prep-scan .scan-actions button {
+      flex: 1;
+      min-height: 46px;
+      border: none;
+      border-radius: 12px;
+      font-weight: 800;
+      font-size: 0.85rem;
+      background: var(--primary);
+      color: #fff;
+    }
+    .prep-scan .scan-actions button.ghost {
+      background: var(--primary-soft);
+      color: var(--primary);
+    }
+    .prep-scan-status {
+      margin-top: 10px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--muted);
+      min-height: 1.2em;
+    }
+    .prep-scan-status.work { color: #2563eb; }
+    .prep-scan-status.ok { color: var(--ok); }
+    .prep-scan-status.err { color: var(--danger); }
+    .prep-scan-preview {
+      display: none;
+      width: 100%;
+      max-height: 160px;
+      object-fit: contain;
+      border-radius: 12px;
+      margin-top: 10px;
+      background: #0f172a;
+    }
+    .prep-scan-preview.show { display: block; }
+
     /* Percorso mobile */
     .m-percorso-tools {
       display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px;
@@ -1066,6 +1211,18 @@
 
   <!-- PREP -->
   <section id="view-prep" class="view">
+    <div class="prep-scan">
+      <h3>📷 Nuovi clienti da LED Manager</h3>
+      <p>Apri lo scanner: inquadra la scheda LED Manager nel riquadro. Quando la riconosce, acquisisce da sola i dati (nome, conf. ordine, indirizzo, modello, scadenza, montaggio).</p>
+      <div class="scan-actions">
+        <button type="button" onclick="prepScanCamera()">📷 Scanner automatico</button>
+        <button type="button" class="ghost" onclick="prepScanGallery()">🖼️ Dalla galleria</button>
+      </div>
+      <input type="file" id="prepScanInput" accept="image/*" capture="environment" hidden>
+      <input type="file" id="prepScanGallery" accept="image/*" hidden>
+      <div class="prep-scan-status" id="prepScanStatus"></div>
+      <img id="prepScanPreview" class="prep-scan-preview" alt="Anteprima scansione">
+    </div>
     <div class="filters">
       <button type="button" class="active" data-pf="scadenza" onclick="setPrepSort('scadenza')">Scadenza</button>
       <button type="button" data-pf="nome" onclick="setPrepSort('nome')">Nome</button>
@@ -2145,6 +2302,496 @@
       if (!html) html = '<div class="empty">Nessun cliente in Note</div>';
       document.getElementById('noteList').innerHTML = html;
     }
+
+    
+    // ===== Prep: scansione LED Manager (camera + OCR) =====
+    var _tessLoading = null;
+    function setPrepScanStatus(msg, kind) {
+      var el = document.getElementById('prepScanStatus');
+      if (!el) return;
+      el.textContent = msg || '';
+      el.className = 'prep-scan-status' + (kind ? (' ' + kind) : '');
+    }
+    function loadTesseractMobile() {
+      if (window.Tesseract) return Promise.resolve(window.Tesseract);
+      if (_tessLoading) return _tessLoading;
+      _tessLoading = new Promise(function (resolve, reject) {
+        var s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+        s.async = true;
+        s.onload = function () {
+          if (window.Tesseract) resolve(window.Tesseract);
+          else reject(new Error('Tesseract non disponibile'));
+        };
+        s.onerror = function () { reject(new Error('Download Tesseract fallito')); };
+        document.head.appendChild(s);
+      });
+      return _tessLoading;
+    }
+
+    function parseItalianDateToISOMobile(raw) {
+      var s = String(raw || '').trim();
+      var m = s.match(/(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/);
+      if (!m) {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+        return '';
+      }
+      var d = m[1].padStart(2, '0');
+      var mo = m[2].padStart(2, '0');
+      var y = m[3].length === 2 ? ('20' + m[3]) : m[3];
+      return y + '-' + mo + '-' + d;
+    }
+
+    function cleanLedAddrMobile(addr) {
+      var s = String(addr || '').trim();
+      s = s.replace(/\s*contratto\b[\s\S]*$/i, '');
+      s = s.replace(/\s*calendarizzato\b[\s\S]*$/i, '');
+      s = s.replace(/\s*assegnato\b[\s\S]*$/i, '');
+      s = s.replace(/\s*nulla\s*osta\b[\s\S]*$/i, '');
+      return s.trim();
+    }
+
+    function splitLedCardsMobile(ocrText) {
+      var raw = String(ocrText || '').replace(/\r/g, '\n');
+      var parts = raw.split(/(?=\bCONF\.?\s*ORDINE\b)/i);
+      if (parts.length <= 1) parts = raw.split(/(?=\bInstallatore\s*:)/i);
+      var cards = [];
+      for (var i = 0; i < parts.length; i++) {
+        var chunk = parts[i].trim();
+        if (!chunk) continue;
+        if (i > 0 && /^\s*CONF\.?\s*ORDINE/i.test(chunk)) {
+          // prova a recuperare nome dal pezzo precedente
+          var prev = String(parts[i - 1] || '');
+          var lines = prev.split(/\n+/).map(function (L) { return L.trim(); }).filter(Boolean);
+          for (var li = lines.length - 1; li >= 0 && li >= lines.length - 4; li--) {
+            var L = lines[li];
+            if (/^(modifica|elimina|avvia|installatore|indirizzo|montaggio|scadenza)/i.test(L)) continue;
+            if (/[A-Za-zÀ-ù]{3,}/.test(L) && L.length < 80) {
+              chunk = L + '\n' + chunk;
+              break;
+            }
+          }
+        }
+        if (/(dashboard|menu laterale|totale ordini|filtro avanzato)/i.test(chunk)) continue;
+        cards.push(chunk);
+      }
+      if (!cards.length && raw.trim()) cards = [raw.trim()];
+      return cards;
+    }
+
+    function extractPrepFieldsMobile(text) {
+      var raw = String(text || '').replace(/\r/g, '\n');
+      var out = { nome: '', confOrdine: '', localita: '', modello: '', scadenza: '', montaggio: '', ordineNum: '', qta: 1 };
+      // CONF. ORDINE: 23660884
+      var mOrd = raw.match(/CONF\.?\s*ORDINE\s*[:\-–]?\s*(\d{5,})/i);
+      if (mOrd) out.confOrdine = mOrd[1];
+      var mOrd2 = raw.match(/\bORDINE\s*[:\-–]?\s*#?\s*(\d{1,6})\b/i);
+      if (mOrd2) out.ordineNum = mOrd2[1];
+
+      // NOME (12345) in testa
+      var mName = raw.match(/^\s*([A-ZÀ-Ù][A-ZÀ-Ùa-zà-ù0-9'’\s.\-&\/]{1,80}?)\s*\(\s*(\d{3,})\s*\)/m);
+      if (mName) out.nome = mName[1].trim();
+      if (!out.nome) {
+        var lines = raw.split(/\n+/).map(function (L) { return L.trim(); }).filter(Boolean);
+        for (var i = 0; i < Math.min(lines.length, 6); i++) {
+          var L = lines[i];
+          if (/CONF\.?\s*ORDINE|SCADENZA|Installatore|Indirizzo|Montaggio|Modifica|Elimina|Avvia/i.test(L)) continue;
+          var m = L.match(/^([A-ZÀ-Ù][A-ZÀ-Ùa-zà-ù0-9'’\s.\-&\/]{2,80})(?:\s*\(\s*\d{3,}\s*\))?$/);
+          if (m) { out.nome = m[1].trim(); break; }
+        }
+      }
+
+      // Indirizzo: Piazza Elvio Pertinace, 8 - ALBA (Cuneo)
+      var mAddr = raw.match(/Indirizzo\s*[:\-–]?\s*([^\n]+)/i);
+      if (mAddr) out.localita = cleanLedAddrMobile(mAddr[1]);
+      if (!out.localita) {
+        var mVia = raw.match(/\b(via|viale|piazza|corso|vicolo|strada)\b[^\n]{5,140}/i);
+        if (mVia) out.localita = cleanLedAddrMobile(mVia[0]);
+      }
+
+      // Modello tipo FC150/3.91 SMD INDOOR...
+      var mMod = raw.match(/\b([A-Z]{1,6}\d{2,4}\s*\/\s*[\d.,]+[^\n]{0,60})/);
+      if (mMod) out.modello = mMod[1].replace(/\s+/g, ' ').trim();
+      if (!out.modello) {
+        var mMod2 = raw.match(/(?:Modello|Tipologia)\s*[:\-–]?\s*([^\n]{3,80})/i);
+        if (mMod2) out.modello = mMod2[1].trim();
+      }
+
+      // Misura / Passo opzionali nel modello
+      var mMis = raw.match(/Misura\s*[:\-–]?\s*([\d]+x[\d]+)/i);
+      var mPasso = raw.match(/Passo\s*[:\-–]?\s*([\d.,]+)/i);
+      if (out.modello && mPasso && out.modello.indexOf(mPasso[1]) < 0) {
+        out.modello += ' P' + mPasso[1];
+      }
+      if (out.modello && mMis && out.modello.toLowerCase().indexOf(mMis[1].toLowerCase()) < 0) {
+        out.modello += ' ' + mMis[1];
+      }
+
+      var mSc = raw.match(/SCADENZA\s*[:\-–]?\s*([0-3]?\d[\/.\-][0-1]?\d[\/.\-]\d{2,4})/i);
+      if (mSc) out.scadenza = parseItalianDateToISOMobile(mSc[1]);
+
+      var mMont = raw.match(/Montaggio\s*[:\-–]?\s*([^\n]{2,40})/i);
+      if (mMont) out.montaggio = mMont[1].split(/\s{2,}/)[0].trim();
+
+      return out;
+    }
+
+    function extractAllPrepFromTextMobile(ocrText) {
+      var cards = splitLedCardsMobile(ocrText);
+      var list = [];
+      cards.forEach(function (card) {
+        var f = extractPrepFieldsMobile(card);
+        if (!(f.nome || f.confOrdine || f.localita || f.modello)) return;
+        // multi ordine: se c'è ORDINE N oltre conf, crea scheda distinta
+        if (f.ordineNum && f.confOrdine) {
+          f._key = f.confOrdine + ':' + f.ordineNum;
+        }
+        list.push(f);
+      });
+      // se una sola card ma più "ORDINE n"
+      if (list.length <= 1) {
+        var raw = String(ocrText || '');
+        var re = /\bORDINE\s*[:\-–]?\s*#?\s*(\d{1,6})\b/gi;
+        var found = [];
+        var mm;
+        while ((mm = re.exec(raw))) found.push(mm[1]);
+        if (found.length > 1 && list[0]) {
+          var base = list[0];
+          list = found.map(function (n) {
+            var o = Object.assign({}, base);
+            o.ordineNum = n;
+            o.nome = base.nome;
+            return o;
+          });
+        }
+      }
+      return list;
+    }
+
+    function applyPrepScanList(list) {
+      if (!list || !list.length) {
+        setPrepScanStatus('Nessuna scheda cliente riconosciuta. Inquadra meglio la scheda LED Manager.', 'err');
+        return 0;
+      }
+      var n = 0;
+      list.forEach(function (f) {
+        var nome = f.nome || ('CLIENTE ' + (f.confOrdine || ''));
+        // se ordine multiplo, distingui nel nome leggero
+        if (f.ordineNum && list.length > 1) {
+          // non cambiare nome, confOrdine resta; engine usa conf
+        }
+        var c = E.upsertPrepFromFields({
+          nome: nome,
+          confOrdine: f.confOrdine || '',
+          localita: f.localita || '',
+          modello: f.modello || '',
+          scadenza: f.scadenza || '',
+          montaggio: f.montaggio || ''
+        });
+        if (c) n++;
+      });
+      setPrepScanStatus('Importati / aggiornati ' + n + ' clienti in Prep', 'ok');
+      toast(n + ' clienti in Prep');
+      renderAll();
+      return n;
+    }
+
+    function enhanceCanvasForOcr(canvas) {
+      try {
+        var ctx = canvas.getContext('2d');
+        var img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        var d = img.data;
+        for (var i = 0; i < d.length; i += 4) {
+          var g = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
+          // contrasto
+          g = g < 140 ? Math.max(0, g * 0.75) : Math.min(255, g * 1.15 + 10);
+          d[i] = d[i + 1] = d[i + 2] = g;
+        }
+        ctx.putImageData(img, 0, 0);
+      } catch (e) {}
+      return canvas;
+    }
+
+    async function prepRunOcrFromFile(file) {
+      if (!file) return;
+      setPrepScanStatus('Caricamento immagine…', 'work');
+      var url = URL.createObjectURL(file);
+      var prev = document.getElementById('prepScanPreview');
+      if (prev) {
+        prev.src = url;
+        prev.classList.add('show');
+      }
+      try {
+        var img = await new Promise(function (resolve, reject) {
+          var im = new Image();
+          im.onload = function () { resolve(im); };
+          im.onerror = reject;
+          im.src = url;
+        });
+        var maxW = 1600;
+        var scale = img.width > maxW ? maxW / img.width : 1;
+        var canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        enhanceCanvasForOcr(canvas);
+
+        setPrepScanStatus('Lettura testo LED Manager… (può richiedere 10-30s)', 'work');
+        var Tesseract = await loadTesseractMobile();
+        var result = await Tesseract.recognize(canvas, 'ita+eng', {
+          logger: function (m) {
+            if (!m || m.status !== 'recognizing text') return;
+            var pct = Math.round((m.progress || 0) * 100);
+            setPrepScanStatus('Lettura testo… ' + pct + '%', 'work');
+          }
+        });
+        var text = (result && result.data && result.data.text) ? result.data.text : '';
+        if (!text.trim()) {
+          setPrepScanStatus('Nessun testo letto. Ritratta la scheda più da vicino e leggibile.', 'err');
+          return;
+        }
+        var list = extractAllPrepFromTextMobile(text);
+        applyPrepScanList(list);
+      } catch (err) {
+        console.error(err);
+        setPrepScanStatus('Errore OCR: ' + (err && err.message ? err.message : err), 'err');
+      } finally {
+        try { URL.revokeObjectURL(url); } catch (e) {}
+      }
+    }
+
+    
+    // ===== Live camera auto-scan scheda LED Manager =====
+    var _prepStream = null;
+    var _prepScanTimer = null;
+    var _prepScanBusy = false;
+    var _prepHitCount = 0;
+
+    function prepLiveStatus(msg) {
+      var el = document.getElementById('prepLiveStatus');
+      if (el) el.textContent = msg || '';
+    }
+
+    function prepScanGallery() {
+      var input = document.getElementById('prepScanGallery');
+      if (!input) return;
+      input.value = '';
+      input.onchange = function () {
+        var f = input.files && input.files[0];
+        if (f) prepRunOcrFromFile(f);
+      };
+      input.click();
+    }
+
+    async function prepScanCamera() {
+      // apre scanner live con rilevamento automatico
+      await prepLiveOpen();
+    }
+
+    async function prepLiveOpen() {
+      var overlay = document.getElementById('prepLiveScan');
+      var video = document.getElementById('prepLiveVideo');
+      if (!overlay || !video) {
+        // fallback file input
+        var input = document.getElementById('prepScanInput');
+        if (input) { input.value = ''; input.onchange = function () { var f = input.files && input.files[0]; if (f) prepRunOcrFromFile(f); }; input.click(); }
+        return;
+      }
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error('Fotocamera non disponibile');
+        }
+        _prepStream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          }
+        });
+        video.srcObject = _prepStream;
+        await video.play();
+        overlay.classList.add('open');
+        _prepHitCount = 0;
+        prepLiveStatus('Inquadra la scheda nel riquadro…');
+        var frame = document.getElementById('prepLiveFrame');
+        if (frame) frame.classList.remove('locked');
+        // avvia rilevamento periodico
+        if (_prepScanTimer) clearInterval(_prepScanTimer);
+        _prepScanTimer = setInterval(function () { prepLiveTick(); }, 1600);
+        // primo tick dopo stabilizzazione
+        setTimeout(function () { prepLiveTick(); }, 900);
+      } catch (err) {
+        console.warn(err);
+        setPrepScanStatus('Fotocamera non avviata: ' + (err.message || err) + '. Uso selezione file.', 'err');
+        var input = document.getElementById('prepScanInput');
+        if (input) {
+          input.value = '';
+          input.onchange = function () { var f = input.files && input.files[0]; if (f) prepRunOcrFromFile(f); };
+          input.click();
+        }
+      }
+    }
+
+    function prepLiveClose() {
+      if (_prepScanTimer) { clearInterval(_prepScanTimer); _prepScanTimer = null; }
+      _prepScanBusy = false;
+      _prepHitCount = 0;
+      try {
+        if (_prepStream) {
+          _prepStream.getTracks().forEach(function (tr) { tr.stop(); });
+        }
+      } catch (e) {}
+      _prepStream = null;
+      var video = document.getElementById('prepLiveVideo');
+      if (video) video.srcObject = null;
+      var overlay = document.getElementById('prepLiveScan');
+      if (overlay) overlay.classList.remove('open');
+      var frame = document.getElementById('prepLiveFrame');
+      if (frame) frame.classList.remove('locked');
+    }
+
+    async function prepLiveToggleTorch() {
+      try {
+        var track = _prepStream && _prepStream.getVideoTracks()[0];
+        if (!track) return;
+        var cap = track.getCapabilities && track.getCapabilities();
+        if (!cap || !cap.torch) { prepLiveStatus('Torcia non disponibile'); return; }
+        var settings = track.getSettings && track.getSettings();
+        var on = !(settings && settings.torch);
+        await track.applyConstraints({ advanced: [{ torch: on }] });
+        prepLiveStatus(on ? 'Torcia accesa' : 'Torcia spenta');
+      } catch (e) {
+        prepLiveStatus('Torcia non disponibile');
+      }
+    }
+
+    function prepLiveGrabFrameCanvas() {
+      var video = document.getElementById('prepLiveVideo');
+      var canvas = document.getElementById('prepLiveCanvas');
+      var frame = document.getElementById('prepLiveFrame');
+      if (!video || !canvas || !video.videoWidth) return null;
+      var vw = video.videoWidth, vh = video.videoHeight;
+      // crop centrale corrispondente al riquadro guida (~92% x 52%)
+      var cropW = Math.round(vw * 0.92);
+      var cropH = Math.round(vh * 0.48);
+      var sx = Math.round((vw - cropW) / 2);
+      var sy = Math.round((vh - cropH) / 2);
+      canvas.width = Math.min(cropW, 1600);
+      canvas.height = Math.round(canvas.width * (cropH / cropW));
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
+      enhanceCanvasForOcr(canvas);
+      return canvas;
+    }
+
+    function looksLikeLedCard(text) {
+      var t = String(text || '');
+      var score = 0;
+      if (/CONF\.?\s*ORDINE/i.test(t)) score += 3;
+      if (/SCADENZA/i.test(t)) score += 2;
+      if (/Indirizzo/i.test(t)) score += 2;
+      if (/Montaggio/i.test(t)) score += 1;
+      if (/Installatore/i.test(t)) score += 1;
+      if (/\(\s*\d{3,}\s*\)/.test(t)) score += 1;
+      if (/\b\d{5,}\b/.test(t)) score += 1;
+      return score >= 4;
+    }
+
+    async function prepLiveTick() {
+      if (_prepScanBusy) return;
+      if (!document.getElementById('prepLiveScan') || !document.getElementById('prepLiveScan').classList.contains('open')) return;
+      var canvas = prepLiveGrabFrameCanvas();
+      if (!canvas) return;
+      _prepScanBusy = true;
+      try {
+        prepLiveStatus('Analisi riquadro…');
+        var Tesseract = await loadTesseractMobile();
+        // OCR leggero: solo per capire se c'è una scheda
+        var result = await Tesseract.recognize(canvas, 'ita+eng', {
+          logger: function () {}
+        });
+        var text = (result && result.data && result.data.text) ? result.data.text : '';
+        if (looksLikeLedCard(text)) {
+          _prepHitCount++;
+          var frame = document.getElementById('prepLiveFrame');
+          if (frame) frame.classList.add('locked');
+          prepLiveStatus('Scheda rilevata (' + _prepHitCount + '/2)…');
+          if (_prepHitCount >= 2) {
+            // conferma su 2 frame consecutivi
+            if (_prepScanTimer) { clearInterval(_prepScanTimer); _prepScanTimer = null; }
+            prepLiveStatus('Scheda acquisita, estraggo i dati…');
+            await prepLiveProcessText(text, canvas);
+            return;
+          }
+        } else {
+          _prepHitCount = 0;
+          var frame2 = document.getElementById('prepLiveFrame');
+          if (frame2) frame2.classList.remove('locked');
+          prepLiveStatus('Inquadra la scheda nel riquadro…');
+        }
+      } catch (e) {
+        console.warn(e);
+        prepLiveStatus('Ricerca scheda…');
+      } finally {
+        _prepScanBusy = false;
+      }
+    }
+
+    async function prepLiveManualCapture() {
+      if (_prepScanBusy) return;
+      var canvas = prepLiveGrabFrameCanvas();
+      if (!canvas) return;
+      if (_prepScanTimer) { clearInterval(_prepScanTimer); _prepScanTimer = null; }
+      _prepScanBusy = true;
+      prepLiveStatus('Scatto manuale, lettura…');
+      try {
+        var Tesseract = await loadTesseractMobile();
+        var result = await Tesseract.recognize(canvas, 'ita+eng', {
+          logger: function (m) {
+            if (!m || m.status !== 'recognizing text') return;
+            prepLiveStatus('Lettura… ' + Math.round((m.progress || 0) * 100) + '%');
+          }
+        });
+        var text = (result && result.data && result.data.text) ? result.data.text : '';
+        await prepLiveProcessText(text, canvas);
+      } catch (e) {
+        prepLiveStatus('Errore: ' + (e.message || e));
+        _prepScanTimer = setInterval(function () { prepLiveTick(); }, 1600);
+      } finally {
+        _prepScanBusy = false;
+      }
+    }
+
+    async function prepLiveProcessText(text, canvas) {
+      var prev = document.getElementById('prepScanPreview');
+      if (prev && canvas) {
+        try {
+          prev.src = canvas.toDataURL('image/jpeg', 0.85);
+          prev.classList.add('show');
+        } catch (e) {}
+      }
+      if (!String(text || '').trim()) {
+        prepLiveStatus('Nessun testo. Riprova.');
+        setPrepScanStatus('Nessun testo letto dalla scheda.', 'err');
+        _prepScanTimer = setInterval(function () { prepLiveTick(); }, 1600);
+        return;
+      }
+      var list = extractAllPrepFromTextMobile(text);
+      // se il testo intero non è spezzato, prova come unica scheda
+      if (!list.length) {
+        var one = extractPrepFieldsMobile(text);
+        if (one.nome || one.confOrdine || one.localita) list = [one];
+      }
+      prepLiveClose();
+      if (!list.length) {
+        setPrepScanStatus('Scheda non riconosciuta. Riprova con più luce e testo a fuoco.', 'err');
+        return;
+      }
+      applyPrepScanList(list);
+    }
+
 
     function renderPrep() {
       let list = E.getBySection('prep').slice();
@@ -3252,5 +3899,27 @@
       }
     } catch (e) {}
   </script>
+
+  <!-- Scanner live LED Manager -->
+  <div class="prep-live-scan" id="prepLiveScan">
+    <video id="prepLiveVideo" playsinline muted autoplay></video>
+    <div class="scan-ui">
+      <div class="scan-top">
+        <button type="button" onclick="prepLiveClose()">✕ Chiudi</button>
+        <button type="button" id="prepLiveTorchBtn" onclick="prepLiveToggleTorch()">💡</button>
+      </div>
+      <div class="scan-hint">Inquadra la scheda LED Manager nel riquadro</div>
+      <div class="scan-frame-wrap">
+        <div class="scan-frame" id="prepLiveFrame">
+          <i class="cbl"></i><i class="cbr"></i>
+        </div>
+      </div>
+      <div class="scan-bottom">
+        <div class="scan-status" id="prepLiveStatus">Ricerca scheda…</div>
+        <button type="button" class="scan-capture" onclick="prepLiveManualCapture()" title="Scatta"></button>
+      </div>
+    </div>
+    <canvas id="prepLiveCanvas" hidden></canvas>
+  </div>
 </body>
 </html>
