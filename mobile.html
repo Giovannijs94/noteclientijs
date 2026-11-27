@@ -2626,13 +2626,28 @@
     function enhanceCanvasForOcr(canvas) {
       try {
         var ctx = canvas.getContext('2d');
-        var img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        var w = canvas.width, h = canvas.height;
+        var img = ctx.getImageData(0, 0, w, h);
         var d = img.data;
-        for (var i = 0; i < d.length; i += 4) {
-          var g = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
-          // contrasto
-          g = g < 140 ? Math.max(0, g * 0.75) : Math.min(255, g * 1.15 + 10);
-          d[i] = d[i + 1] = d[i + 2] = g;
+        // scala di grigi + contrasto locale leggero
+        var gray = new Uint8ClampedArray(w * h);
+        for (var i = 0, p = 0; i < d.length; i += 4, p++) {
+          gray[p] = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
+        }
+        // stima luminosità media per adaptive
+        var sum = 0;
+        for (var p = 0; p < gray.length; p += 8) sum += gray[p];
+        var avg = sum / (gray.length / 8);
+        var thr = Math.max(90, Math.min(170, avg * 0.92));
+        for (var i = 0, p = 0; i < d.length; i += 4, p++) {
+          var g = gray[p];
+          // unsharp leggero usando media
+          var boosted = g + (g - avg) * 0.55;
+          // binarizzazione soft (non duro 0/255) per non perdere dettagli
+          if (boosted < thr - 18) boosted = Math.max(0, boosted * 0.55);
+          else if (boosted > thr + 18) boosted = Math.min(255, 200 + (boosted - thr) * 0.4);
+          else boosted = thr + (boosted - thr) * 1.35;
+          d[i] = d[i + 1] = d[i + 2] = Math.max(0, Math.min(255, boosted));
         }
         ctx.putImageData(img, 0, 0);
       } catch (e) {}
@@ -3025,63 +3040,108 @@
     var _prepDraft = {};
     var _prepLastRead = '';
     var PREP_STEPS = [
-      { key: 'nome', label: 'NOME cliente', hint: 'Inquadra solo il NOME (es. HU YUNGAN)', tall: false,
+      { key: 'nome', label: 'NOME cliente',
+        hint: 'Inquadra la riga in alto col NOME (es. HU YUNGAN)',
+        tall: false, cropH: 0.16,
         parse: function (text) {
-          var raw = String(text || '');
-          var m = raw.match(/([A-ZÀ-Ù][A-ZÀ-Ùa-zà-ù0-9'’\s.\-&\/]{1,60}?)\s*\(\s*\d{3,}\s*\)/);
-          if (m) return m[1].trim();
-          m = raw.match(/\b([A-ZÀ-Ù]{2,}(?:\s+[A-ZÀ-Ùa-zà-ù]{2,}){0,4})\b/);
-          return m ? m[1].trim() : raw.replace(/\s+/g, ' ').trim().slice(0, 60);
+          var raw = normalizeOcrText(text);
+          var m = raw.match(/([A-ZÀ-Ù][A-ZÀ-ÙA-ZÀ-Ùa-zà-ù0-9'’\s.\-&\/]{1,70}?)\s*[\(\[]\s*\d{3,}\s*[\)\]]/);
+          if (m) return cleanName(m[1]);
+          // riga tutta maiuscola tipica LED Manager
+          m = raw.match(/\b([A-ZÀ-Ù]{2,}(?:[\s\-]+[A-ZÀ-Ù]{2,}){0,5})\b/);
+          if (m && !/CONF|ORDINE|SCADENZA|INDIRIZZO|MONTAGGIO|INSTALLATORE/i.test(m[1])) return cleanName(m[1]);
+          var lines = raw.split(/\n/).map(function (L) { return L.trim(); }).filter(function (L) {
+            return L.length >= 3 && !/CONF|ORDINE|SCADENZA|NULLA|IN CODA|INSTALLATORE/i.test(L);
+          });
+          return lines[0] ? cleanName(lines[0].slice(0, 60)) : '';
         }
       },
-      { key: 'modello', label: 'MODELLO', hint: 'Inquadra la riga del MODELLO (es. FC150/3.91…)', tall: true,
+      { key: 'modello', label: 'MODELLO',
+        hint: 'Inquadra la riga del MODELLO (FC150/3.91 SMD…)',
+        tall: true, cropH: 0.26,
         parse: function (text) {
-          var raw = String(text || '');
-          var m = raw.match(/\b([A-Z]{1,6}\d{2,4}\s*\/\s*[\d.,]+[^\n]{0,50})/);
-          if (m) return m[1].replace(/\s+/g, ' ').trim();
-          m = raw.match(/(SMD|INDOOR|OUTDOOR|LCD|TOTEM|CABINET)[^\n]{0,40}/i);
-          if (m) return m[0].replace(/\s+/g, ' ').trim();
-          return raw.replace(/\s+/g, ' ').trim().slice(0, 80);
+          var raw = normalizeOcrText(text);
+          var m = raw.match(/\b([A-Z]{1,6}\d{2,4}\s*[\/]\s*[\dO][\dO.,]*[^\n]{0,55})/i);
+          if (m) return fixOcrModel(m[1]);
+          m = raw.match(/\b(FC|FH|P|LED|LCD)\s*[\w.\-\/]{3,40}/i);
+          if (m) return fixOcrModel(m[0]);
+          m = raw.match(/(SMD|INDOOR|OUTDOOR)[^\n]{0,40}/i);
+          if (m) return fixOcrModel(m[0]);
+          return '';
         }
       },
-      { key: 'localita', label: 'INDIRIZZO', hint: 'Inquadra la riga INDIRIZZO', tall: true,
+      { key: 'localita', label: 'INDIRIZZO',
+        hint: 'Inquadra la riga INDIRIZZO (via e paese)',
+        tall: true, cropH: 0.24,
         parse: function (text) {
-          var raw = String(text || '');
+          var raw = normalizeOcrText(text);
           var m = raw.match(/Indirizzo\s*[:\-–]?\s*([^\n]+)/i);
           if (m) return cleanLedAddrMobile(m[1]);
-          m = raw.match(/\b(via|viale|piazza|corso|vicolo|strada)\b[^\n]{5,120}/i);
+          m = raw.match(/\b(via|viale|piazza|corso|vicolo|strada|contrada|localit[aà])\b[^\n]{4,130}/i);
           if (m) return cleanLedAddrMobile(m[0]);
-          return cleanLedAddrMobile(raw.replace(/\s+/g, ' ').trim().slice(0, 120));
+          // fallback: riga con numero civico
+          m = raw.match(/([^\n]{5,120}\d{1,4}[^\n]{0,80})/);
+          if (m && !/CONF|SCADENZA|ORDINE/i.test(m[1])) return cleanLedAddrMobile(m[1]);
+          return '';
         }
       },
-      { key: 'confOrdine', label: 'CONF. ORDINE', hint: 'Inquadra CONF. ORDINE (solo il numero)', tall: false,
+      { key: 'confOrdine', label: 'CONF. ORDINE',
+        hint: 'Inquadra CONF. ORDINE (solo il numero lungo)',
+        tall: false, cropH: 0.14,
         parse: function (text) {
-          var raw = String(text || '');
+          var raw = normalizeOcrText(text).replace(/[Oo]/g, '0').replace(/[Il|]/g, '1');
           var m = raw.match(/CONF\.?\s*ORDINE\s*[:\-–]?\s*(\d{5,})/i);
           if (m) return m[1];
-          m = raw.match(/\b(\d{6,})\b/);
-          return m ? m[1] : '';
+          // numero isolato lungo (tipico conf ordine)
+          var nums = raw.match(/\b(\d{6,10})\b/g);
+          if (nums && nums.length) {
+            nums.sort(function (a, b) { return b.length - a.length; });
+            return nums[0];
+          }
+          return '';
         }
       },
-      { key: 'scadenza', label: 'SCADENZA', hint: 'Inquadra la SCADENZA (gg/mm/aaaa)', tall: false,
+      { key: 'scadenza', label: 'SCADENZA',
+        hint: 'Inquadra SCADENZA (data gg/mm/aaaa)',
+        tall: false, cropH: 0.14,
         parse: function (text) {
-          var raw = String(text || '');
-          var m = raw.match(/SCADENZA\s*[:\-–]?\s*([0-3]?\d[\/.\-][0-1]?\d[\/.\-]\d{2,4})/i);
-          if (m) return parseItalianDateToISOMobile(m[1]);
-          m = raw.match(/\b([0-3]?\d[\/.\-][0-1]?\d[\/.\-]\d{2,4})\b/);
-          return m ? parseItalianDateToISOMobile(m[1]) : '';
+          var raw = normalizeOcrText(text);
+          var m = raw.match(/SCADENZA\s*[:\-–]?\s*([0-3O]?\d[\/.\-][0-1O]?\d[\/.\-]\d{2,4})/i);
+          if (m) return parseItalianDateToISOMobile(fixOcrDate(m[1]));
+          m = raw.match(/\b([0-3O]?\d[\/.\-][0-1O]?\d[\/.\-]\d{2,4})\b/);
+          return m ? parseItalianDateToISOMobile(fixOcrDate(m[1])) : '';
         }
       },
-      { key: 'montaggio', label: 'MONTAGGIO', hint: 'Inquadra MONTAGGIO (es. Piantana)', tall: false,
+      { key: 'montaggio', label: 'MONTAGGIO',
+        hint: 'Inquadra MONTAGGIO (es. Piantana, A parete)',
+        tall: false, cropH: 0.14,
         parse: function (text) {
-          var raw = String(text || '');
+          var raw = normalizeOcrText(text);
           var m = raw.match(/Montaggio\s*[:\-–]?\s*([A-Za-zÀ-ù0-9\/\-\s]{2,40})/i);
           if (m) return m[1].trim().split(/\s{2,}/)[0];
-          m = raw.match(/\b(Piantana|A\s*parete|Sospeso|Staffa|Telaio|Totem)\b/i);
-          return m ? m[1].trim() : raw.replace(/\s+/g, ' ').trim().slice(0, 40);
+          m = raw.match(/\b(Piantana|A\s*parete|Sospeso|Staffa|Telaio|Totem|Mensola|Palo)\b/i);
+          return m ? m[1].trim() : '';
         }
       }
     ];
+
+    function normalizeOcrText(text) {
+      return String(text || '')
+        .replace(/\r/g, '\n')
+        .replace(/[|]/g, 'I')
+        .replace(/[“”]/g, '"')
+        .replace(/[ \t]+/g, ' ')
+        .trim();
+    }
+    function cleanName(s) {
+      return String(s || '').replace(/\s*\(\s*\d{3,}\s*\)\s*$/, '').replace(/\s+/g, ' ').trim();
+    }
+    function fixOcrModel(s) {
+      return String(s || '').replace(/\s+/g, ' ').replace(/O(?=\d)/g, '0').trim();
+    }
+    function fixOcrDate(s) {
+      return String(s || '').replace(/O/g, '0').replace(/[Il]/g, '1');
+    }
 
     function prepStepUi() {
       var step = PREP_STEPS[_prepStepIndex];
@@ -3092,13 +3152,13 @@
       var frame = document.getElementById('prepLiveFrame');
       if (lab) lab.textContent = 'Passo ' + (_prepStepIndex + 1) + ' di ' + PREP_STEPS.length + ' · ' + step.label;
       if (hint) hint.textContent = step.hint;
-      if (val) val.textContent = _prepLastRead ? ('Letto: ' + _prepLastRead) : '(in attesa di lettura)';
+      if (val) val.textContent = _prepLastRead ? ('✓ ' + _prepLastRead) : 'Inquadra nel riquadro…';
       if (frame) {
         frame.classList.add('field');
         frame.classList.toggle('tall', !!step.tall);
         frame.classList.remove('locked');
       }
-      prepLiveStatus('1) Inquadra · 2) Pulsante rosa · 3) Conferma');
+      prepLiveStatus('Centra il testo nel riquadro · poi scatta');
     }
 
     async function prepLiveOpen() {
@@ -3113,7 +3173,12 @@
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('Fotocamera non disponibile');
         _prepStream = await navigator.mediaDevices.getUserMedia({
           audio: false,
-          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            focusMode: { ideal: 'continuous' }
+          }
         });
         video.srcObject = _prepStream;
         await video.play();
@@ -3122,10 +3187,12 @@
         _prepDraft = {};
         _prepLastRead = '';
         _prepScanBusy = false;
+        _prepStableHits = 0;
         prepStepUi();
         if (window._prepScanTimer) clearInterval(window._prepScanTimer);
-        window._prepScanTimer = setInterval(function () { prepStepAutoTick(); }, 1200);
-        setTimeout(function () { prepStepAutoTick(); }, 600);
+        // auto-lettura più frequente ma leggera
+        window._prepScanTimer = setInterval(function () { prepStepAutoTick(); }, 900);
+        setTimeout(function () { prepStepAutoTick(); }, 500);
       } catch (err) {
         console.warn(err);
         setPrepScanStatus('Fotocamera non avviata: ' + (err.message || err), 'err');
@@ -3177,14 +3244,18 @@
       if (!video || !canvas || !video.videoWidth) return null;
       var step = PREP_STEPS[_prepStepIndex] || {};
       var vw = video.videoWidth, vh = video.videoHeight;
-      var cropW = Math.round(vw * 0.9);
-      var cropH = Math.round(vh * (step.tall ? 0.28 : 0.18));
+      // crop adattivo: più stretto in altezza = meno rumore, lettura più precisa
+      var cropW = Math.round(vw * 0.88);
+      var cropH = Math.round(vh * (step.cropH || (step.tall ? 0.26 : 0.16)));
       var sx = Math.round((vw - cropW) / 2);
       var sy = Math.round((vh - cropH) / 2);
-      var maxW = 1000;
+      // risoluzione OCR bilanciata (velocità + nitidezza)
+      var maxW = 1200;
       canvas.width = Math.min(cropW, maxW);
-      canvas.height = Math.round(canvas.width * (cropH / cropW));
+      canvas.height = Math.max(48, Math.round(canvas.width * (cropH / cropW)));
       var ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
       enhanceCanvasForOcr(canvas);
       return canvas;
@@ -3194,29 +3265,52 @@
       var canvas = prepLiveGrabFieldCanvas();
       if (!canvas) return '';
       var Tesseract = await loadTesseractMobile();
-      var result = await Tesseract.recognize(canvas, 'ita+eng', { logger: function () {} });
+      var step = PREP_STEPS[_prepStepIndex] || {};
+      // whitelist caratteri per campi numerici → meno errori
+      var opts = { logger: function () {} };
+      try {
+        if (step.key === 'confOrdine') {
+          opts.tessedit_char_whitelist = '0123456789CONFORDINE.:- ';
+        } else if (step.key === 'scadenza') {
+          opts.tessedit_char_whitelist = '0123456789SCADENZA/:.- ';
+        }
+      } catch (e) {}
+      var result = await Tesseract.recognize(canvas, 'ita+eng', opts);
       return (result && result.data && result.data.text) ? result.data.text : '';
     }
+
+    var _prepStableHits = 0;
+    var _prepPrevRead = '';
 
     async function prepStepAutoTick() {
       if (_prepScanBusy) return;
       if (!document.getElementById('prepLiveScan') || !document.getElementById('prepLiveScan').classList.contains('open')) return;
       _prepScanBusy = true;
       try {
-        prepLiveStatus('Lettura…');
+        prepLiveStatus('Analisi inquadratura…');
         var text = await prepStepOcrOnce();
         var step = PREP_STEPS[_prepStepIndex];
         if (!step) return;
         var parsed = step.parse(text);
         if (parsed && String(parsed).trim().length >= 2) {
-          _prepLastRead = String(parsed).trim();
+          var cur = String(parsed).trim();
+          // stabilità: stesso valore 2 volte di fila → più affidabile
+          if (cur === _prepPrevRead) _prepStableHits++;
+          else { _prepStableHits = 1; _prepPrevRead = cur; }
+          _prepLastRead = cur;
           var val = document.getElementById('prepLiveValue');
-          if (val) val.textContent = 'Letto: ' + _prepLastRead;
+          if (val) val.textContent = '✓ ' + _prepLastRead;
           var frame = document.getElementById('prepLiveFrame');
           if (frame) frame.classList.add('locked');
-          prepLiveStatus('Valore trovato. Premi Conferma o riscatta.');
+          if (_prepStableHits >= 2) {
+            prepLiveStatus('Inquadratura ok · Conferma per andare avanti');
+          } else {
+            prepLiveStatus('Quasi… tieni fermo un attimo');
+          }
         } else {
-          prepLiveStatus('Non chiaro: avvicina il campo nel riquadro');
+          _prepStableHits = 0;
+          _prepPrevRead = '';
+          prepLiveStatus('Avvicina e centra il testo nel riquadro');
         }
       } catch (e) {
         prepLiveStatus('Inquadra il campo…');
@@ -3228,17 +3322,26 @@
     async function prepStepCapture() {
       if (_prepScanBusy) return;
       _prepScanBusy = true;
-      prepLiveStatus('Scatto…');
+      prepLiveStatus('Lettura precisa…');
       try {
-        var text = await prepStepOcrOnce();
+        // doppia lettura e scegli la migliore
+        var t1 = await prepStepOcrOnce();
+        var t2 = await prepStepOcrOnce();
         var step = PREP_STEPS[_prepStepIndex];
-        var parsed = step ? step.parse(text) : '';
+        var p1 = step ? step.parse(t1) : '';
+        var p2 = step ? step.parse(t2) : '';
+        var parsed = '';
+        if (p1 && p2 && p1 === p2) parsed = p1;
+        else if (p1 && p2) parsed = (String(p1).length >= String(p2).length ? p1 : p2);
+        else parsed = p1 || p2 || '';
         _prepLastRead = String(parsed || '').trim();
+        _prepPrevRead = _prepLastRead;
+        _prepStableHits = _prepLastRead ? 2 : 0;
         var val = document.getElementById('prepLiveValue');
-        if (val) val.textContent = _prepLastRead ? ('Letto: ' + _prepLastRead) : 'Nessun testo';
+        if (val) val.textContent = _prepLastRead ? ('✓ ' + _prepLastRead) : 'Nessun testo chiaro';
         var frame = document.getElementById('prepLiveFrame');
         if (frame) frame.classList.toggle('locked', !!_prepLastRead);
-        prepLiveStatus(_prepLastRead ? 'Ok. Premi Conferma' : 'Riprova più vicino e a fuoco');
+        prepLiveStatus(_prepLastRead ? 'Ok · premi Conferma' : 'Riprova: più vicino, meno riflessi');
       } catch (e) {
         prepLiveStatus('Errore lettura');
       } finally {
