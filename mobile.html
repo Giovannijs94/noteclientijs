@@ -799,6 +799,33 @@
       box-shadow: 0 8px 24px rgba(0,0,0,0.35);
     }
     .prep-live-scan .scan-capture:active { transform: scale(0.94); }
+    .prep-live-scan .scan-frame.field {
+      width: min(92vw, 420px);
+      height: min(22vh, 120px);
+    }
+    .prep-live-scan .scan-frame.field.tall { height: min(28vh, 150px); }
+    .prep-live-scan .scan-step {
+      color: #fda4af; font-size: 0.8rem; font-weight: 800;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      text-align: center; margin-top: 8px;
+      text-shadow: 0 1px 4px #000;
+    }
+    .prep-live-scan .scan-value {
+      color: #fff; font-size: 0.95rem; font-weight: 700;
+      text-align: center; margin-top: 6px; min-height: 1.3em;
+      max-width: 92vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      text-shadow: 0 1px 4px #000;
+    }
+    .prep-live-scan .scan-actions-row {
+      pointer-events: auto;
+      display: flex; gap: 8px; width: min(92vw, 360px); justify-content: center; margin-top: 8px;
+    }
+    .prep-live-scan .scan-actions-row button {
+      flex: 1; min-height: 44px; border: none; border-radius: 12px;
+      font-weight: 800; font-size: 0.85rem;
+      background: rgba(255,255,255,0.18); color: #fff;
+    }
+    .prep-live-scan .scan-actions-row button.ok { background: #16a34a; }
 
     /* Prep scan LED Manager */
     .prep-scan {
@@ -3063,15 +3090,15 @@
       var hint = document.getElementById('prepLiveHint');
       var val = document.getElementById('prepLiveValue');
       var frame = document.getElementById('prepLiveFrame');
-      if (lab) lab.textContent = 'Passo ' + (_prepStepIndex + 1) + '/' + PREP_STEPS.length + ' · ' + step.label;
+      if (lab) lab.textContent = 'Passo ' + (_prepStepIndex + 1) + ' di ' + PREP_STEPS.length + ' · ' + step.label;
       if (hint) hint.textContent = step.hint;
-      if (val) val.textContent = _prepLastRead ? ('Letto: ' + _prepLastRead) : '';
+      if (val) val.textContent = _prepLastRead ? ('Letto: ' + _prepLastRead) : '(in attesa di lettura)';
       if (frame) {
         frame.classList.add('field');
         frame.classList.toggle('tall', !!step.tall);
         frame.classList.remove('locked');
       }
-      prepLiveStatus('Inquadra e premi il pulsante rosa, oppure attendi…');
+      prepLiveStatus('1) Inquadra · 2) Pulsante rosa · 3) Conferma');
     }
 
     async function prepLiveOpen() {
@@ -3262,6 +3289,17 @@
     }
 
 
+
+
+    // Espone funzioni scanner alla UI
+    window.prepScanCamera = prepScanCamera;
+    window.prepLiveOpen = prepLiveOpen;
+    window.prepLiveClose = prepLiveClose;
+    window.prepLiveToggleTorch = prepLiveToggleTorch;
+    window.prepStepCapture = prepStepCapture;
+    window.prepStepSkip = prepStepSkip;
+    window.prepStepConfirm = prepStepConfirm;
+    window.prepLiveManualCapture = prepStepCapture;
 
     function renderPrep() {
       let list = E.getBySection('prep').slice();
@@ -4390,7 +4428,7 @@
     </div>
   </div>
 
-  <!-- Scanner live LED Manager -->
+  <!-- Scanner guidato campo-per-campo LED Manager -->
   <div class="prep-live-scan" id="prepLiveScan">
     <video id="prepLiveVideo" playsinline muted autoplay></video>
     <div class="scan-ui">
@@ -4398,15 +4436,21 @@
         <button type="button" onclick="prepLiveClose()">✕ Chiudi</button>
         <button type="button" id="prepLiveTorchBtn" onclick="prepLiveToggleTorch()">💡</button>
       </div>
-      <div class="scan-hint">Inquadra la scheda LED Manager nel riquadro</div>
+      <div class="scan-step" id="prepLiveStepLabel">Passo 1/6 · NOME</div>
+      <div class="scan-hint" id="prepLiveHint">Inquadra SOLO il NOME del cliente</div>
+      <div class="scan-value" id="prepLiveValue"></div>
       <div class="scan-frame-wrap">
-        <div class="scan-frame" id="prepLiveFrame">
+        <div class="scan-frame field" id="prepLiveFrame">
           <i class="cbl"></i><i class="cbr"></i>
         </div>
       </div>
       <div class="scan-bottom">
-        <div class="scan-status" id="prepLiveStatus">Ricerca scheda…</div>
-        <button type="button" class="scan-capture" onclick="prepLiveManualCapture()" title="Scatta"></button>
+        <div class="scan-status" id="prepLiveStatus">Metti il nome nel riquadro rosa</div>
+        <button type="button" class="scan-capture" onclick="prepStepCapture()" title="Leggi questo campo"></button>
+        <div class="scan-actions-row">
+          <button type="button" onclick="prepStepSkip()">Salta</button>
+          <button type="button" class="ok" onclick="prepStepConfirm()">Conferma ›</button>
+        </div>
       </div>
     </div>
     <canvas id="prepLiveCanvas" hidden></canvas>
